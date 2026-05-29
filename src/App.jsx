@@ -1,168 +1,174 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "./supabase"
-import { MATCHES, FLAGS, STAGES, calcPoints, formatDate, isLocked } from "./data"
+import { MATCHES, FLAGS, AVATARS, STAGES, calcPoints, formatDate, formatTime, isLocked, isSameDay } from "./data"
 
 const ADMIN_PASSWORD = "mundial2026"
 
 const C = {
-  bg: "#0a0e1a",
-  card: "#111827",
-  border: "#1e2940",
-  accent: "#c8a84b",
-  accentDim: "#8a6e28",
-  green: "#22c55e",
-  red: "#ef4444",
-  muted: "#6b7280",
-  text: "#e2e8f0",
-  textDim: "#94a3b8",
+  bg: "#0a0e1a", card: "#111827", card2: "#0f1624",
+  border: "#1e2940", accent: "#c8a84b", accentDim: "#8a6e28",
+  green: "#22c55e", red: "#ef4444",
+  muted: "#6b7280", text: "#e2e8f0", textDim: "#94a3b8",
 }
 
-const s = {
-  app: { minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" },
-  header: { background: "linear-gradient(135deg,#0f172a 0%,#1e2a45 100%)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 },
-  logo: { fontSize: 18, fontWeight: 800, color: C.accent, letterSpacing: -0.5 },
-  card: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 20, marginBottom: 12 },
-  btn: (v = "primary") => ({ background: v === "primary" ? C.accent : v === "danger" ? C.red : "transparent", color: v === "primary" ? "#0a0e1a" : "#fff", border: v === "ghost" ? `1px solid ${C.accent}` : "none", borderRadius: 10, padding: "12px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", width: "100%" }),
-  tab: (a) => ({ background: a ? C.accent : "transparent", color: a ? "#0a0e1a" : C.textDim, border: `1px solid ${a ? C.accent : C.border}`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }),
-  input: { width: "100%", background: "#1a2035", border: `2px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", fontSize: 16, color: C.text, outline: "none", boxSizing: "border-box" },
-  scoreInput: { width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" },
-  scoreBox: (pts) => ({ width: 44, height: 44, background: pts === 5 ? "#1a3320" : pts >= 3 ? "#1a2820" : pts > 0 ? "#1a2218" : "#1a1a2e", border: `2px solid ${pts === 5 ? C.green : pts >= 3 ? "#4ade80" : pts > 0 ? "#86efac" : C.border}`, borderRadius: 8, color: pts === 5 ? C.green : pts >= 3 ? "#4ade80" : C.textDim, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }),
-}
+const btn = (v = "primary", extra = {}) => ({
+  background: v === "primary" ? C.accent : v === "ghost" ? "transparent" : "#1a2035",
+  color: v === "primary" ? "#0a0e1a" : v === "ghost" ? C.accent : C.text,
+  border: v === "ghost" ? `1px solid ${C.accent}` : "none",
+  borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", ...extra
+})
+const inp = (extra = {}) => ({ width: "100%", background: "#1a2035", border: `2px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 15, color: C.text, outline: "none", boxSizing: "border-box", ...extra })
+const crd = (extra = {}) => ({ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 10, ...extra })
 
 function flag(team) { return FLAGS[team] || "🏳️" }
 
+function Avatar({ av = "⚽", size = 36, name = "" }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg,#1e2a45,#2a3a60)", border: `2px solid ${C.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, flexShrink: 0 }}>
+      {av || (name ? name[0].toUpperCase() : "⚽")}
+    </div>
+  )
+}
+
+function ScoreInput({ value, onChange }) {
+  return <input type="number" min="0" max="20" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => onChange(e.target.value)} />
+}
+
+function ScoreBox({ value, pts }) {
+  const color = pts === 5 ? C.green : pts >= 3 ? "#4ade80" : pts > 0 ? "#86efac" : C.textDim
+  const bg = pts === 5 ? "#1a3320" : pts >= 3 ? "#1a2820" : pts > 0 ? "#1a2218" : "#1a1a2e"
+  const border = pts === 5 ? C.green : pts >= 3 ? "#4ade80" : pts > 0 ? "#86efac" : C.border
+  return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
+}
+
+function FlashMsg({ msg }) {
+  return <div style={{ position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: msg.startsWith("❌") ? "#7f1d1d" : "#14532d", color: "#fff", borderRadius: 10, padding: "10px 22px", fontWeight: 700, fontSize: 14, zIndex: 300, whiteSpace: "nowrap" }}>{msg}</div>
+}
+
 export default function App() {
-  const [screen, setScreen] = useState("home")
-  const [user, setUser] = useState(null) // {id, name}
+  const [tab, setTab] = useState("home")
+  const [user, setUser] = useState(null)
+  const [registered, setRegistered] = useState(false)
   const [players, setPlayers] = useState([])
-  const [predictions, setPredictions] = useState([]) // [{player_id, match_id, home_score, away_score}]
-  const [results, setResults] = useState([]) // [{match_id, home_score, away_score}]
+  const [predictions, setPredictions] = useState([])
+  const [results, setResults] = useState([])
+  const [messages, setMessages] = useState([])
   const [stage, setStage] = useState("Grupos")
-  const [regName, setRegName] = useState("")
-  const [regError, setRegError] = useState("")
-  const [editPreds, setEditPreds] = useState({}) // {match_id: {home_score, away_score}}
+  const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
   const [loading, setLoading] = useState(true)
-  const [syncStatus, setSyncStatus] = useState("idle")
+  const [chatMsg, setChatMsg] = useState("")
+  const chatEndRef = useRef(null)
+  const [regName, setRegName] = useState("")
+  const [regAvatar, setRegAvatar] = useState("⚽")
+  const [regDefault, setRegDefault] = useState("0-0")
+  const [regError, setRegError] = useState("")
+  const [settName, setSettName] = useState("")
+  const [settAvatar, setSettAvatar] = useState("⚽")
+  const [settDefault, setSettDefault] = useState("0-0")
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
 
-  // Load all data
   const loadData = useCallback(async () => {
-    const [{ data: pl }, { data: pr }, { data: re }] = await Promise.all([
+    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }] = await Promise.all([
       supabase.from("players").select("*"),
       supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
+      supabase.from("chat_messages").select("*").order("created_at", { ascending: true }).limit(200),
     ])
     if (pl) setPlayers(pl)
     if (pr) setPredictions(pr)
     if (re) setResults(re)
+    if (ms) setMessages(ms)
     setLoading(false)
   }, [])
 
   useEffect(() => {
     loadData()
-    // Load saved user from localStorage
     const saved = localStorage.getItem("prode_user")
-    if (saved) { setUser(JSON.parse(saved)); setScreen("predictions") }
-    // Realtime subscription
-    const channel = supabase.channel("prode_changes")
+    if (saved) {
+      const u = JSON.parse(saved)
+      setUser(u); setRegistered(true)
+      setSettName(u.name); setSettAvatar(u.avatar || "⚽"); setSettDefault(u.default_score || "0-0")
+    }
+    const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public" }, () => loadData())
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
-  // ── REGISTER ────────────────────────────────────────────────────────────────
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+
+  const todayUnbet = registered && user ? MATCHES.filter(m => {
+    if (!isSameDay(m.date) || isLocked(m.date)) return false
+    return !predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+  }) : []
+
   const handleRegister = async () => {
     const name = regName.trim()
     if (!name) { setRegError("Ingresá tu nombre"); return }
-    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-      setRegError("Ese nombre ya existe, elegí otro"); return
-    }
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) { setRegError("Ese nombre ya existe, elegí otro"); return }
     const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now().toString(36)
-    const { error } = await supabase.from("players").insert({ id, name })
+    const { error } = await supabase.from("players").insert({ id, name, avatar: regAvatar, default_score: regDefault })
     if (error) { setRegError("Error al registrarse, intentá de nuevo"); return }
-    const me = { id, name }
+    const me = { id, name, avatar: regAvatar, default_score: regDefault }
     localStorage.setItem("prode_user", JSON.stringify(me))
-    setUser(me)
-    setScreen("predictions")
+    setUser(me); setRegistered(true)
+    setSettName(name); setSettAvatar(regAvatar); setSettDefault(regDefault)
     loadData()
   }
 
-  // ── SAVE PREDICTIONS ────────────────────────────────────────────────────────
   const savePredictions = async () => {
     if (!user) return
     setSaving(true)
-    const upserts = Object.entries(editPreds).map(([match_id, scores]) => ({
-      player_id: user.id,
-      match_id: parseInt(match_id),
-      home_score: parseInt(scores.home_score),
-      away_score: parseInt(scores.away_score),
-    })).filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
-
-    if (upserts.length > 0) {
-      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
-    }
-    setEditPreds({})
-    setSaving(false)
-    showFlash("✓ Predicciones guardadas")
-    loadData()
+    const upserts = Object.entries(editPreds)
+      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score) }))
+      .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
+    if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    setEditPreds({}); setSaving(false)
+    showFlash("✓ Predicciones guardadas"); loadData()
   }
 
-  // ── SAVE RESULTS (admin) ────────────────────────────────────────────────────
+  const applyDefaults = async () => {
+    if (!user) return
+    const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
+    const toApply = MATCHES.filter(m => !isLocked(m.date) && !predictions.find(p => p.player_id === user.id && p.match_id === m.id))
+    if (toApply.length === 0) { showFlash("No hay partidos pendientes"); return }
+    await supabase.from("predictions").upsert(toApply.map(m => ({ player_id: user.id, match_id: m.id, home_score: dh, away_score: da })), { onConflict: "player_id,match_id" })
+    showFlash(`✓ ${user.default_score} aplicado a ${toApply.length} partido(s)`); loadData()
+  }
+
   const saveResults = async () => {
     setSaving(true)
-    const upserts = Object.entries(editResults).map(([match_id, scores]) => ({
+    const upserts = Object.entries(editResults).map(([match_id, sc]) => ({
       match_id: parseInt(match_id),
-      home_score: scores.home_score === "" ? null : parseInt(scores.home_score),
-      away_score: scores.away_score === "" ? null : parseInt(scores.away_score),
+      home_score: sc.home_score === "" ? null : parseInt(sc.home_score),
+      away_score: sc.away_score === "" ? null : parseInt(sc.away_score),
       updated_at: new Date().toISOString(),
     }))
     await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-    setEditResults({})
-    setSaving(false)
-    showFlash("✓ Resultados guardados")
-    loadData()
+    setEditResults({}); setSaving(false); showFlash("✓ Resultados guardados"); loadData()
   }
 
-  // ── SYNC LIVE SCORES ────────────────────────────────────────────────────────
-  const syncLive = async () => {
-    setSyncStatus("loading")
-    try {
-      const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=IN_PLAY,FINISHED&season=2026", {
-        headers: { "X-Auth-Token": "demo" }
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      if (data.matches?.length > 0) {
-        const upserts = []
-        data.matches.forEach(m => {
-          if (m.score?.fullTime?.home !== null) {
-            const local = MATCHES.find(lm =>
-              lm.home.toLowerCase().includes(m.homeTeam.name.toLowerCase().slice(0, 4))
-            )
-            if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
-          }
-        })
-        if (upserts.length > 0) {
-          await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-          loadData()
-        }
-        setSyncStatus("ok")
-      } else {
-        setSyncStatus("empty")
-      }
-    } catch {
-      setSyncStatus("error")
-    }
-    setTimeout(() => setSyncStatus("idle"), 4000)
+  const saveSettings = async () => {
+    if (!user) return
+    setSaving(true)
+    await supabase.from("players").update({ name: settName, avatar: settAvatar, default_score: settDefault }).eq("id", user.id)
+    const updated = { ...user, name: settName, avatar: settAvatar, default_score: settDefault }
+    localStorage.setItem("prode_user", JSON.stringify(updated))
+    setUser(updated); setSaving(false); showFlash("✓ Configuración guardada"); loadData()
   }
 
-  // ── LEADERBOARD ─────────────────────────────────────────────────────────────
+  const sendChat = async () => {
+    if (!chatMsg.trim() || !user) return
+    await supabase.from("chat_messages").insert({ player_id: user.id, player_name: user.name, avatar: user.avatar, message: chatMsg.trim() })
+    setChatMsg("")
+  }
+
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
     MATCHES.forEach(m => {
@@ -176,93 +182,87 @@ export default function App() {
     return { ...p, total, played, perfect }
   }).sort((a, b) => b.total - a.total)
 
-  // ── HELPERS ─────────────────────────────────────────────────────────────────
-  const myPreds = (matchId) => {
-    if (!user) return {}
-    const saved = predictions.find(p => p.player_id === user.id && p.match_id === matchId) || {}
-    const edited = editPreds[matchId] || {}
-    return { ...saved, ...edited }
-  }
+  const myPred = (matchId) => ({ ...predictions.find(p => p.player_id === user?.id && p.match_id === matchId), ...editPreds[matchId] })
   const getResult = (matchId) => results.find(r => r.match_id === matchId)
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
+  const hasUnsaved = Object.keys(editPreds).length > 0
+
+  const appStyle = { minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", paddingBottom: 72 }
+
+  const Header = ({ title, right }) => (
+    <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ fontSize: 17, fontWeight: 800, color: C.accent }}>{title}</div>
+      {right || <div style={{ width: 60 }} />}
+    </div>
+  )
+
+  const BottomNav = () => (
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "chat", icon: "💬", label: "Chat" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+        <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderTop: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
+          <div style={{ fontSize: 20 }}>{icon}</div>
+          <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
+        </button>
+      ))}
+    </div>
+  )
 
   if (loading) return (
-    <div style={{ ...s.app, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚽</div>
-        <div style={{ color: C.accent, fontWeight: 700 }}>Cargando prode...</div>
-      </div>
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 52 }}>⚽</div>
+      <div style={{ color: C.accent, fontWeight: 700 }}>Cargando prode...</div>
     </div>
   )
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HOME
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (screen === "home") return (
-    <div style={s.app}>
-      <div style={{ ...s.header, justifyContent: "center", flexDirection: "column", gap: 4, padding: "32px 20px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>🏆</div>
-        <div style={{ ...s.logo, fontSize: 26 }}>PRODE MUNDIAL 2026</div>
-        <div style={{ color: C.textDim, fontSize: 13 }}>USA · México · Canadá · 11 Jun – 19 Jul</div>
+  // ── REGISTER ──────────────────────────────────────────────────────────────
+  if (!registered) return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "32px 20px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 52 }}>🏆</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.accent, marginTop: 8 }}>PRODE MUNDIAL 2026</div>
+        <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>USA · México · Canadá · 11 Jun – 19 Jul</div>
       </div>
       <div style={{ padding: 20 }}>
-        <div style={{ ...s.card, textAlign: "center", padding: 28 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>¡Unite al prode con tus amigos!</div>
-          <div style={{ color: C.textDim, fontSize: 14, marginBottom: 20 }}>Predecí los 104 partidos y competí en la tabla de posiciones.</div>
-          <div style={{ background: "#1a2035", borderRadius: 10, padding: "14px 20px", marginBottom: 20, textAlign: "left" }}>
-            <div style={{ color: C.accent, fontWeight: 700, marginBottom: 8, fontSize: 13 }}>📊 Puntos por partido</div>
-            <div style={{ fontSize: 13, color: C.textDim, lineHeight: 2.2 }}>
-              +3 pts — Acertás ganador o empate<br />
-              +1 pt &nbsp; — Acertás goles del local<br />
-              +1 pt &nbsp; — Acertás goles del visitante<br />
-              <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
+        <div style={crd({ background: "#1a2035", marginBottom: 16 })}>
+          <div style={{ color: C.accent, fontWeight: 700, marginBottom: 8 }}>📊 Sistema de puntos</div>
+          <div style={{ fontSize: 13, color: C.textDim, lineHeight: 2.1 }}>
+            +3 pts — Acertás ganador o empate<br />
+            +1 pt &nbsp;— Acertás goles del local<br />
+            +1 pt &nbsp;— Acertás goles del visitante<br />
+            <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
+          </div>
+        </div>
+        <div style={crd()}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>👋 Anotate al prode</div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+            <input style={inp()} placeholder="Nombre o apodo" value={regName} onChange={e => { setRegName(e.target.value); setRegError("") }} onKeyDown={e => e.key === "Enter" && handleRegister()} autoFocus />
+            {regError && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{regError}</div>}
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Elegí tu avatar</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {AVATARS.map(av => (
+                <button key={av} onClick={() => setRegAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: regAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${regAvatar === av ? C.accent : C.border}` }}>{av}</button>
+              ))}
             </div>
           </div>
-          <button style={s.btn()} onClick={() => setScreen("register")}>Anotarme al prode ⚡</button>
-          <div style={{ marginTop: 10 }}>
-            <button style={{ ...s.btn("ghost"), color: C.accent }} onClick={() => { loadData(); setScreen("leaderboard") }}>Ver tabla de posiciones 🏅</button>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto <span style={{ color: C.muted }}>(si olvidás cargar)</span></div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["0-0","1-0","0-1","1-1","2-1","2-0","2-2"].map(sc => (
+                <button key={sc} onClick={() => setRegDefault(sc)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", background: regDefault === sc ? C.accentDim : "#1a2035", border: `2px solid ${regDefault === sc ? C.accent : C.border}`, color: regDefault === sc ? C.accent : C.textDim }}>{sc}</button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div style={{ textAlign: "center", marginTop: 4 }}>
-          <button style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer" }} onClick={() => setScreen("admin")}>
-            🔧 Panel admin
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // REGISTER
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (screen === "register") return (
-    <div style={s.app}>
-      <div style={s.header}>
-        <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 22 }} onClick={() => setScreen("home")}>←</button>
-        <div style={s.logo}>REGISTRARSE</div>
-        <div style={{ width: 32 }} />
-      </div>
-      <div style={{ padding: 20 }}>
-        <div style={s.card}>
-          <div style={{ fontSize: 22, textAlign: "center", marginBottom: 14 }}>👋</div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>¿Cómo te llamás?</div>
-          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 14 }}>Este nombre va a aparecer en la tabla.</div>
-          <input style={s.input} placeholder="Tu nombre o apodo" value={regName}
-            onChange={e => { setRegName(e.target.value); setRegError("") }}
-            onKeyDown={e => e.key === "Enter" && handleRegister()} autoFocus />
-          {regError && <div style={{ color: C.red, fontSize: 13, marginTop: 8 }}>{regError}</div>}
-          <div style={{ marginTop: 16 }}>
-            <button style={s.btn()} onClick={handleRegister}>Entrar al prode</button>
-          </div>
+          <button style={btn("primary", { width: "100%" })} onClick={handleRegister}>Entrar al prode ⚡</button>
         </div>
         {players.length > 0 && (
-          <div style={s.card}>
+          <div style={crd()}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados ({players.length})</div>
             {players.map(p => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: C.accent }}>
-                  {p.name[0].toUpperCase()}
-                </div>
+                <Avatar av={p.avatar} size={32} name={p.name} />
                 <div style={{ fontSize: 14 }}>{p.name}</div>
               </div>
             ))}
@@ -272,239 +272,315 @@ export default function App() {
     </div>
   )
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PREDICTIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (screen === "predictions" && user) {
-    const hasUnsaved = Object.keys(editPreds).length > 0
+  // ── HOME ──────────────────────────────────────────────────────────────────
+  if (tab === "home") {
+    const me = board.find(p => p.id === user.id)
+    const myRank = board.findIndex(p => p.id === user.id) + 1
+    const nextMatch = MATCHES.find(m => !isLocked(m.date))
     return (
-      <div style={s.app}>
-        <div style={s.header}>
-          <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 22 }} onClick={() => setScreen("home")}>←</button>
-          <div style={{ textAlign: "center" }}>
-            <div style={s.logo}>MIS PREDICCIONES</div>
-            <div style={{ fontSize: 11, color: C.textDim }}>{user.name}</div>
+      <div style={appStyle}>
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "20px 18px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+          <Avatar av={user.avatar} size={52} name={user.name} />
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>¡Hola, {user.name}!</div>
+            <div style={{ fontSize: 13, color: C.textDim }}>Mundial 2026 · {players.length} participantes</div>
           </div>
-          <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 13, fontWeight: 700 }} onClick={() => { loadData(); setScreen("leaderboard") }}>
-            🏅
-          </button>
         </div>
-
-        {/* Stage tabs */}
-        <div style={{ display: "flex", gap: 6, padding: "10px 16px", overflowX: "auto", background: C.card, borderBottom: `1px solid ${C.border}` }}>
-          {STAGES.map(st => <button key={st} style={s.tab(stage === st)} onClick={() => setStage(st)}>{st}</button>)}
-        </div>
-
-        <div style={{ padding: "14px 16px", paddingBottom: hasUnsaved ? 90 : 20 }}>
-          {matchesByStage.map(match => {
-            const locked = isLocked(match.date)
-            const result = getResult(match.id)
-            const pred = myPreds(match.id)
-            const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-            const canEdit = !locked
-
-            return (
-              <div key={match.id} style={{ ...s.card, border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {match.group && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr. {match.group}</span>}
-                    {pts !== null && <span style={{ background: pts === 5 ? "#14532d" : pts >= 3 ? "#166534" : pts > 0 ? "#1e3318" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>+{pts} pts</span>}
-                    {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
-                  </div>
+        <div style={{ padding: "14px 16px" }}>
+          {todayUnbet.length > 0 && (
+            <div style={{ background: "#2a1a00", border: `1px solid ${C.accent}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div>
+                <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>⚠️ {todayUnbet.length} partido(s) hoy sin pronóstico</div>
+                <div style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{todayUnbet.map(m => `${m.home} vs ${m.away} (${formatTime(m.date)})`).join(" · ")}</div>
+              </div>
+              <button onClick={() => setTab("fixture")} style={btn("primary", { padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" })}>Ir →</button>
+            </div>
+          )}
+          <div style={crd({ display: "flex", gap: 0, padding: 0, overflow: "hidden" })}>
+            {[{ label: "Posición", value: myRank ? `#${myRank}` : "—", icon: "🏅" }, { label: "Puntos", value: me?.total ?? 0, icon: "⭐" }, { label: "Jugados", value: me?.played ?? 0, icon: "📊" }, { label: "Plenos", value: me?.perfect ?? 0, icon: "🔥" }].map(({ label, value, icon }, i) => (
+              <div key={label} style={{ flex: 1, textAlign: "center", padding: "14px 4px", borderRight: i < 3 ? `1px solid ${C.border}` : "none" }}>
+                <div style={{ fontSize: 18 }}>{icon}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: C.accent, lineHeight: 1.2 }}>{value}</div>
+                <div style={{ fontSize: 10, color: C.muted }}>{label}</div>
+              </div>
+            ))}
+          </div>
+          {nextMatch && (
+            <div style={crd()}>
+              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8 }}>⏱ PRÓXIMO PARTIDO</div>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div style={{ fontSize: 28 }}>{flag(nextMatch.home)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{nextMatch.home}</div>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Home */}
-                  <div style={{ flex: 1, textAlign: "right" }}>
-                    <div style={{ fontSize: 22 }}>{flag(match.home)}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
-                  </div>
-
-                  {/* Scores */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    {result && result.home_score !== null && (
-                      <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, letterSpacing: 2 }}>
-                        {result.home_score} – {result.away_score}
-                      </div>
-                    )}
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      {canEdit ? (
-                        <>
-                          <input type="number" min="0" max="20" style={s.scoreInput}
-                            value={editPreds[match.id]?.home_score ?? (pred.home_score ?? "")}
-                            onChange={e => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))}
-                          />
-                          <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                          <input type="number" min="0" max="20" style={s.scoreInput}
-                            value={editPreds[match.id]?.away_score ?? (pred.away_score ?? "")}
-                            onChange={e => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <div style={s.scoreBox(pts)}>{pred.home_score ?? "—"}</div>
-                          <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                          <div style={s.scoreBox(pts)}>{pred.away_score ?? "—"}</div>
-                        </>
-                      )}
-                    </div>
-                    {!canEdit && pred.home_score !== undefined && (
-                      <div style={{ fontSize: 10, color: C.muted }}>tu predicción</div>
-                    )}
-                  </div>
-
-                  {/* Away */}
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <div style={{ fontSize: 22 }}>{flag(match.away)}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
-                  </div>
+                <div style={{ textAlign: "center", padding: "0 10px" }}>
+                  <div style={{ fontSize: 11, color: C.muted }}>{formatDate(nextMatch.date)}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.textDim, margin: "4px 0" }}>VS</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{nextMatch.venue}</div>
+                </div>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div style={{ fontSize: 28 }}>{flag(nextMatch.away)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{nextMatch.away}</div>
                 </div>
               </div>
-            )
-          })}
-        </div>
-
-        {hasUnsaved && (
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111827", borderTop: `2px solid ${C.accent}`, padding: "14px 20px", maxWidth: 860, margin: "0 auto" }}>
-            <button style={s.btn()} onClick={savePredictions} disabled={saving}>
-              {saving ? "Guardando..." : "💾 Guardar predicciones"}
-            </button>
+              {!predictions.find(p => p.player_id === user.id && p.match_id === nextMatch.id) && (
+                <button onClick={() => setTab("fixture")} style={btn("ghost", { width: "100%", marginTop: 10, fontSize: 13 })}>Cargar pronóstico →</button>
+              )}
+            </div>
+          )}
+          <div style={crd({ textAlign: "center" })}>
+            <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>🔗 Invitá a tus amigos</div>
+            <button style={btn("ghost", { width: "auto", padding: "8px 20px", fontSize: 13 })} onClick={() => { navigator.clipboard?.writeText(window.location.href); showFlash("✓ Link copiado") }}>Copiar link del prode</button>
           </div>
-        )}
-        {flash && <div style={{ position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", background: C.green, color: "#fff", borderRadius: 10, padding: "10px 24px", fontWeight: 700, fontSize: 14, zIndex: 200 }}>{flash}</div>}
+        </div>
+        <BottomNav />
+        {flash && <FlashMsg msg={flash} />}
       </div>
     )
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEADERBOARD
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (screen === "leaderboard") return (
-    <div style={s.app}>
-      <div style={s.header}>
-        <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 22 }} onClick={() => setScreen(user ? "predictions" : "home")}>←</button>
-        <div style={s.logo}>TABLA DE POSICIONES</div>
-        <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 18 }} onClick={loadData}>🔄</button>
-      </div>
-      <div style={{ padding: 16 }}>
-        {board.length === 0 ? (
-          <div style={{ ...s.card, textAlign: "center", color: C.textDim, padding: 40 }}>Todavía no hay jugadores</div>
-        ) : board.map((p, i) => (
-          <div key={p.id} style={{ ...s.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: p.id === user?.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#4a6a0a" : p.id === user?.id ? C.accent : C.border}` }}>
-            <div style={{ fontSize: i === 0 ? 30 : 22, minWidth: 36, textAlign: "center" }}>
-              {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name} {p.id === user?.id && <span style={{ fontSize: 11, color: C.accent }}>(vos)</span>}</div>
-              <div style={{ fontSize: 12, color: C.textDim }}>{p.played} partidos · {p.perfect} plenos 🔥</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: i === 0 ? C.accent : C.text }}>{p.total}</div>
-              <div style={{ fontSize: 11, color: C.muted }}>pts</div>
-            </div>
-          </div>
+  // ── FIXTURE ───────────────────────────────────────────────────────────────
+  if (tab === "fixture") return (
+    <div style={appStyle}>
+      <Header title="📅 Fixture" right={
+        hasUnsaved
+          ? <button style={btn("primary", { padding: "8px 16px", fontSize: 13 })} onClick={savePredictions} disabled={saving}>{saving ? "..." : "💾 Guardar"}</button>
+          : <button style={{ background: "none", border: "none", color: C.textDim, fontSize: 12, cursor: "pointer" }} onClick={applyDefaults}>Aplicar default</button>
+      } />
+      <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
+        {STAGES.map(st => (
+          <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
         ))}
-
-        <div style={{ ...s.card, textAlign: "center", marginTop: 8 }}>
-          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>🔗 Compartí este link con tus amigos</div>
-          <div style={{ background: "#1a2035", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: C.accent, wordBreak: "break-all", marginBottom: 10 }}>
-            {window.location.href}
-          </div>
-          <button style={{ ...s.btn("ghost"), width: "auto", padding: "8px 20px", color: C.accent }} onClick={() => { navigator.clipboard?.writeText(window.location.href); showFlash("✓ Link copiado") }}>
-            Copiar link
-          </button>
-        </div>
       </div>
-      {flash && <div style={{ position: "fixed", bottom: 30, left: "50%", transform: "translateX(-50%)", background: C.green, color: "#fff", borderRadius: 10, padding: "10px 24px", fontWeight: 700, fontSize: 14, zIndex: 200 }}>{flash}</div>}
+      {todayUnbet.length > 0 && (
+        <div style={{ background: "#1a1200", borderBottom: `1px solid ${C.accentDim}`, padding: "8px 16px", fontSize: 12, color: C.accent }}>
+          ⚠️ Tenés {todayUnbet.length} partido(s) hoy sin pronóstico
+        </div>
+      )}
+      <div style={{ padding: "12px 14px", paddingBottom: hasUnsaved ? 130 : 20 }}>
+        {matchesByStage.map(match => {
+          const locked = isLocked(match.date)
+          const result = getResult(match.id)
+          const pred = myPred(match.id)
+          const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
+          return (
+            <div key={match.id} style={crd({ border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 12 })}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {match.group && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
+                  {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+                  {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ flex: 1, textAlign: "right" }}>
+                  <div style={{ fontSize: 26 }}>{flag(match.home)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
+                  {result && result.home_score !== null && (
+                    <div style={{ fontSize: 12, color: C.accent, fontWeight: 800 }}>{result.home_score} – {result.away_score} <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>real</span></div>
+                  )}
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {!locked ? (
+                      <>
+                        <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } }))} />
+                        <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
+                        <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } }))} />
+                      </>
+                    ) : (
+                      <>
+                        <ScoreBox value={pred?.home_score} pts={pts} />
+                        <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
+                        <ScoreBox value={pred?.away_score} pts={pts} />
+                      </>
+                    )}
+                  </div>
+                  {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: C.muted }}>tu pronóstico</div>}
+                </div>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {hasUnsaved && (
+        <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#111827", borderTop: `2px solid ${C.accent}`, padding: "12px 16px", zIndex: 150 }}>
+          <button style={btn("primary", { width: "100%" })} onClick={savePredictions} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar predicciones"}</button>
+        </div>
+      )}
+      <BottomNav />
+      {flash && <FlashMsg msg={flash} />}
     </div>
   )
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ADMIN
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (screen === "admin") {
-    if (!adminMode) return (
-      <div style={s.app}>
-        <div style={s.header}>
-          <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 22 }} onClick={() => setScreen("home")}>←</button>
-          <div style={s.logo}>PANEL ADMIN</div>
-          <div style={{ width: 32 }} />
-        </div>
-        <div style={{ padding: 20 }}>
-          <div style={s.card}>
-            <div style={{ fontSize: 22, textAlign: "center", marginBottom: 14 }}>🔐</div>
-            <div style={{ fontWeight: 700, marginBottom: 14 }}>Contraseña de admin</div>
-            <input type="password" style={s.input} placeholder="Contraseña" value={adminPass}
-              onChange={e => setAdminPass(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && (adminPass === ADMIN_PASSWORD ? setAdminMode(true) : alert("Contraseña incorrecta"))} />
-            <div style={{ marginTop: 12 }}>
-              <button style={s.btn()} onClick={() => adminPass === ADMIN_PASSWORD ? setAdminMode(true) : alert("Contraseña incorrecta")}>Entrar</button>
+  // ── TABLE ─────────────────────────────────────────────────────────────────
+  if (tab === "table") return (
+    <div style={appStyle}>
+      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 18 }} onClick={loadData}>🔄</button>} />
+      <div style={{ padding: "12px 14px" }}>
+        {board.length === 0
+          ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>
+          : board.map((p, i) => (
+            <div key={p.id} style={crd({ display: "flex", alignItems: "center", gap: 12, background: p.id === user.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#5a7a0a" : p.id === user.id ? C.accent : C.border}`, padding: "12px 16px" })}>
+              <div style={{ fontSize: i < 3 ? 26 : 16, minWidth: 32, textAlign: "center", color: C.muted, fontWeight: 700 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}</div>
+              <Avatar av={p.avatar} size={38} name={p.name} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name} {p.id === user.id && <span style={{ fontSize: 11, color: C.accent }}>(vos)</span>}</div>
+                <div style={{ fontSize: 12, color: C.textDim }}>{p.played} jugados · {p.perfect} plenos 🔥</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: i === 0 ? C.accent : C.text }}>{p.total}</div>
+                <div style={{ fontSize: 11, color: C.muted }}>pts</div>
+              </div>
             </div>
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: C.muted }}>Contraseña por defecto: <strong>mundial2026</strong></div>
-          </div>
-        </div>
+          ))
+        }
       </div>
-    )
+      <BottomNav />
+    </div>
+  )
 
-    return (
-      <div style={s.app}>
-        <div style={s.header}>
-          <button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 22 }} onClick={() => { setAdminMode(false); setScreen("home") }}>←</button>
-          <div style={s.logo}>ADMIN · RESULTADOS</div>
-          <button
-            style={{ background: syncStatus === "loading" ? C.accentDim : C.accent, color: "#0a0e1a", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-            onClick={syncLive} disabled={syncStatus === "loading"}>
-            {syncStatus === "loading" ? "⏳" : syncStatus === "ok" ? "✓" : syncStatus === "error" ? "⚠️" : "⚡ API"}
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: 6, padding: "10px 16px", overflowX: "auto", background: C.card, borderBottom: `1px solid ${C.border}` }}>
-          {STAGES.map(st => <button key={st} style={s.tab(stage === st)} onClick={() => setStage(st)}>{st}</button>)}
-        </div>
-
-        <div style={{ padding: "14px 16px", paddingBottom: Object.keys(editResults).length > 0 ? 90 : 20 }}>
-          <div style={{ ...s.card, background: "#1a2035", marginBottom: 14, padding: 12 }}>
-            <div style={{ fontSize: 13, color: C.textDim }}>
-              Cargá los resultados manualmente o usá <strong style={{ color: C.accent }}>⚡ API</strong> para sync automática (disponible desde el 11 de junio).
-            </div>
-          </div>
-          {matchesByStage.map(match => {
-            const saved = getResult(match.id) || {}
-            const edited = editResults[match.id] || {}
-            const current = { ...saved, ...edited }
-            return (
-              <div key={match.id} style={{ ...s.card, padding: 14 }}>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{formatDate(match.date)} · {match.venue}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ flex: 1, textAlign: "right", fontSize: 13, fontWeight: 700 }}>{flag(match.home)} {match.home}</div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <input type="number" min="0" max="20" style={s.scoreInput}
-                      value={current.home_score ?? ""}
-                      onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))} />
-                    <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                    <input type="number" min="0" max="20" style={s.scoreInput}
-                      value={current.away_score ?? ""}
-                      onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))} />
-                  </div>
-                  <div style={{ flex: 1, textAlign: "left", fontSize: 13, fontWeight: 700 }}>{flag(match.away)} {match.away}</div>
+  // ── CHAT ──────────────────────────────────────────────────────────────────
+  if (tab === "chat") return (
+    <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
+      <Header title="💬 Chat del Prode" />
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 140 }}>
+        {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
+        {messages.map((msg, i) => {
+          const isMe = msg.player_id === user.id
+          const showName = i === 0 || messages[i - 1].player_id !== msg.player_id
+          return (
+            <div key={msg.id} style={{ marginBottom: 6, display: "flex", flexDirection: isMe ? "row-reverse" : "row", gap: 8, alignItems: "flex-end" }}>
+              {!isMe && (showName ? <Avatar av={msg.avatar} size={30} name={msg.player_name} /> : <div style={{ width: 30 }} />)}
+              <div style={{ maxWidth: "75%" }}>
+                {showName && !isMe && <div style={{ fontSize: 11, color: C.textDim, marginBottom: 2, marginLeft: 2 }}>{msg.player_name}</div>}
+                <div style={{ background: isMe ? C.accentDim : "#1a2035", color: isMe ? "#fff" : C.text, borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "8px 13px", fontSize: 14, lineHeight: 1.4, border: `1px solid ${isMe ? C.accent : C.border}` }}>
+                  {msg.message}
+                </div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 2, textAlign: isMe ? "right" : "left" }}>
+                  {new Date(msg.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
-            )
-          })}
+            </div>
+          )
+        })}
+        <div ref={chatEndRef} />
+      </div>
+      <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 150 }}>
+        <input style={inp({ flex: 1, padding: "10px 14px", fontSize: 14 })} placeholder="Escribí algo..." value={chatMsg} onChange={e => setChatMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
+        <button onClick={sendChat} style={btn("primary", { padding: "10px 18px", width: "auto" })}>➤</button>
+      </div>
+      <BottomNav />
+    </div>
+  )
+
+  // ── SETTINGS ──────────────────────────────────────────────────────────────
+  if (tab === "settings") return (
+    <div style={appStyle}>
+      <Header title="⚙️ Configuración" />
+      <div style={{ padding: "12px 14px" }}>
+        <div style={crd()}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <Avatar av={settAvatar} size={56} name={settName} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{user.name}</div>
+              <div style={{ fontSize: 12, color: C.textDim }}>Default: {user.default_score}</div>
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+            <input style={inp()} value={settName} onChange={e => setSettName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Avatar</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {AVATARS.map(av => (
+                <button key={av} onClick={() => setSettAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: settAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === av ? C.accent : C.border}` }}>{av}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Se aplica a partidos sin pronóstico cuando usás "Aplicar default" en el Fixture.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["0-0","1-0","0-1","1-1","2-1","2-0","2-2","3-0","3-1","3-2"].map(sc => (
+                <button key={sc} onClick={() => setSettDefault(sc)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", background: settDefault === sc ? C.accentDim : "#1a2035", border: `2px solid ${settDefault === sc ? C.accent : C.border}`, color: settDefault === sc ? C.accent : C.textDim }}>{sc}</button>
+              ))}
+            </div>
+          </div>
+          <button style={btn("primary", { width: "100%" })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
         </div>
 
-        {Object.keys(editResults).length > 0 && (
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111827", borderTop: `2px solid ${C.accent}`, padding: "14px 20px", maxWidth: 860, margin: "0 auto" }}>
-            <button style={s.btn()} onClick={saveResults} disabled={saving}>
-              {saving ? "Guardando..." : "💾 Guardar resultados"}
-            </button>
-          </div>
-        )}
-        {flash && <div style={{ position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", background: C.green, color: "#fff", borderRadius: 10, padding: "10px 24px", fontWeight: 700, fontSize: 14, zIndex: 200 }}>{flash}</div>}
+        {/* Admin */}
+        <div style={crd()}>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>🔧 Panel admin</div>
+          {!adminMode ? (
+            <>
+              <input type="password" style={inp({ marginBottom: 10 })} placeholder="Contraseña admin" value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta"))} />
+              <button style={btn("secondary", { width: "100%" })} onClick={() => adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta")}>Entrar como admin</button>
+              <div style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 8 }}>Default: mundial2026</div>
+            </>
+          ) : (
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} />
+          )}
+        </div>
       </div>
-    )
-  }
+      <BottomNav />
+      {flash && <FlashMsg msg={flash} />}
+    </div>
+  )
 
   return null
+}
+
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash }) {
+  const matchesByStage = MATCHES.filter(m => m.stage === stage)
+  const getResult = (id) => results.find(r => r.match_id === id)
+  const syncLive = async () => {
+    try {
+      const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=IN_PLAY,FINISHED&season=2026", { headers: { "X-Auth-Token": "demo" } })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      showFlash(data.matches?.length > 0 ? `✓ ${data.matches.length} partidos` : "Sin datos aún (empieza 11 Jun)")
+    } catch { showFlash("⚠️ API no disponible") }
+  }
+  return (
+    <div>
+      <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync automática (desde 11 Jun)</button>
+      <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
+        {STAGES.map(st => (
+          <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
+        ))}
+      </div>
+      {matchesByStage.map(match => {
+        const saved = getResult(match.id) || {}
+        const edited = editResults[match.id] || {}
+        const cur = { ...saved, ...edited }
+        return (
+          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{formatDate(match.date)}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.home_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))} />
+                <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
+                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.away_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))} />
+              </div>
+              <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.away] || "🏳️"} {match.away}</div>
+            </div>
+          </div>
+        )
+      })}
+      {Object.keys(editResults).length > 0 && (
+        <button style={{ background: C.accent, color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }} onClick={saveResults} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar resultados"}</button>
+      )}
+    </div>
+  )
 }

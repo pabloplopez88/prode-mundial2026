@@ -148,11 +148,23 @@ export default function App() {
       .map(([match_id]) => parseInt(match_id))
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
+    // Update predictions state directly without wiping editPreds (avoids visual flicker)
+    setPredictions(prev => {
+      let updated = [...prev]
+      upserts.forEach(u => {
+        const idx = updated.findIndex(p => p.player_id === u.player_id && p.match_id === u.match_id)
+        if (idx >= 0) updated[idx] = { ...updated[idx], ...u }
+        else updated.push(u)
+      })
+      toDelete.forEach(match_id => {
+        updated = updated.filter(p => !(p.player_id === user.id && p.match_id === match_id))
+      })
+      return updated
+    })
     editPredsRef.current = {}
     setEditPreds({})
     showFlash("✓ Guardado")
-    loadData()
-  }, [user, loadData])
+  }, [user])
 
   const todayUnbet = user ? MATCHES.filter(m => {
     if (!isSameDay(m.date) || isLocked(m.date)) return false

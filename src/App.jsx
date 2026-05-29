@@ -134,13 +134,21 @@ export default function App() {
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
-  const autoSavePredictions = useCallback(async (preds) => {
-    if (!user) return
-    const upserts = Object.entries(preds)
+  const editPredsRef = useRef({})
+
+  const autoSavePredictions = useCallback(async () => {
+    const preds = editPredsRef.current
+    if (!user || Object.keys(preds).length === 0) return
+    const entries = Object.entries(preds)
+    const upserts = entries
       .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score) }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
-    if (upserts.length === 0) return
-    await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    const toDelete = entries
+      .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
+      .map(([match_id]) => parseInt(match_id))
+    if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
+    editPredsRef.current = {}
     setEditPreds({})
     showFlash("✓ Guardado")
     loadData()
@@ -625,17 +633,15 @@ export default function App() {
                     {!locked ? (
                       <>
                         <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
-                          const updated = (prev) => ({ ...prev, [match.id]: { ...prev[match.id], home_score: v } })
-                          setEditPreds(updated)
+                          setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], home_score: v } }; editPredsRef.current = next; return next })
                           clearTimeout(saveTimerRef.current)
-                          saveTimerRef.current = setTimeout(() => setEditPreds(cur => { autoSavePredictions(updated(cur)); return cur }), 1500)
+                          saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                         }} />
                         <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
                         <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
-                          const updated = (prev) => ({ ...prev, [match.id]: { ...prev[match.id], away_score: v } })
-                          setEditPreds(updated)
+                        setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], away_score: v } }; editPredsRef.current = next; return next })
                           clearTimeout(saveTimerRef.current)
-                          saveTimerRef.current = setTimeout(() => setEditPreds(cur => { autoSavePredictions(updated(cur)); return cur }), 1500)
+                          saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                         }} />
                       </>
                     ) : (

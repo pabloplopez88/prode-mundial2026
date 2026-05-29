@@ -31,7 +31,7 @@ function Avatar({ av = "⚽", size = 36, name = "" }) {
 }
 
 function ScoreInput({ value, onChange }) {
-  return <input type="number" min="0" max="20" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => onChange(e.target.value)} />
+  return <input type="number" min="0" max="20" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={value ?? ""} onChange={e => onChange(e.target.value)} />
 }
 
 function ScoreBox({ value, pts }) {
@@ -118,7 +118,12 @@ export default function App() {
       setSettName(u.name); setSettAvatar(u.avatar || "⚽"); setSettDefault(u.default_score || "0-0")
     }
     const channel = supabase.channel("all_changes")
-      .on("postgres_changes", { event: "*", schema: "public" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "predictions" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
+        setMessages(prev => [...prev, payload.new])
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadData])
@@ -713,9 +718,9 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.home_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))} />
+                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={cur.home_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))} />
                 <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.away_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))} />
+                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={cur.away_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))} />
               </div>
               <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.away] || "🏳️"} {match.away}</div>
             </div>

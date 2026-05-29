@@ -45,10 +45,18 @@ function FlashMsg({ msg }) {
   return <div style={{ position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)", background: msg.startsWith("❌") ? "#7f1d1d" : "#14532d", color: "#fff", borderRadius: 10, padding: "10px 22px", fontWeight: 700, fontSize: 14, zIndex: 300, whiteSpace: "nowrap" }}>{msg}</div>
 }
 
+// ── Simple hash (not cryptographic, fine for a friends app) ──────────────────
+async function hashPassword(password) {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password + "prode2026salt")
+  const hash = await crypto.subtle.digest("SHA-256", data)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("")
+}
+
 export default function App() {
   const [tab, setTab] = useState("home")
   const [user, setUser] = useState(null)
-  const [registered, setRegistered] = useState(false)
+  const [authScreen, setAuthScreen] = useState("choose") // choose | register | login
   const [players, setPlayers] = useState([])
   const [predictions, setPredictions] = useState([])
   const [results, setResults] = useState([])
@@ -63,19 +71,33 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [chatMsg, setChatMsg] = useState("")
   const chatEndRef = useRef(null)
+
+  // register form
   const [regName, setRegName] = useState("")
+  const [regPassword, setRegPassword] = useState("")
+  const [regPassword2, setRegPassword2] = useState("")
   const [regAvatar, setRegAvatar] = useState("⚽")
   const [regDefault, setRegDefault] = useState("0-0")
   const [regError, setRegError] = useState("")
+
+  // login form
+  const [loginName, setLoginName] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
+
+  // settings form
   const [settName, setSettName] = useState("")
   const [settAvatar, setSettAvatar] = useState("⚽")
   const [settDefault, setSettDefault] = useState("0-0")
+  const [settOldPass, setSettOldPass] = useState("")
+  const [settNewPass, setSettNewPass] = useState("")
+  const [settPassError, setSettPassError] = useState("")
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
 
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }] = await Promise.all([
-      supabase.from("players").select("*"),
+      supabase.from("players").select("id,name,avatar,default_score,joined"),
       supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
       supabase.from("chat_messages").select("*").order("created_at", { ascending: true }).limit(200),
@@ -92,7 +114,7 @@ export default function App() {
     const saved = localStorage.getItem("prode_user")
     if (saved) {
       const u = JSON.parse(saved)
-      setUser(u); setRegistered(true)
+      setUser(u)
       setSettName(u.name); setSettAvatar(u.avatar || "⚽"); setSettDefault(u.default_score || "0-0")
     }
     const channel = supabase.channel("all_changes")
@@ -103,25 +125,54 @@ export default function App() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
-  const todayUnbet = registered && user ? MATCHES.filter(m => {
+  const todayUnbet = user ? MATCHES.filter(m => {
     if (!isSameDay(m.date) || isLocked(m.date)) return false
     return !predictions.find(p => p.player_id === user.id && p.match_id === m.id)
   }) : []
 
+  // ── REGISTER ──────────────────────────────────────────────────────────────
   const handleRegister = async () => {
     const name = regName.trim()
     if (!name) { setRegError("Ingresá tu nombre"); return }
+    if (!regPassword) { setRegError("Ingresá una contraseña"); return }
+    if (regPassword !== regPassword2) { setRegError("Las contraseñas no coinciden"); return }
+    if (regPassword.length < 4) { setRegError("La contraseña debe tener al menos 4 caracteres"); return }
     if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) { setRegError("Ese nombre ya existe, elegí otro"); return }
     const id = name.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now().toString(36)
-    const { error } = await supabase.from("players").insert({ id, name, avatar: regAvatar, default_score: regDefault })
+    const hashed = await hashPassword(regPassword)
+    const { error } = await supabase.from("players").insert({ id, name, avatar: regAvatar, default_score: regDefault, password: hashed })
     if (error) { setRegError("Error al registrarse, intentá de nuevo"); return }
     const me = { id, name, avatar: regAvatar, default_score: regDefault }
     localStorage.setItem("prode_user", JSON.stringify(me))
-    setUser(me); setRegistered(true)
+    setUser(me)
     setSettName(name); setSettAvatar(regAvatar); setSettDefault(regDefault)
     loadData()
   }
 
+  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  const handleLogin = async () => {
+    const name = loginName.trim()
+    if (!name || !loginPassword) { setLoginError("Completá todos los campos"); return }
+    const { data: player } = await supabase.from("players").select("*").ilike("name", name).single()
+    if (!player) { setLoginError("No existe un jugador con ese nombre"); return }
+    const hashed = await hashPassword(loginPassword)
+    if (player.password && player.password !== hashed) { setLoginError("Contraseña incorrecta"); return }
+    // allow login if no password set yet (legacy players)
+    const me = { id: player.id, name: player.name, avatar: player.avatar, default_score: player.default_score }
+    localStorage.setItem("prode_user", JSON.stringify(me))
+    setUser(me)
+    setSettName(me.name); setSettAvatar(me.avatar || "⚽"); setSettDefault(me.default_score || "0-0")
+    loadData()
+  }
+
+  // ── LOGOUT ────────────────────────────────────────────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem("prode_user")
+    setUser(null); setTab("home"); setAuthScreen("choose")
+    setLoginName(""); setLoginPassword(""); setLoginError("")
+  }
+
+  // ── SAVE PREDICTIONS ───────────────────────────────────────────────────────
   const savePredictions = async () => {
     if (!user) return
     setSaving(true)
@@ -142,6 +193,7 @@ export default function App() {
     showFlash(`✓ ${user.default_score} aplicado a ${toApply.length} partido(s)`); loadData()
   }
 
+  // ── SAVE RESULTS ───────────────────────────────────────────────────────────
   const saveResults = async () => {
     setSaving(true)
     const upserts = Object.entries(editResults).map(([match_id, sc]) => ({
@@ -154,21 +206,37 @@ export default function App() {
     setEditResults({}); setSaving(false); showFlash("✓ Resultados guardados"); loadData()
   }
 
+  // ── SAVE SETTINGS ──────────────────────────────────────────────────────────
   const saveSettings = async () => {
     if (!user) return
     setSaving(true)
-    await supabase.from("players").update({ name: settName, avatar: settAvatar, default_score: settDefault }).eq("id", user.id)
+    const updates = { name: settName, avatar: settAvatar, default_score: settDefault }
+
+    // change password if requested
+    if (settNewPass) {
+      if (settNewPass.length < 4) { setSettPassError("La contraseña debe tener al menos 4 caracteres"); setSaving(false); return }
+      if (!settOldPass) { setSettPassError("Ingresá tu contraseña actual"); setSaving(false); return }
+      const oldHashed = await hashPassword(settOldPass)
+      const { data: current } = await supabase.from("players").select("password").eq("id", user.id).single()
+      if (current?.password && current.password !== oldHashed) { setSettPassError("Contraseña actual incorrecta"); setSaving(false); return }
+      updates.password = await hashPassword(settNewPass)
+      setSettOldPass(""); setSettNewPass(""); setSettPassError("")
+    }
+
+    await supabase.from("players").update(updates).eq("id", user.id)
     const updated = { ...user, name: settName, avatar: settAvatar, default_score: settDefault }
     localStorage.setItem("prode_user", JSON.stringify(updated))
     setUser(updated); setSaving(false); showFlash("✓ Configuración guardada"); loadData()
   }
 
+  // ── SEND CHAT ──────────────────────────────────────────────────────────────
   const sendChat = async () => {
     if (!chatMsg.trim() || !user) return
     await supabase.from("chat_messages").insert({ player_id: user.id, player_name: user.name, avatar: user.avatar, message: chatMsg.trim() })
     setChatMsg("")
   }
 
+  // ── LEADERBOARD ────────────────────────────────────────────────────────────
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
     MATCHES.forEach(m => {
@@ -214,65 +282,123 @@ export default function App() {
     </div>
   )
 
-  // ── REGISTER ──────────────────────────────────────────────────────────────
-  if (!registered) return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+  // ════════════════════════════════════════════════════════════════════════════
+  // AUTH SCREENS (not logged in)
+  // ════════════════════════════════════════════════════════════════════════════
+  if (!user) {
+    const AuthHeader = () => (
       <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "32px 20px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 52 }}>🏆</div>
         <div style={{ fontSize: 24, fontWeight: 800, color: C.accent, marginTop: 8 }}>PRODE MUNDIAL 2026</div>
         <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>USA · México · Canadá · 11 Jun – 19 Jul</div>
       </div>
-      <div style={{ padding: 20 }}>
-        <div style={crd({ background: "#1a2035", marginBottom: 16 })}>
-          <div style={{ color: C.accent, fontWeight: 700, marginBottom: 8 }}>📊 Sistema de puntos</div>
-          <div style={{ fontSize: 13, color: C.textDim, lineHeight: 2.1 }}>
-            +3 pts — Acertás ganador o empate<br />
-            +1 pt &nbsp;— Acertás goles del local<br />
-            +1 pt &nbsp;— Acertás goles del visitante<br />
-            <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
-          </div>
-        </div>
-        <div style={crd()}>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>👋 Anotate al prode</div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
-            <input style={inp()} placeholder="Nombre o apodo" value={regName} onChange={e => { setRegName(e.target.value); setRegError("") }} onKeyDown={e => e.key === "Enter" && handleRegister()} autoFocus />
-            {regError && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{regError}</div>}
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Elegí tu avatar</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {AVATARS.map(av => (
-                <button key={av} onClick={() => setRegAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: regAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${regAvatar === av ? C.accent : C.border}` }}>{av}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto <span style={{ color: C.muted }}>(si olvidás cargar)</span></div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["0-0","1-0","0-1","1-1","2-1","2-0","2-2"].map(sc => (
-                <button key={sc} onClick={() => setRegDefault(sc)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", background: regDefault === sc ? C.accentDim : "#1a2035", border: `2px solid ${regDefault === sc ? C.accent : C.border}`, color: regDefault === sc ? C.accent : C.textDim }}>{sc}</button>
-              ))}
-            </div>
-          </div>
-          <button style={btn("primary", { width: "100%" })} onClick={handleRegister}>Entrar al prode ⚡</button>
-        </div>
-        {players.length > 0 && (
-          <div style={crd()}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados ({players.length})</div>
-            {players.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
-                <Avatar av={p.avatar} size={32} name={p.name} />
-                <div style={{ fontSize: 14 }}>{p.name}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
+    )
 
-  // ── HOME ──────────────────────────────────────────────────────────────────
+    // CHOOSE: register or login
+    if (authScreen === "choose") return (
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+        <AuthHeader />
+        <div style={{ padding: 20 }}>
+          <div style={crd({ background: "#1a2035", marginBottom: 16 })}>
+            <div style={{ color: C.accent, fontWeight: 700, marginBottom: 8 }}>📊 Sistema de puntos</div>
+            <div style={{ fontSize: 13, color: C.textDim, lineHeight: 2.1 }}>
+              +3 pts — Acertás ganador o empate<br />
+              +1 pt &nbsp;— Acertás goles del local<br />
+              +1 pt &nbsp;— Acertás goles del visitante<br />
+              <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
+            </div>
+          </div>
+          <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>
+            Anotarme al prode ⚡
+          </button>
+          <button style={btn("ghost", { width: "100%", padding: "14px" })} onClick={() => setAuthScreen("login")}>
+            Ya tengo cuenta — Ingresar
+          </button>
+          {players.length > 0 && (
+            <div style={crd({ marginTop: 16 })}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados ({players.length})</div>
+              {players.map(p => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <Avatar av={p.avatar} size={32} name={p.name} />
+                  <div style={{ fontSize: 14 }}>{p.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+
+    // REGISTER
+    if (authScreen === "register") return (
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+        <AuthHeader />
+        <div style={{ padding: 20 }}>
+          <div style={crd()}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>👋 Crear cuenta</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+              <input style={inp()} placeholder="Nombre o apodo" value={regName} onChange={e => { setRegName(e.target.value); setRegError("") }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Contraseña</div>
+              <input type="password" style={inp()} placeholder="Mínimo 4 caracteres" value={regPassword} onChange={e => { setRegPassword(e.target.value); setRegError("") }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Repetir contraseña</div>
+              <input type="password" style={inp()} placeholder="Repetí la contraseña" value={regPassword2} onChange={e => { setRegPassword2(e.target.value); setRegError("") }} onKeyDown={e => e.key === "Enter" && handleRegister()} />
+            </div>
+            {regError && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{regError}</div>}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Elegí tu avatar</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {AVATARS.map(av => (
+                  <button key={av} onClick={() => setRegAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: regAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${regAvatar === av ? C.accent : C.border}` }}>{av}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto <span style={{ color: C.muted }}>(si olvidás cargar)</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["0-0","1-0","0-1","1-1","2-1","2-0","2-2"].map(sc => (
+                  <button key={sc} onClick={() => setRegDefault(sc)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", background: regDefault === sc ? C.accentDim : "#1a2035", border: `2px solid ${regDefault === sc ? C.accent : C.border}`, color: regDefault === sc ? C.accent : C.textDim }}>{sc}</button>
+                ))}
+              </div>
+            </div>
+            <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={handleRegister}>Crear cuenta ⚡</button>
+            <button style={btn("ghost", { width: "100%" })} onClick={() => { setAuthScreen("choose"); setRegError("") }}>← Volver</button>
+          </div>
+        </div>
+      </div>
+    )
+
+    // LOGIN
+    if (authScreen === "login") return (
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+        <AuthHeader />
+        <div style={{ padding: 20 }}>
+          <div style={crd()}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>🔐 Ingresar</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+              <input style={inp()} placeholder="Nombre o apodo" value={loginName} onChange={e => { setLoginName(e.target.value); setLoginError("") }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Contraseña</div>
+              <input type="password" style={inp()} placeholder="Tu contraseña" value={loginPassword} onChange={e => { setLoginPassword(e.target.value); setLoginError("") }} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+            </div>
+            {loginError && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{loginError}</div>}
+            <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={handleLogin}>Entrar</button>
+            <button style={btn("ghost", { width: "100%" })} onClick={() => { setAuthScreen("choose"); setLoginError("") }}>← Volver</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // HOME
+  // ════════════════════════════════════════════════════════════════════════════
   if (tab === "home") {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
@@ -281,7 +407,7 @@ export default function App() {
       <div style={appStyle}>
         <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "20px 18px 16px", display: "flex", alignItems: "center", gap: 14 }}>
           <Avatar av={user.avatar} size={52} name={user.name} />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 800 }}>¡Hola, {user.name}!</div>
             <div style={{ fontSize: 13, color: C.textDim }}>Mundial 2026 · {players.length} participantes</div>
           </div>
@@ -339,7 +465,9 @@ export default function App() {
     )
   }
 
-  // ── FIXTURE ───────────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════════
+  // FIXTURE
+  // ════════════════════════════════════════════════════════════════════════════
   if (tab === "fixture") return (
     <div style={appStyle}>
       <Header title="📅 Fixture" right={
@@ -418,7 +546,9 @@ export default function App() {
     </div>
   )
 
-  // ── TABLE ─────────────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════════
+  // TABLE
+  // ════════════════════════════════════════════════════════════════════════════
   if (tab === "table") return (
     <div style={appStyle}>
       <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 18 }} onClick={loadData}>🔄</button>} />
@@ -445,7 +575,9 @@ export default function App() {
     </div>
   )
 
-  // ── CHAT ──────────────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════════
+  // CHAT
+  // ════════════════════════════════════════════════════════════════════════════
   if (tab === "chat") return (
     <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
@@ -479,7 +611,9 @@ export default function App() {
     </div>
   )
 
-  // ── SETTINGS ──────────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════════
+  // SETTINGS
+  // ════════════════════════════════════════════════════════════════════════════
   if (tab === "settings") return (
     <div style={appStyle}>
       <Header title="⚙️ Configuración" />
@@ -492,11 +626,11 @@ export default function App() {
               <div style={{ fontSize: 12, color: C.textDim }}>Default: {user.default_score}</div>
             </div>
           </div>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
             <input style={inp()} value={settName} onChange={e => setSettName(e.target.value)} />
           </div>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Avatar</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {AVATARS.map(av => (
@@ -504,7 +638,7 @@ export default function App() {
               ))}
             </div>
           </div>
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto</div>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Se aplica a partidos sin pronóstico cuando usás "Aplicar default" en el Fixture.</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -513,7 +647,17 @@ export default function App() {
               ))}
             </div>
           </div>
-          <button style={btn("primary", { width: "100%" })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
+
+          {/* Change password */}
+          <div style={{ marginBottom: 18, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Cambiar contraseña <span style={{ color: C.muted }}>(opcional)</span></div>
+            <input type="password" style={inp({ marginBottom: 8 })} placeholder="Contraseña actual" value={settOldPass} onChange={e => { setSettOldPass(e.target.value); setSettPassError("") }} />
+            <input type="password" style={inp()} placeholder="Nueva contraseña" value={settNewPass} onChange={e => { setSettNewPass(e.target.value); setSettPassError("") }} />
+            {settPassError && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{settPassError}</div>}
+          </div>
+
+          <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
+          <button style={btn("ghost", { width: "100%" })} onClick={handleLogout}>Cerrar sesión</button>
         </div>
 
         {/* Admin */}

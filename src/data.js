@@ -1,5 +1,5 @@
 export const MATCHES = [
-  { id: 1, home: "México", away: "Sudáfrica", group: "A", date: "2026-05-29T17:44", venue: "Ciudad de México", stage: "Grupos" },
+  { id: 1, home: "México", away: "Sudáfrica", group: "A", date: "2026-06-11T16:00", venue: "Ciudad de México", stage: "Grupos" },
   { id: 2, home: "Corea del Sur", away: "Rep. Checa", group: "A", date: "2026-06-11T23:00", venue: "Guadalajara", stage: "Grupos" },
   { id: 3, home: "Canadá", away: "Bosnia y Herz.", group: "B", date: "2026-06-12T16:00", venue: "Toronto", stage: "Grupos" },
   { id: 4, home: "Estados Unidos", away: "Paraguay", group: "D", date: "2026-06-12T22:00", venue: "Los Ángeles", stage: "Grupos" },

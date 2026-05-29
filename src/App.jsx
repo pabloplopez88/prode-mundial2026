@@ -441,14 +441,10 @@ export default function App() {
   if (tab === "home") {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
-    // Find the next day that has matches (today if there are, otherwise next match day)
-    const nextMatchDay = MATCHES.find(m => new Date(m.date) > new Date())
-    const targetDate = nextMatchDay ? new Date(nextMatchDay.date) : null
-    const todayMatches = MATCHES.filter(m => {
-      if (!targetDate) return false
-      const d = new Date(m.date)
-      return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth() && d.getDate() === targetDate.getDate()
-    })
+    // Partidos de hoy (fecha real)
+    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+    // Próximos 6 partidos que no son de hoy y aún no arrancaron
+    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date) > new Date()).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -478,10 +474,11 @@ export default function App() {
               </div>
             ))}
           </div>
-          {todayMatches.length > 0 && (
-            <div style={crd({ padding: 0, overflow: "hidden" })}>
-              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
-              {todayMatches.map((m, i) => {
+          <div style={crd({ padding: 0, overflow: "hidden" })}>
+            <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
+            {todayMatches.length === 0
+              ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, campión 😎</div>
+              : todayMatches.map((m, i) => {
                 const result = getResult(m.id)
                 const pred = myPred(m.id)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
@@ -504,6 +501,38 @@ export default function App() {
                         {pts !== null && <span style={{ color: pts > 0 ? C.green : C.muted, marginLeft: 4 }}>+{pts}pts</span>}
                       </div>}
                       {!locked && !hasPred && <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>sin pronóstico</div>}
+                    </div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+
+          {upcomingMatches.length > 0 && (
+            <div style={crd({ padding: 0, overflow: "hidden" })}>
+              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
+              {upcomingMatches.map((m, i) => {
+                const result = getResult(m.id)
+                const pred = myPred(m.id)
+                const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
+                const locked = isLocked(m.date)
+                const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+                return (
+                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, textAlign: "right" }}>
+                      <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
+                    </div>
+                    <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{formatDate(m.date)}</div>
+                      <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
+                      {hasPred
+                        ? <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{pred.home_score} : {pred.away_score}</div>
+                        : <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>sin pronóstico</div>
+                      }
                     </div>
                     <div style={{ flex: 1, textAlign: "left" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.away)}</div>

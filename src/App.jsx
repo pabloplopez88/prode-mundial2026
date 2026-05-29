@@ -441,7 +441,8 @@ export default function App() {
   if (tab === "home") {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
-    const nextMatch = MATCHES.find(m => !isLocked(m.date))
+    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+    const nextMatch = !todayMatches.length ? MATCHES.find(m => new Date(m.date) > new Date()) : null
     return (
       <div style={appStyle}>
         <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "20px 18px 16px", display: "flex", alignItems: "center", gap: 14 }}>
@@ -470,6 +471,42 @@ export default function App() {
               </div>
             ))}
           </div>
+          {todayMatches.length > 0 && (
+            <div style={crd({ padding: 0, overflow: "hidden" })}>
+              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
+              {todayMatches.map((m, i) => {
+                const result = getResult(m.id)
+                const pred = myPred(m.id)
+                const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
+                const locked = isLocked(m.date)
+                const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+                return (
+                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, textAlign: "right" }}>
+                      <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
+                    </div>
+                    <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{formatTime(m.date)}</div>
+                      {result && result.home_score !== null
+                        ? <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{result.home_score} – {result.away_score}</div>
+                        : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
+                      }
+                      {pred && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted, marginTop: 2 }}>
+                        {pred.home_score} : {pred.away_score} {pred.isDefault ? "(def)" : ""}
+                        {pts !== null && <span style={{ color: pts > 0 ? C.green : C.muted, marginLeft: 4 }}>+{pts}pts</span>}
+                      </div>}
+                      {!locked && !hasPred && <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>sin pronóstico</div>}
+                    </div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           {nextMatch && (
             <div style={crd()}>
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8 }}>⏱ PRÓXIMO PARTIDO</div>

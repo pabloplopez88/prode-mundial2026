@@ -31,7 +31,7 @@ function Avatar({ av = "⚽", size = 36, name = "" }) {
 }
 
 function ScoreInput({ value, onChange }) {
-  return <input type="number" min="0" max="20" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={value ?? ""} onChange={e => onChange(e.target.value)} />
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
 }
 
 function ScoreBox({ value, pts }) {
@@ -65,6 +65,7 @@ export default function App() {
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -81,6 +82,7 @@ export default function App() {
   const [regError, setRegError] = useState("")
 
   // login form
+  const [quickLoginPlayer, setQuickLoginPlayer] = useState(null)
   const [loginName, setLoginName] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [loginError, setLoginError] = useState("")
@@ -130,6 +132,20 @@ export default function App() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
+  // Auto-save predictions after 1.5s of inactivity
+  const saveTimerRef = useRef(null)
+  const autoSavePredictions = useCallback(async (preds) => {
+    if (!user) return
+    const upserts = Object.entries(preds)
+      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score) }))
+      .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
+    if (upserts.length === 0) return
+    await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    setEditPreds({})
+    showFlash("✓ Guardado")
+    loadData()
+  }, [user, loadData])
+
   const todayUnbet = user ? MATCHES.filter(m => {
     if (!isSameDay(m.date) || isLocked(m.date)) return false
     return !predictions.find(p => p.player_id === user.id && p.match_id === m.id)
@@ -175,6 +191,7 @@ export default function App() {
     localStorage.removeItem("prode_user")
     setUser(null); setTab("home"); setAuthScreen("choose")
     setLoginName(""); setLoginPassword(""); setLoginError("")
+    setShowLogoutConfirm(false)
   }
 
   // ── SAVE PREDICTIONS ───────────────────────────────────────────────────────
@@ -321,11 +338,15 @@ export default function App() {
           </button>
           {players.length > 0 && (
             <div style={crd({ marginTop: 16 })}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados ({players.length})</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados — tocá tu nombre para entrar</div>
               {players.map(p => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
-                  <Avatar av={p.avatar} size={32} name={p.name} />
-                  <div style={{ fontSize: 14 }}>{p.name}</div>
+                <div key={p.id} onClick={() => { setQuickLoginPlayer(p); setLoginName(p.name); setLoginPassword(""); setLoginError(""); setAuthScreen("login") }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, cursor: "pointer", marginBottom: 2, transition: "background 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#1a2035"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <Avatar av={p.avatar} size={36} name={p.name} />
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</div>
+                  <div style={{ marginLeft: "auto", fontSize: 18, color: C.accentDim }}>→</div>
                 </div>
               ))}
             </div>
@@ -383,18 +404,31 @@ export default function App() {
         <AuthHeader />
         <div style={{ padding: 20 }}>
           <div style={crd()}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>🔐 Ingresar</div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
-              <input style={inp()} placeholder="Nombre o apodo" value={loginName} onChange={e => { setLoginName(e.target.value); setLoginError("") }} />
-            </div>
+            {quickLoginPlayer ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+                <Avatar av={quickLoginPlayer.avatar} size={48} name={quickLoginPlayer.name} />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>{quickLoginPlayer.name}</div>
+                  <div style={{ fontSize: 12, color: C.textDim }}>Ingresá tu contraseña</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>🔐 Ingresar</div>
+            )}
+            {!quickLoginPlayer && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+                <input style={inp()} placeholder="Nombre o apodo" value={loginName} onChange={e => { setLoginName(e.target.value); setLoginError("") }} />
+              </div>
+            )}
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Contraseña</div>
-              <input type="password" style={inp()} placeholder="Tu contraseña" value={loginPassword} onChange={e => { setLoginPassword(e.target.value); setLoginError("") }} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+              <input type="password" style={inp()} placeholder="Tu contraseña" value={loginPassword} autoFocus
+                onChange={e => { setLoginPassword(e.target.value); setLoginError("") }} onKeyDown={e => e.key === "Enter" && handleLogin()} />
             </div>
             {loginError && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{loginError}</div>}
             <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={handleLogin}>Entrar</button>
-            <button style={btn("ghost", { width: "100%" })} onClick={() => { setAuthScreen("choose"); setLoginError("") }}>← Volver</button>
+            <button style={btn("ghost", { width: "100%" })} onClick={() => { setAuthScreen("choose"); setQuickLoginPlayer(null); setLoginError("") }}>← Volver</button>
           </div>
         </div>
       </div>
@@ -476,9 +510,7 @@ export default function App() {
   if (tab === "fixture") return (
     <div style={appStyle}>
       <Header title="📅 Fixture" right={
-        hasUnsaved
-          ? <button style={btn("primary", { padding: "8px 16px", fontSize: 13 })} onClick={savePredictions} disabled={saving}>{saving ? "..." : "💾 Guardar"}</button>
-          : <button style={{ background: "none", border: "none", color: C.textDim, fontSize: 12, cursor: "pointer" }} onClick={applyDefaults}>Aplicar default</button>
+        <button style={{ background: "none", border: "none", color: C.textDim, fontSize: 12, cursor: "pointer" }} onClick={applyDefaults}>Aplicar default</button>
       } />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
         {STAGES.map(st => (
@@ -518,9 +550,19 @@ export default function App() {
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     {!locked ? (
                       <>
-                        <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } }))} />
+                        <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
+                          const updated = (prev) => ({ ...prev, [match.id]: { ...prev[match.id], home_score: v } })
+                          setEditPreds(updated)
+                          clearTimeout(saveTimerRef.current)
+                          saveTimerRef.current = setTimeout(() => setEditPreds(cur => { autoSavePredictions(updated(cur)); return cur }), 1500)
+                        }} />
                         <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                        <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => setEditPreds(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } }))} />
+                        <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
+                          const updated = (prev) => ({ ...prev, [match.id]: { ...prev[match.id], away_score: v } })
+                          setEditPreds(updated)
+                          clearTimeout(saveTimerRef.current)
+                          saveTimerRef.current = setTimeout(() => setEditPreds(cur => { autoSavePredictions(updated(cur)); return cur }), 1500)
+                        }} />
                       </>
                     ) : (
                       <>
@@ -541,11 +583,6 @@ export default function App() {
           )
         })}
       </div>
-      {hasUnsaved && (
-        <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#111827", borderTop: `2px solid ${C.accent}`, padding: "12px 16px", zIndex: 150 }}>
-          <button style={btn("primary", { width: "100%" })} onClick={savePredictions} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar predicciones"}</button>
-        </div>
-      )}
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>
@@ -662,7 +699,7 @@ export default function App() {
           </div>
 
           <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
-          <button style={btn("ghost", { width: "100%" })} onClick={handleLogout}>Cerrar sesión</button>
+          <button style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setShowLogoutConfirm(true)}>🚪 Cerrar sesión</button>
         </div>
 
         {/* Admin */}
@@ -683,10 +720,25 @@ export default function App() {
       </div>
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
+      {showLogoutConfirm && <LogoutConfirm onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} />}
     </div>
   )
 
   return null
+}
+
+function LogoutConfirm({ onConfirm, onCancel }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: "#111827", border: "1px solid #1e2940", borderRadius: 16, padding: 28, maxWidth: 320, width: "100%", textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🚪</div>
+        <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Cerrar sesión?</div>
+        <div style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>Vas a tener que volver a ingresar con tu contraseña.</div>
+        <button onClick={onConfirm} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 10, padding: "12px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer", width: "100%", marginBottom: 10 }}>Sí, salir</button>
+        <button onClick={onCancel} style={{ background: "transparent", color: "#94a3b8", border: "1px solid #1e2940", borderRadius: 10, padding: "12px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer", width: "100%" }}>Cancelar</button>
+      </div>
+    </div>
+  )
 }
 
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash }) {
@@ -718,9 +770,9 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={cur.home_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: e.target.value } }))} />
+                <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.home_score ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }} />
                 <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                <input type="number" min="0" max="20" style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none", MozAppearance: "textfield", WebkitAppearance: "none", appearance: "none" }} value={cur.away_score ?? ""} onChange={e => setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: e.target.value } }))} />
+                <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.away_score ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }} />
               </div>
               <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.away] || "🏳️"} {match.away}</div>
             </div>

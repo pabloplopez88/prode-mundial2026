@@ -441,8 +441,15 @@ export default function App() {
   if (tab === "home") {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
-    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
-    const nextMatch = !todayMatches.length ? MATCHES.find(m => new Date(m.date) > new Date()) : null
+    // Find the next day that has matches (today if there are, otherwise next match day)
+    const nextMatchDay = MATCHES.find(m => new Date(m.date) > new Date())
+    const targetDate = nextMatchDay ? new Date(nextMatchDay.date) : null
+    const todayMatches = MATCHES.filter(m => {
+      if (!targetDate) return false
+      const d = new Date(m.date)
+      return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth() && d.getDate() === targetDate.getDate()
+    })
+    const nextMatch = null
     return (
       <div style={appStyle}>
         <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "20px 18px 16px", display: "flex", alignItems: "center", gap: 14 }}>

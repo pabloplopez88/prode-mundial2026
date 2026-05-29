@@ -206,14 +206,7 @@ export default function App() {
     showFlash("✓ Predicciones guardadas"); loadData()
   }
 
-  const applyDefaults = async () => {
-    if (!user) return
-    const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
-    const toApply = MATCHES.filter(m => !isLocked(m.date) && !predictions.find(p => p.player_id === user.id && p.match_id === m.id))
-    if (toApply.length === 0) { showFlash("No hay partidos pendientes"); return }
-    await supabase.from("predictions").upsert(toApply.map(m => ({ player_id: user.id, match_id: m.id, home_score: dh, away_score: da })), { onConflict: "player_id,match_id" })
-    showFlash(`✓ ${user.default_score} aplicado a ${toApply.length} partido(s)`); loadData()
-  }
+
 
   // ── SAVE RESULTS ───────────────────────────────────────────────────────────
   const saveResults = async () => {
@@ -272,7 +265,14 @@ export default function App() {
     return { ...p, total, played, perfect }
   }).sort((a, b) => b.total - a.total)
 
-  const myPred = (matchId) => ({ ...predictions.find(p => p.player_id === user?.id && p.match_id === matchId), ...editPreds[matchId] })
+  const myPred = (matchId) => {
+    const saved = predictions.find(p => p.player_id === user?.id && p.match_id === matchId)
+    const edited = editPreds[matchId]
+    if (saved || edited) return { ...saved, ...edited }
+    // Fall back to default score for display and points calculation
+    const [dh, da] = (user?.default_score || "0-0").split("-").map(Number)
+    return { home_score: dh, away_score: da, isDefault: true }
+  }
   const getResult = (matchId) => results.find(r => r.match_id === matchId)
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
   const hasUnsaved = Object.keys(editPreds).length > 0
@@ -509,9 +509,7 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (tab === "fixture") return (
     <div style={appStyle}>
-      <Header title="📅 Fixture" right={
-        <button style={{ background: "none", border: "none", color: C.textDim, fontSize: 12, cursor: "pointer" }} onClick={applyDefaults}>Aplicar default</button>
-      } />
+      <Header title="📅 Fixture" />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
         {STAGES.map(st => (
           <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
@@ -572,7 +570,7 @@ export default function App() {
                       </>
                     )}
                   </div>
-                  {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: C.muted }}>tu pronóstico</div>}
+                  {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted }}>{pred.isDefault ? 'default' : 'tu pronóstico'}</div>}
                 </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
                   <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
@@ -682,11 +680,21 @@ export default function App() {
           </div>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto</div>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Se aplica a partidos sin pronóstico cuando usás "Aplicar default" en el Fixture.</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["0-0","1-0","0-1","1-1","2-1","2-0","2-2","3-0","3-1","3-2"].map(sc => (
-                <button key={sc} onClick={() => setSettDefault(sc)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", background: settDefault === sc ? C.accentDim : "#1a2035", border: `2px solid ${settDefault === sc ? C.accent : C.border}`, color: settDefault === sc ? C.accent : C.textDim }}>{sc}</button>
-              ))}
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Si no cargás un pronóstico, este resultado se usa automáticamente para el cálculo de puntos.</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 44 }}>Local</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[0] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault(v + "-" + (settDefault.split("-")[1] ?? "0")) }}
+              />
+              <span style={{ fontSize: 22, color: C.muted, fontWeight: 900 }}>:</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[1] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault((settDefault.split("-")[0] ?? "0") + "-" + v) }}
+              />
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 56 }}>Visitante</span>
             </div>
           </div>
 
@@ -711,7 +719,7 @@ export default function App() {
                 onChange={e => setAdminPass(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && (adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta"))} />
               <button style={btn("secondary", { width: "100%" })} onClick={() => adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta")}>Entrar como admin</button>
-              <div style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 8 }}>Default: mundial2026</div>
+
             </>
           ) : (
             <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} />

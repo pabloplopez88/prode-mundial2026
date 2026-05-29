@@ -265,13 +265,16 @@ export default function App() {
     return { ...p, total, played, perfect }
   }).sort((a, b) => b.total - a.total)
 
-  const myPred = (matchId) => {
+  const myPred = (matchId, locked = false) => {
     const saved = predictions.find(p => p.player_id === user?.id && p.match_id === matchId)
     const edited = editPreds[matchId]
     if (saved || edited) return { ...saved, ...edited }
-    // Fall back to default score for display and points calculation
-    const [dh, da] = (user?.default_score || "0-0").split("-").map(Number)
-    return { home_score: dh, away_score: da, isDefault: true }
+    // Only fall back to default when match is already locked (started)
+    if (locked) {
+      const [dh, da] = (user?.default_score || "0-0").split("-").map(Number)
+      return { home_score: dh, away_score: da, isDefault: true }
+    }
+    return {}
   }
   const getResult = (matchId) => results.find(r => r.match_id === matchId)
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
@@ -479,10 +482,10 @@ export default function App() {
             {todayMatches.length === 0
               ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, campión 😎</div>
               : todayMatches.map((m, i) => {
+                const locked = isLocked(m.id)
                 const result = getResult(m.id)
-                const pred = myPred(m.id)
+                const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const locked = isLocked(m.date)
                 const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
@@ -515,10 +518,10 @@ export default function App() {
             <div style={crd({ padding: 0, overflow: "hidden" })}>
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
               {upcomingMatches.map((m, i) => {
+                const locked = isLocked(m.id)
                 const result = getResult(m.id)
-                const pred = myPred(m.id)
+                const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const locked = isLocked(m.date)
                 const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
@@ -597,7 +600,7 @@ export default function App() {
         {matchesByStage.map(match => {
           const locked = isLocked(match.date)
           const result = getResult(match.id)
-          const pred = myPred(match.id)
+          const pred = myPred(match.id, locked)
           const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
           return (
             <div key={match.id} style={crd({ border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 12 })}>

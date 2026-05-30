@@ -593,6 +593,8 @@ export default function App() {
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
+                const matchStart = new Date(m.date)
+                const inPlay = locked && new Date() < new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
                 const inProgress = locked && result && result.home_score !== null
                 const finished = inProgress // for now same signal; could add status field later
                 const showDefault = locked && !hasPred
@@ -604,9 +606,12 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{formatTime(m.date)}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                        {formatTime(m.date)}
+                        {inPlay && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
+                      </div>
                       {result && result.home_score !== null
-                        ? <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{result.home_score} – {result.away_score}</div>
+                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
                       {/* Before match: show "sin pronóstico" only if not locked */}

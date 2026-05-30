@@ -68,7 +68,3 @@ Los participantes pueden registrarse, cargar sus pronósticos para cada partido,
 ## ⚠️ Nota
 
 Este proyecto fue desarrollado como una aplicación privada para jugar un prode entre amigos durante el Mundial FIFA 2026.
-
----
-
-## ⚽ Que gane el que más sabe de fútbol... o el que más suerte tenga.

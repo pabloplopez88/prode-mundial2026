@@ -640,7 +640,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {match.group && gruposView === "grupo" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
+              {match.group && stage === "Grupos" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
               {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>

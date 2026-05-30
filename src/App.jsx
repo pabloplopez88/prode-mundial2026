@@ -606,7 +606,7 @@ export default function App() {
                     <div style={{ textAlign: "center", minWidth: 110 }}>
                       <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{formatTime(m.date)}</div>
                       {result && result.home_score !== null
-                        ? <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{result.home_score} – {result.away_score}</div>
+                        ? <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
                       {/* Before match: show "sin pronóstico" only if not locked */}

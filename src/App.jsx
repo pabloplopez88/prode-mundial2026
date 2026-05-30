@@ -116,8 +116,18 @@ export default function App() {
     const saved = localStorage.getItem("prode_user")
     if (saved) {
       const u = JSON.parse(saved)
-      setUser(u)
-      setSettName(u.name); setSettAvatar(u.avatar || "⚽"); setSettDefault(u.default_score || "0-0")
+      // Always refresh user profile from Supabase on load
+      supabase.from("players").select("*").eq("id", u.id).single().then(({ data: fresh }) => {
+        if (fresh) {
+          const me = { id: fresh.id, name: fresh.name, avatar: fresh.avatar, default_score: fresh.default_score }
+          localStorage.setItem("prode_user", JSON.stringify(me))
+          setUser(me)
+          setSettName(me.name); setSettAvatar(me.avatar || "⚽"); setSettDefault(me.default_score || "0-0")
+        } else {
+          // Player deleted, log out
+          localStorage.removeItem("prode_user")
+        }
+      })
     }
     const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "players" }, () => loadData())

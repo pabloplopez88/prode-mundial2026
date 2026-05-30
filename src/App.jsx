@@ -116,7 +116,7 @@ export default function App() {
         const u = JSON.parse(savedUser)
         const myPreds = {}
         pr.filter(p => p.player_id === u.id).forEach(p => {
-          myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? "") }
+          myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? ""), isDefault: p.is_default || false }
         })
         setEditPreds(myPreds)
         editPredsRef.current = myPreds
@@ -166,14 +166,14 @@ export default function App() {
       if (toSave.length === 0) return
       const upserts = toSave.map(m => ({
         player_id: user.id, match_id: m.id,
-        home_score: dh, away_score: da
+        home_score: dh, away_score: da, is_default: true
       }))
       await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
       // Update editPreds so UI reflects saved defaults
       setEditPreds(prev => {
         const next = { ...prev }
         toSave.forEach(m => {
-          if (!next[m.id]) next[m.id] = { home_score: String(dh), away_score: String(da) }
+          if (!next[m.id]) next[m.id] = { home_score: String(dh), away_score: String(da), isDefault: true }
         })
         editPredsRef.current = next
         return next
@@ -380,11 +380,6 @@ export default function App() {
   const myPred = (matchId, locked = false) => {
     const edited = editPreds[matchId]
     if (edited) return edited
-    // Only fall back to default when match is already locked (started)
-    if (locked) {
-      const [dh, da] = (user?.default_score || "0-0").split("-").map(Number)
-      return { home_score: dh, away_score: da, isDefault: true }
-    }
     return {}
   }
   const getResult = (matchId) => results.find(r => r.match_id === matchId)

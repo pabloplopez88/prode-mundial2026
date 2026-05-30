@@ -364,6 +364,10 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
+      // Only count finished matches (more than 2hs since kickoff)
+      const matchStart = new Date(m.date)
+      const finished = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
+      if (!finished) return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
       const pts = calcPoints(pred, r)
@@ -633,7 +637,7 @@ export default function App() {
                           <div style={{ fontSize: 15, fontWeight: 800, color: showDefault ? C.muted : C.accent }}>
                             {effectivePred.home_score} : {effectivePred.away_score}
                           </div>
-                          {pts !== null && (
+                          {pts !== null && !inPlay && (
                             <div style={{ fontSize: 11, color: pts > 0 ? C.green : C.muted, fontWeight: 700 }}>+{pts} pts</div>
                           )}
                         </div>
@@ -753,7 +757,7 @@ export default function App() {
               {match.group && match.stage === "Grupos" && gruposView === "fecha" && (
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
-              {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+              {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {locked && !result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
               {locked && result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}

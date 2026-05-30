@@ -159,9 +159,12 @@ export default function App() {
     if (!user) return
     const saveDefaultsForLockedMatches = async () => {
       const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
+      // Only save default if match is locked AND there's no prediction AT ALL in Supabase
+      const { data: existing } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
+      const existingIds = new Set((existing || []).map(p => p.match_id))
       const toSave = MATCHES.filter(m => {
         if (!isLocked(m.date)) return false
-        return !hasPrediction(m.id)
+        return !existingIds.has(m.id) // only if not in DB at all
       })
       if (toSave.length === 0) return
       const upserts = toSave.map(m => ({
@@ -169,7 +172,6 @@ export default function App() {
         home_score: dh, away_score: da, is_default: true
       }))
       await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
-      // Update editPreds so UI reflects saved defaults
       setEditPreds(prev => {
         const next = { ...prev }
         toSave.forEach(m => {

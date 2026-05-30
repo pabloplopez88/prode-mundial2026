@@ -68,6 +68,8 @@ export default function App() {
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
+  const [registrationOpen, setRegistrationOpen] = useState(true)
+  const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
@@ -145,6 +147,14 @@ export default function App() {
         }
       })
     }
+    // Load registration cutoff from config
+    supabase.from("config").select("value").eq("key", "registration_closes_at").single().then(({ data }) => {
+      if (data?.value) {
+        setRegClosesAt(data.value)
+        setRegistrationOpen(new Date() < new Date(data.value))
+      }
+    })
+
     const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
@@ -223,22 +233,6 @@ export default function App() {
   }, [])
 
   const chatScrollRef = useRef(null)
-  const chatScrollCallback = (el) => {
-    chatScrollRef.current = el
-    if (el) el.scrollTop = el.scrollHeight
-  }
-  const scrollChatToBottom = () => {
-    if (chatScrollRef.current)
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
-  }
-  useEffect(() => { scrollChatToBottom() }, [messages])
-  useEffect(() => {
-    if (tab === "chat") {
-      scrollChatToBottom()
-      setTimeout(scrollChatToBottom, 100)
-      setTimeout(scrollChatToBottom, 300)
-    }
-  }, [tab])
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
@@ -454,9 +448,14 @@ export default function App() {
               <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
             </div>
           </div>
-          <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>
-            Anotarme al prode ⚡
-          </button>
+          {registrationOpen
+            ? <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>
+                Anotarme al prode ⚡
+              </button>
+            : <div style={{ background: "#1a1a1a", border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px", textAlign: "center", color: C.muted, fontSize: 14, marginBottom: 10 }}>
+                🔒 Inscripción cerrada
+              </div>
+          }
           <button style={btn("ghost", { width: "100%", padding: "14px" })} onClick={() => setAuthScreen("login")}>
             Ya tengo cuenta — Ingresar
           </button>
@@ -936,13 +935,10 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   // CHAT
   // ════════════════════════════════════════════════════════════════════════════
-  const chatVisible = tab === "chat"
-
-  // Always render chat (never unmount) so scroll position is preserved
-  const ChatPanel = (
-    <div style={{ ...appStyle, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, height: "100vh", zIndex: chatVisible ? 250 : -1, visibility: chatVisible ? "visible" : "hidden", background: C.bg }}>
+  if (tab === "chat") return (
+    <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
-      <div ref={chatScrollCallback} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
+      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
         {messages.map((msg, i) => {
           const isMe = msg.player_id === user.id
@@ -1053,7 +1049,7 @@ export default function App() {
     </div>
   )
 
-  return <>{ChatPanel}</>
+  return null
 }
 
 function LogoutConfirm({ onConfirm, onCancel }) {
@@ -1083,6 +1079,21 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   }
   return (
     <div>
+      <div style={{ marginBottom: 14, padding: 12, background: "#0f1624", borderRadius: 10, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8, fontWeight: 700 }}>🔒 Cierre de inscripciones</div>
+        <input type="datetime-local" style={{ width: "100%", background: "#1a2035", border: `2px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: C.text, outline: "none", boxSizing: "border-box", marginBottom: 8 }}
+          defaultValue={regClosesAt}
+          onChange={async (e) => {
+            const val = e.target.value
+            await supabase.from("config").upsert({ key: "registration_closes_at", value: val }, { onConflict: "key" })
+            setRegClosesAt(val)
+            setRegistrationOpen(new Date() < new Date(val))
+          }}
+        />
+        <div style={{ fontSize: 11, color: registrationOpen ? C.green : C.red }}>
+          {registrationOpen ? "✓ Inscripciones abiertas" : "✗ Inscripciones cerradas"}
+        </div>
+      </div>
       <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync automática (desde 11 Jun)</button>
       <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
         {STAGES.map(st => (

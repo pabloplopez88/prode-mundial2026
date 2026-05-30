@@ -620,16 +620,15 @@ export default function App() {
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
-                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
+                    {inPlay && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "2px 6px" }}>⚽ en juego</span>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                        {formatTime(m.date)}
-                        {inPlay && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
-                      </div>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{formatTime(m.date)}</div>
                       {result && result.home_score !== null
                         ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
@@ -647,12 +646,11 @@ export default function App() {
                       {/* During/after match */}
                       {locked && effectivePred && (
                         <div style={{ marginTop: 4, textAlign: "center" }}>
-                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>
-                            {showDefault ? "pronóstico default" : "mi pronóstico"}
-                          </div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: showDefault ? C.muted : C.accent }}>
+                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
                             {effectivePred.home_score} : {effectivePred.away_score}
                           </div>
+                          {effectivePred.isDefault && <div style={{ fontSize: 10, color: C.accent, fontWeight: 600 }}>(default)</div>}
                           {pts !== null && !inPlay && (
                             <div style={{ fontSize: 11, color: pts > 0 ? C.green : C.muted, fontWeight: 700 }}>+{pts} pts</div>
                           )}
@@ -662,6 +660,7 @@ export default function App() {
                     <div style={{ flex: 1, textAlign: "left" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
+                    </div>
                     </div>
                   </div>
                 )
@@ -939,7 +938,7 @@ export default function App() {
 
   // Always render chat (never unmount) so scroll position is preserved
   const ChatPanel = (
-    <div style={{ ...appStyle, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, height: "100vh", zIndex: chatVisible ? 10 : -1, visibility: chatVisible ? "visible" : "hidden", background: C.bg }}>
+    <div style={{ ...appStyle, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, height: "100vh", zIndex: chatVisible ? 250 : -1, visibility: chatVisible ? "visible" : "hidden", background: C.bg }}>
       <Header title="💬 Chat del Prode" />
       <div ref={chatScrollCallback} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
@@ -963,7 +962,7 @@ export default function App() {
         })}
         <div ref={chatEndRef} />
       </div>
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 150 }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 260 }}>
         <input style={inp({ flex: 1, padding: "10px 14px", fontSize: 14 })} placeholder="Escribí algo..." value={chatMsg} onChange={e => setChatMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
         <button onClick={sendChat} style={btn("primary", { padding: "10px 18px", width: "auto" })}>➤</button>
       </div>

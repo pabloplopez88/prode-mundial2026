@@ -221,15 +221,16 @@ export default function App() {
   }, [])
 
   const chatScrollRef = useRef(null)
+  const chatScrollCallback = (el) => {
+    if (el) {
+      chatScrollRef.current = el
+      el.scrollTop = el.scrollHeight
+    }
+  }
   useEffect(() => {
-    if (tab !== "chat" || !chatScrollRef.current) return
-    // Small delay to ensure messages are rendered
-    const timer = setTimeout(() => {
-      if (chatScrollRef.current)
-        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
-    }, 50)
-    return () => clearTimeout(timer)
-  }, [messages, tab])
+    if (chatScrollRef.current)
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+  }, [messages])
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
@@ -931,7 +932,7 @@ export default function App() {
   if (tab === "chat") return (
     <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
-      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
+      <div ref={chatScrollCallback} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
         {messages.map((msg, i) => {
           const isMe = msg.player_id === user.id

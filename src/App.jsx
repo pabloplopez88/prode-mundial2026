@@ -614,14 +614,20 @@ export default function App() {
                         ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
-                      {/* Before match: show "sin pronóstico" only if not locked */}
+                      {/* Before match */}
                       {!locked && !hasPred && (
                         <div style={{ fontSize: 10, color: C.red, marginTop: 4, fontWeight: 600 }}>sin pronóstico</div>
                       )}
-                      {/* During/after match: always show prediction (real or default) + pts */}
+                      {!locked && hasPred && (
+                        <div style={{ marginTop: 4, textAlign: "center" }}>
+                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>{pred.home_score} : {pred.away_score}</div>
+                        </div>
+                      )}
+                      {/* During/after match */}
                       {locked && effectivePred && (
                         <div style={{ marginTop: 4, textAlign: "center" }}>
-                          <div style={{ fontSize: 10, color: showDefault ? C.accentDim : C.accentDim, fontWeight: 600 }}>
+                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>
                             {showDefault ? "pronóstico default" : "mi pronóstico"}
                           </div>
                           <div style={{ fontSize: 15, fontWeight: 800, color: showDefault ? C.muted : C.accent }}>

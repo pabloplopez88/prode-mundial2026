@@ -624,6 +624,7 @@ export default function App() {
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
                     {inPlay && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "2px 6px" }}>⚽ en juego</span>}
+                    {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
@@ -648,11 +649,11 @@ export default function App() {
                       {/* During/after match */}
                       {locked && effectivePred && (
                         <div style={{ marginTop: 4, textAlign: "center" }}>
-                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
+                          <div style={{ fontSize: 10, color: inPlay ? C.accentDim : C.muted, fontWeight: 600 }}>mi pronóstico</div>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: inPlay ? C.accent : C.muted }}>
                             {effectivePred.home_score} : {effectivePred.away_score}
                           </div>
-                          {effectivePred.isDefault && <div style={{ fontSize: 10, color: C.accent, fontWeight: 600 }}>(default)</div>}
+                          {effectivePred.isDefault && <div style={{ fontSize: 10, color: inPlay ? C.accent : C.muted, fontWeight: 600 }}>(default)</div>}
                           {pts !== null && !inPlay && (
                             <div style={{ fontSize: 11, color: pts > 0 ? C.green : C.muted, fontWeight: 700 }}>+{pts} pts</div>
                           )}
@@ -775,9 +776,8 @@ export default function App() {
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {locked && !result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
+              {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
-              {locked && result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -789,7 +789,7 @@ export default function App() {
               {result && result.home_score !== null && (
                 <div style={{ fontSize: 12, color: matchState === "inplay" ? C.green : C.text, fontWeight: 800 }}>
                   {result.home_score} – {result.away_score}
-                  <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}> {matchState === "inplay" ? "⚽" : "real"}</span>
+                  {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 400 }}> ⚽</span>}
                 </div>
               )}
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>

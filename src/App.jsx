@@ -148,7 +148,7 @@ export default function App() {
       .map(([match_id]) => parseInt(match_id))
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
-    // Update predictions state directly without wiping editPreds (avoids visual flicker)
+    // Move saved preds into predictions state, clear editPreds
     setPredictions(prev => {
       let updated = [...prev]
       upserts.forEach(u => {
@@ -261,14 +261,19 @@ export default function App() {
     await supabase.from("players").update(updates).eq("id", user.id)
     const updated = { ...user, name: settName, avatar: settAvatar, default_score: settDefault }
     localStorage.setItem("prode_user", JSON.stringify(updated))
-    setUser(updated); setSaving(false); showFlash("✓ Configuración guardada"); loadData()
+    setUser(updated)
+    setPlayers(prev => prev.map(p => p.id === user.id ? { ...p, name: settName, avatar: settAvatar, default_score: settDefault } : p))
+    setSaving(false)
+    showFlash("✓ Configuración guardada")
   }
 
   // ── SEND CHAT ──────────────────────────────────────────────────────────────
   const sendChat = async () => {
     if (!chatMsg.trim() || !user) return
-    await supabase.from("chat_messages").insert({ player_id: user.id, player_name: user.name, avatar: user.avatar, message: chatMsg.trim() })
+    const msg = { player_id: user.id, player_name: user.name, avatar: user.avatar, message: chatMsg.trim(), created_at: new Date().toISOString(), id: Date.now() }
+    setMessages(prev => [...prev, msg])
     setChatMsg("")
+    await supabase.from("chat_messages").insert({ player_id: user.id, player_name: user.name, avatar: user.avatar, message: msg.message })
   }
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────

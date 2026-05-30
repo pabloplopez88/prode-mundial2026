@@ -34,11 +34,11 @@ function ScoreInput({ value, onChange }) {
   return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
 }
 
-function ScoreBox({ value, pts }) {
-  const color = pts === 5 ? C.green : pts >= 3 ? "#4ade80" : pts > 0 ? "#86efac" : C.textDim
-  const bg = pts === 5 ? "#1a3320" : pts >= 3 ? "#1a2820" : pts > 0 ? "#1a2218" : "#1a1a2e"
-  const border = pts === 5 ? C.green : pts >= 3 ? "#4ade80" : pts > 0 ? "#86efac" : C.border
-  return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
+function ScoreBox({ value, matchState = "upcoming" }) {
+  // matchState: "upcoming" = editable (not shown as box), "inplay" = green border gray text, "finished" = gray border gray text
+  const border = matchState === "inplay" ? "#22c55e" : "#2a2a2a"
+  const bg = matchState === "inplay" ? "#0f2a1a" : "#1a1a1a"
+  return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color: C.muted, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
 }
 
 function FlashMsg({ msg }) {
@@ -736,8 +736,12 @@ export default function App() {
       const result = getResult(match.id)
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
+      const matchStart = new Date(match.date)
+      const matchState = !locked ? "upcoming"
+        : new Date() < new Date(matchStart.getTime() + 2 * 60 * 60 * 1000) ? "inplay"
+        : "finished"
       return (
-        <div key={match.id} style={crd({ border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 12 })}>
+        <div key={match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -750,7 +754,9 @@ export default function App() {
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
+              {locked && !result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
+              {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
+              {locked && result && matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -760,7 +766,10 @@ export default function App() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
               {result && result.home_score !== null && (
-                <div style={{ fontSize: 12, color: C.accent, fontWeight: 800 }}>{result.home_score} – {result.away_score} <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>real</span></div>
+                <div style={{ fontSize: 12, color: matchState === "inplay" ? C.green : C.text, fontWeight: 800 }}>
+                  {result.home_score} – {result.away_score}
+                  <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}> {matchState === "inplay" ? "⚽" : "real"}</span>
+                </div>
               )}
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {!locked ? (
@@ -779,13 +788,15 @@ export default function App() {
                   </>
                 ) : (
                   <>
-                    <ScoreBox value={pred?.home_score} pts={pts} />
+                    <ScoreBox value={pred?.home_score} matchState={matchState} />
                     <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                    <ScoreBox value={pred?.away_score} pts={pts} />
+                    <ScoreBox value={pred?.away_score} matchState={matchState} />
                   </>
                 )}
               </div>
-              {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted }}>{pred.isDefault ? "default" : "tu pronóstico"}</div>}
+              {locked && pred?.isDefault && (
+                <div style={{ fontSize: 10, color: C.muted }}>(default)</div>
+              )}
             </div>
             <div style={{ flex: 1, textAlign: "left" }}>
               <div style={{ fontSize: 26 }}>{flag(match.away)}</div>

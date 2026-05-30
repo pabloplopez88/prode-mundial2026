@@ -178,9 +178,13 @@ export default function App() {
     showFlash("✓ Guardado")
   }, [user])
 
+  const hasPrediction = (matchId) => {
+    const ep = editPreds[matchId]
+    return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
+  }
   const todayUnbet = user ? MATCHES.filter(m => {
     if (!isSameDay(m.date) || isLocked(m.date)) return false
-    return !predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+    return !hasPrediction(m.id)
   }) : []
 
   // ── REGISTER ──────────────────────────────────────────────────────────────
@@ -522,7 +526,7 @@ export default function App() {
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+                const hasPred = hasPrediction(m.id)
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
@@ -558,7 +562,7 @@ export default function App() {
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const hasPred = predictions.find(p => p.player_id === user.id && p.match_id === m.id)
+                const hasPred = hasPrediction(m.id)
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
@@ -600,7 +604,7 @@ export default function App() {
                   <div style={{ fontSize: 12, fontWeight: 700 }}>{nextMatch.away}</div>
                 </div>
               </div>
-              {!predictions.find(p => p.player_id === user.id && p.match_id === nextMatch.id) && (
+              {!hasPrediction(nextMatch.id) && (
                 <button onClick={() => setTab("fixture")} style={btn("ghost", { width: "100%", marginTop: 10, fontSize: 13 })}>Cargar pronóstico →</button>
               )}
             </div>

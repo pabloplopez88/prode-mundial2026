@@ -819,17 +819,6 @@ export default function App() {
       )
     }
 
-    // Scroll to target match after render
-    useEffect(() => {
-      if (scrollToMatchId && tab === "fixture") {
-        setTimeout(() => {
-          const el = document.getElementById("match-" + scrollToMatchId)
-          if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }) }
-          setScrollToMatchId(null)
-        }, 100)
-      }
-    }, [scrollToMatchId, tab])
-
     return (
     <div style={appStyle}>
       <Header title="📅 Fixture" />

@@ -222,15 +222,21 @@ export default function App() {
 
   const chatScrollRef = useRef(null)
   const chatScrollCallback = (el) => {
-    if (el) {
-      chatScrollRef.current = el
-      el.scrollTop = el.scrollHeight
-    }
+    chatScrollRef.current = el
+    if (el) el.scrollTop = el.scrollHeight
   }
-  useEffect(() => {
+  const scrollChatToBottom = () => {
     if (chatScrollRef.current)
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
-  }, [messages])
+  }
+  useEffect(() => { scrollChatToBottom() }, [messages])
+  useEffect(() => {
+    if (tab === "chat") {
+      scrollChatToBottom()
+      setTimeout(scrollChatToBottom, 100)
+      setTimeout(scrollChatToBottom, 300)
+    }
+  }, [tab])
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
@@ -929,8 +935,11 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   // CHAT
   // ════════════════════════════════════════════════════════════════════════════
-  if (tab === "chat") return (
-    <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
+  const chatVisible = tab === "chat"
+
+  // Always render chat (never unmount) so scroll position is preserved
+  const ChatPanel = (
+    <div style={{ ...appStyle, display: chatVisible ? "flex" : "none", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
       <div ref={chatScrollCallback} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
@@ -961,6 +970,8 @@ export default function App() {
       <BottomNav />
     </div>
   )
+
+  if (chatVisible) return ChatPanel
 
   // ════════════════════════════════════════════════════════════════════════════
   // SETTINGS

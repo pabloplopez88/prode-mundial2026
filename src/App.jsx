@@ -107,7 +107,20 @@ export default function App() {
       supabase.from("chat_messages").select("*").order("created_at", { ascending: true }).limit(200),
     ])
     if (pl) setPlayers(pl)
-    if (pr) setPredictions(pr)
+    if (pr) {
+      setPredictions(pr)
+      // Populate editPreds with user's saved predictions (single source of truth for inputs)
+      const savedUser = localStorage.getItem("prode_user")
+      if (savedUser) {
+        const u = JSON.parse(savedUser)
+        const myPreds = {}
+        pr.filter(p => p.player_id === u.id).forEach(p => {
+          myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? "") }
+        })
+        setEditPreds(myPreds)
+        editPredsRef.current = myPreds
+      }
+    }
     if (re) setResults(re)
     if (ms) setMessages(ms)
     setLoading(false)
@@ -159,23 +172,9 @@ export default function App() {
     const toDelete = entries
       .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
       .map(([match_id]) => parseInt(match_id))
+    // Fire and forget - don't touch editPreds state, inputs stay stable
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
-    // Move saved preds into predictions state, clear editPreds
-    setPredictions(prev => {
-      let updated = [...prev]
-      upserts.forEach(u => {
-        const idx = updated.findIndex(p => p.player_id === u.player_id && p.match_id === u.match_id)
-        if (idx >= 0) updated[idx] = { ...updated[idx], ...u }
-        else updated.push(u)
-      })
-      toDelete.forEach(match_id => {
-        updated = updated.filter(p => !(p.player_id === user.id && p.match_id === match_id))
-      })
-      return updated
-    })
-    editPredsRef.current = {}
-    setEditPreds({})
     showFlash("✓ Guardado")
   }, [user])
 
@@ -304,9 +303,8 @@ export default function App() {
   }).sort((a, b) => b.total - a.total)
 
   const myPred = (matchId, locked = false) => {
-    const saved = predictions.find(p => p.player_id === user?.id && p.match_id === matchId)
     const edited = editPreds[matchId]
-    if (saved || edited) return { ...saved, ...edited }
+    if (edited) return edited
     // Only fall back to default when match is already locked (started)
     if (locked) {
       const [dh, da] = (user?.default_score || "0-0").split("-").map(Number)
@@ -640,7 +638,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {match.group && stage === "Grupos" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
+              {match.group && gruposView === "grupo" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
               {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>

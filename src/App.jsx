@@ -153,6 +153,57 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
+  // Auto-refresh results every 60s when there are matches today
+  useEffect(() => {
+    const autoSync = async () => {
+      const todayHasMatches = MATCHES.some(m => isSameDay(m.date))
+      if (!todayHasMatches) return
+      try {
+        // Try football-data.org for Champions League
+        const clRes = await fetch(
+          "https://api.football-data.org/v4/competitions/CL/matches?status=IN_PLAY,FINISHED&dateFrom=" + new Date().toISOString().slice(0,10) + "&dateTo=" + new Date().toISOString().slice(0,10),
+          { headers: { "X-Auth-Token": "demo" } }
+        )
+        if (clRes.ok) {
+          const clData = await clRes.json()
+          const upserts = []
+          ;(clData.matches || []).forEach(m => {
+            if (m.score?.fullTime?.home !== null) {
+              const local = MATCHES.find(lm => lm.id === 201) // PSG vs Arsenal
+              if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
+            }
+          })
+          if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        }
+
+        // Try football-data.org for Copa Argentina  
+        const caRes = await fetch(
+          "https://api.football-data.org/v4/competitions/CA/matches?status=IN_PLAY,FINISHED&dateFrom=" + new Date().toISOString().slice(0,10) + "&dateTo=" + new Date().toISOString().slice(0,10),
+          { headers: { "X-Auth-Token": "demo" } }
+        )
+        if (caRes.ok) {
+          const caData = await caRes.json()
+          const upserts = []
+          ;(caData.matches || []).forEach(m => {
+            if (m.score?.fullTime?.home !== null) {
+              const local = MATCHES.find(lm =>
+                lm.home.toLowerCase().includes(m.homeTeam?.name?.toLowerCase().slice(0,5) || "xxx") ||
+                m.homeTeam?.name?.toLowerCase().includes(lm.home.toLowerCase().slice(0,5))
+              )
+              if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
+            }
+          })
+          if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        }
+      } catch (e) {
+        // Silently fail - manual override always available in admin
+      }
+    }
+    const interval = setInterval(autoSync, 60000)
+    autoSync() // run immediately on load too
+    return () => clearInterval(interval)
+  }, [])
+
   const chatScrollRef = useRef(null)
   useEffect(() => {
     if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight

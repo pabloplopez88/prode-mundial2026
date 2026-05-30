@@ -222,7 +222,13 @@ export default function App() {
 
   const chatScrollRef = useRef(null)
   useEffect(() => {
-    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    if (tab !== "chat" || !chatScrollRef.current) return
+    // Small delay to ensure messages are rendered
+    const timer = setTimeout(() => {
+      if (chatScrollRef.current)
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    }, 50)
+    return () => clearTimeout(timer)
   }, [messages, tab])
 
   // Auto-save predictions after 1.5s of inactivity

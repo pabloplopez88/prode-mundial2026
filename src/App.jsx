@@ -159,42 +159,27 @@ export default function App() {
       const todayHasMatches = MATCHES.some(m => isSameDay(m.date))
       if (!todayHasMatches) return
       try {
-        // Try football-data.org for Champions League
-        const clRes = await fetch(
-          "https://api.football-data.org/v4/competitions/CL/matches?status=IN_PLAY,FINISHED&dateFrom=" + new Date().toISOString().slice(0,10) + "&dateTo=" + new Date().toISOString().slice(0,10),
-          { headers: { "X-Auth-Token": "demo" } }
+        const token = import.meta.env.VITE_FOOTBALL_API_TOKEN || ""
+        if (!token) return // No token configured, skip
+        const today = new Date().toISOString().slice(0, 10)
+        const res = await fetch(
+          `https://api.football-data.org/v4/competitions/CL/matches?status=IN_PLAY,FINISHED&dateFrom=${today}&dateTo=${today}`,
+          { headers: { "X-Auth-Token": token } }
         )
-        if (clRes.ok) {
-          const clData = await clRes.json()
-          const upserts = []
-          ;(clData.matches || []).forEach(m => {
-            if (m.score?.fullTime?.home !== null) {
-              const local = MATCHES.find(lm => lm.id === 201) // PSG vs Arsenal
-              if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
-            }
-          })
-          if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-        }
-
-        // Try football-data.org for Copa Argentina  
-        const caRes = await fetch(
-          "https://api.football-data.org/v4/competitions/CA/matches?status=IN_PLAY,FINISHED&dateFrom=" + new Date().toISOString().slice(0,10) + "&dateTo=" + new Date().toISOString().slice(0,10),
-          { headers: { "X-Auth-Token": "demo" } }
-        )
-        if (caRes.ok) {
-          const caData = await caRes.json()
-          const upserts = []
-          ;(caData.matches || []).forEach(m => {
-            if (m.score?.fullTime?.home !== null) {
-              const local = MATCHES.find(lm =>
-                lm.home.toLowerCase().includes(m.homeTeam?.name?.toLowerCase().slice(0,5) || "xxx") ||
-                m.homeTeam?.name?.toLowerCase().includes(lm.home.toLowerCase().slice(0,5))
-              )
-              if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
-            }
-          })
-          if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-        }
+        if (!res.ok) return
+        const data = await res.json()
+        const upserts = []
+        ;(data.matches || []).forEach(m => {
+          if (m.score?.fullTime?.home === null) return
+          // Match by team name against today's MATCHES
+          const local = MATCHES.find(lm =>
+            isSameDay(lm.date) &&
+            (lm.home.toLowerCase().includes((m.homeTeam?.shortName || m.homeTeam?.name || "").toLowerCase().slice(0, 4)) ||
+             lm.away.toLowerCase().includes((m.awayTeam?.shortName || m.awayTeam?.name || "").toLowerCase().slice(0, 4)))
+          )
+          if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
+        })
+        if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
       } catch (e) {
         // Silently fail - manual override always available in admin
       }

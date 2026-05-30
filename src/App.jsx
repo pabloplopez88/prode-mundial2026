@@ -62,6 +62,8 @@ export default function App() {
   const [results, setResults] = useState([])
   const [messages, setMessages] = useState([])
   const [stage, setStage] = useState("Grupos")
+  const [gruposView, setGruposView] = useState("fecha") // "fecha" | "grupo"
+  const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
@@ -138,7 +140,10 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+  const chatScrollRef = useRef(null)
+  useEffect(() => {
+    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+  }, [messages, tab])
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
@@ -616,82 +621,154 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   // FIXTURE
   // ════════════════════════════════════════════════════════════════════════════
-  if (tab === "fixture") return (
+  if (tab === "fixture") {
+    // Build subgroups for Grupos stage
+    const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+    const fechaGroups = (() => {
+      const grupos = MATCHES.filter(m => m.stage === "Grupos")
+      const byDate = {}
+      grupos.forEach(m => {
+        const d = new Date(m.date)
+        const key = d.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })
+        if (!byDate[key]) byDate[key] = []
+        byDate[key].push(m)
+      })
+      return Object.entries(byDate).map(([date, matches]) => ({ date, matches }))
+    })()
+
+    const renderMatchCard = (match) => {
+      const locked = isLocked(match.date)
+      const result = getResult(match.id)
+      const pred = myPred(match.id, locked)
+      const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
+      return (
+        <div key={match.id} style={crd({ border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 12 })}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {match.group && gruposView === "grupo" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
+              {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+              {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ flex: 1, textAlign: "right" }}>
+              <div style={{ fontSize: 26 }}>{flag(match.home)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
+              {result && result.home_score !== null && (
+                <div style={{ fontSize: 12, color: C.accent, fontWeight: 800 }}>{result.home_score} – {result.away_score} <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>real</span></div>
+              )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {!locked ? (
+                  <>
+                    <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
+                      setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], home_score: v } }; editPredsRef.current = next; return next })
+                      clearTimeout(saveTimerRef.current)
+                      saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
+                    }} />
+                    <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
+                    <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
+                      setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], away_score: v } }; editPredsRef.current = next; return next })
+                      clearTimeout(saveTimerRef.current)
+                      saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
+                    }} />
+                  </>
+                ) : (
+                  <>
+                    <ScoreBox value={pred?.home_score} pts={pts} />
+                    <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
+                    <ScoreBox value={pred?.away_score} pts={pts} />
+                  </>
+                )}
+              </div>
+              {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted }}>{pred.isDefault ? "default" : "tu pronóstico"}</div>}
+            </div>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
     <div style={appStyle}>
       <Header title="📅 Fixture" />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
         {STAGES.map(st => (
-          <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
+          <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
         ))}
       </div>
+
+      {/* Grupos sub-controls */}
+      {stage === "Grupos" && (
+        <>
+          {/* Por Fecha / Por Grupo toggle */}
+          <div style={{ display: "flex", gap: 0, padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", background: "#1a2035", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}` }}>
+              {["fecha", "grupo"].map(v => (
+                <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }} style={{ padding: "6px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
+                  {v === "fecha" ? "Por fecha" : "Por grupo"}
+                </button>
+              ))}
+            </div>
+            {/* Subfilter pills */}
+            <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+              {gruposView === "grupo"
+                ? grupoLetters.map(g => (
+                  <button key={g} onClick={() => { setGruposSubFilter(gruposSubFilter === g ? null : g); setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50) }}
+                    style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${gruposSubFilter === g ? C.accent : C.border}`, background: gruposSubFilter === g ? C.accentDim : "transparent", color: gruposSubFilter === g ? C.accent : C.textDim, whiteSpace: "nowrap" }}>
+                    {g}
+                  </button>
+                ))
+                : fechaGroups.map((fg, i) => (
+                  <button key={i} onClick={() => { setGruposSubFilter(fg.date); setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50) }}
+                    style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${gruposSubFilter === fg.date ? C.accent : C.border}`, background: gruposSubFilter === fg.date ? C.accentDim : "transparent", color: gruposSubFilter === fg.date ? C.accent : C.textDim, whiteSpace: "nowrap" }}>
+                    F{i + 1}
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+        </>
+      )}
+
       {todayUnbet.length > 0 && (
         <div style={{ background: "#1a1200", borderBottom: `1px solid ${C.accentDim}`, padding: "8px 16px", fontSize: 12, color: C.accent }}>
           ⚠️ Tenés {todayUnbet.length} partido(s) hoy sin pronóstico
         </div>
       )}
-      <div style={{ padding: "12px 14px", paddingBottom: hasUnsaved ? 130 : 20 }}>
-        {matchesByStage.map(match => {
-          const locked = isLocked(match.date)
-          const result = getResult(match.id)
-          const pred = myPred(match.id, locked)
-          const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-          return (
-            <div key={match.id} style={crd({ border: `1px solid ${result ? "#1e3a2f" : C.border}`, padding: 12 })}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {match.group && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
-                  {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-                  {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
-                </div>
+
+      <div style={{ padding: "12px 14px", paddingBottom: 20 }}>
+        {stage === "Grupos" && gruposView === "grupo" && (
+          grupoLetters.map(g => {
+            const gMatches = MATCHES.filter(m => m.stage === "Grupos" && m.group === g)
+            if (!gMatches.length) return null
+            return (
+              <div key={g} id={"grp-"+g}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>GRUPO {g}</div>
+                {gMatches.map(renderMatchCard)}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ flex: 1, textAlign: "right" }}>
-                  <div style={{ fontSize: 26 }}>{flag(match.home)}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
-                  {result && result.home_score !== null && (
-                    <div style={{ fontSize: 12, color: C.accent, fontWeight: 800 }}>{result.home_score} – {result.away_score} <span style={{ fontSize: 10, color: C.muted, fontWeight: 400 }}>real</span></div>
-                  )}
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {!locked ? (
-                      <>
-                        <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
-                          setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], home_score: v } }; editPredsRef.current = next; return next })
-                          clearTimeout(saveTimerRef.current)
-                          saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
-                        }} />
-                        <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                        <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
-                        setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], away_score: v } }; editPredsRef.current = next; return next })
-                          clearTimeout(saveTimerRef.current)
-                          saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
-                        }} />
-                      </>
-                    ) : (
-                      <>
-                        <ScoreBox value={pred?.home_score} pts={pts} />
-                        <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                        <ScoreBox value={pred?.away_score} pts={pts} />
-                      </>
-                    )}
-                  </div>
-                  {locked && pred?.home_score !== undefined && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted }}>{pred.isDefault ? 'default' : 'tu pronóstico'}</div>}
-                </div>
-                <div style={{ flex: 1, textAlign: "left" }}>
-                  <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
-                </div>
-              </div>
+            )
+          })
+        )}
+        {stage === "Grupos" && gruposView === "fecha" && (
+          fechaGroups.map((fg, i) => (
+            <div key={i} id={"fecha-"+i}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>FECHA {i + 1} · {fg.date.toUpperCase()}</div>
+              {fg.matches.map(renderMatchCard)}
             </div>
-          )
-        })}
+          ))
+        )}
+        {stage !== "Grupos" && matchesByStage.map(renderMatchCard)}
       </div>
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>
-  )
+  )}
 
   // ════════════════════════════════════════════════════════════════════════════
   // TABLE
@@ -728,7 +805,7 @@ export default function App() {
   if (tab === "chat") return (
     <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 140 }}>
+      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 140 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
         {messages.map((msg, i) => {
           const isMe = msg.player_id === user.id

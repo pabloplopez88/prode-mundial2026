@@ -539,11 +539,16 @@ export default function App() {
                         ? <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
-                      {pred && <div style={{ fontSize: 10, color: pred.isDefault ? C.accentDim : C.muted, marginTop: 2 }}>
-                        {pred.home_score} : {pred.away_score} {pred.isDefault ? "(def)" : ""}
-                        {pts !== null && <span style={{ color: pts > 0 ? C.green : C.muted, marginLeft: 4 }}>+{pts}pts</span>}
-                      </div>}
-                      {!locked && !hasPred && <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>sin pronóstico</div>}
+                      {hasPred
+                        ? <div style={{ marginTop: 4, textAlign: "center" }}>
+                            <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>
+                              {pred.home_score} : {pred.away_score}
+                            </div>
+                            {pts !== null && <div style={{ fontSize: 11, color: pts > 0 ? C.green : C.muted, fontWeight: 700 }}>+{pts} pts</div>}
+                          </div>
+                        : <div style={{ fontSize: 10, color: C.red, marginTop: 4, fontWeight: 600 }}>sin pronóstico</div>
+                      }
                     </div>
                     <div style={{ flex: 1, textAlign: "left" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
@@ -573,8 +578,13 @@ export default function App() {
                       <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{formatDate(m.date)}</div>
                       <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       {hasPred
-                        ? <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{pred.home_score} : {pred.away_score}</div>
-                        : <div style={{ fontSize: 10, color: C.red, marginTop: 2 }}>sin pronóstico</div>
+                        ? <div style={{ marginTop: 4, textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
+                              {pred.home_score} : {pred.away_score}
+                            </div>
+                          </div>
+                        : <div style={{ fontSize: 10, color: C.red, marginTop: 4, fontWeight: 600 }}>sin pronóstico</div>
                       }
                     </div>
                     <div style={{ flex: 1, textAlign: "left" }}>
@@ -642,7 +652,14 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {match.group && gruposView === "grupo" && <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>}
+              {match.stage === "Grupos" && gruposView === "grupo" && (
+                <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>
+                  F{match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}
+                </span>
+              )}
+              {match.group && match.stage === "Grupos" && gruposView === "fecha" && (
+                <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
+              )}
               {pts !== null && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {locked && !result && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>

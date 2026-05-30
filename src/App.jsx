@@ -153,6 +153,36 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
+  // Auto-save default prediction when a match locks and user has no prediction
+  useEffect(() => {
+    if (!user) return
+    const saveDefaultsForLockedMatches = async () => {
+      const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
+      const toSave = MATCHES.filter(m => {
+        if (!isLocked(m.date)) return false
+        return !hasPrediction(m.id)
+      })
+      if (toSave.length === 0) return
+      const upserts = toSave.map(m => ({
+        player_id: user.id, match_id: m.id,
+        home_score: dh, away_score: da
+      }))
+      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+      // Update editPreds so UI reflects saved defaults
+      setEditPreds(prev => {
+        const next = { ...prev }
+        toSave.forEach(m => {
+          if (!next[m.id]) next[m.id] = { home_score: String(dh), away_score: String(da) }
+        })
+        editPredsRef.current = next
+        return next
+      })
+    }
+    saveDefaultsForLockedMatches()
+    const interval = setInterval(saveDefaultsForLockedMatches, 60000)
+    return () => clearInterval(interval)
+  }, [user])
+
   // Auto-refresh results every 60s when there are matches today
   useEffect(() => {
     const autoSync = async () => {
@@ -611,7 +641,7 @@ export default function App() {
             <div style={crd({ padding: 0, overflow: "hidden" })}>
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
               {upcomingMatches.map((m, i) => {
-                const locked = isLocked(m.id)
+                const locked = isLocked(m.date)
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null

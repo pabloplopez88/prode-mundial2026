@@ -130,8 +130,6 @@ export default function App() {
       })
     }
     const channel = supabase.channel("all_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, () => loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "predictions" }, () => loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
         setMessages(prev => [...prev, payload.new])

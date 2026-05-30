@@ -62,7 +62,7 @@ export default function App() {
   const [results, setResults] = useState([])
   const [messages, setMessages] = useState([])
   const [stage, setStage] = useState("Grupos")
-  const [gruposView, setGruposView] = useState("fecha") // "fecha" | "grupo"
+  const [gruposView, setGruposView] = useState("grupo") // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
@@ -624,17 +624,11 @@ export default function App() {
   if (tab === "fixture") {
     // Build subgroups for Grupos stage
     const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-    const fechaGroups = (() => {
-      const grupos = MATCHES.filter(m => m.stage === "Grupos")
-      const byDate = {}
-      grupos.forEach(m => {
-        const d = new Date(m.date)
-        const key = d.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })
-        if (!byDate[key]) byDate[key] = []
-        byDate[key].push(m)
-      })
-      return Object.entries(byDate).map(([date, matches]) => ({ date, matches }))
-    })()
+    const fechaGroups = [
+      { date: "Fecha 1", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
+      { date: "Fecha 2", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 25 && m.id <= 48) },
+      { date: "Fecha 3", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 49 && m.id <= 72) },
+    ]
 
     const renderMatchCard = (match) => {
       const locked = isLocked(match.date)
@@ -707,31 +701,31 @@ export default function App() {
       {stage === "Grupos" && (
         <>
           {/* Por Fecha / Por Grupo toggle */}
-          <div style={{ display: "flex", gap: 0, padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", background: "#1a2035", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}` }}>
-              {["fecha", "grupo"].map(v => (
-                <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }} style={{ padding: "6px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
-                  {v === "fecha" ? "Por fecha" : "Por grupo"}
+          <div style={{ padding: "8px 14px 0", background: C.card2, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}`, flexShrink: 0 }}>
+              {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
+                <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }} style={{ padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
+                  {label}
                 </button>
               ))}
             </div>
-            {/* Subfilter pills */}
-            <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
-              {gruposView === "grupo"
-                ? grupoLetters.map(g => (
-                  <button key={g} onClick={() => { setGruposSubFilter(gruposSubFilter === g ? null : g); setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50) }}
-                    style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${gruposSubFilter === g ? C.accent : C.border}`, background: gruposSubFilter === g ? C.accentDim : "transparent", color: gruposSubFilter === g ? C.accent : C.textDim, whiteSpace: "nowrap" }}>
-                    {g}
-                  </button>
-                ))
-                : fechaGroups.map((fg, i) => (
-                  <button key={i} onClick={() => { setGruposSubFilter(fg.date); setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50) }}
-                    style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${gruposSubFilter === fg.date ? C.accent : C.border}`, background: gruposSubFilter === fg.date ? C.accentDim : "transparent", color: gruposSubFilter === fg.date ? C.accent : C.textDim, whiteSpace: "nowrap" }}>
-                    F{i + 1}
-                  </button>
-                ))
-              }
-            </div>
+          </div>
+          {/* Subfilter pills */}
+          <div style={{ display: "flex", gap: 5, padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, overflowX: "auto" }}>
+            {gruposView === "grupo"
+              ? grupoLetters.map(g => (
+                <button key={g} onClick={() => setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  style={{ padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
+                  Gr. {g}
+                </button>
+              ))
+              : fechaGroups.map((fg, i) => (
+                <button key={i} onClick={() => setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {fg.date}
+                </button>
+              ))
+            }
           </div>
         </>
       )}
@@ -758,7 +752,7 @@ export default function App() {
         {stage === "Grupos" && gruposView === "fecha" && (
           fechaGroups.map((fg, i) => (
             <div key={i} id={"fecha-"+i}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>FECHA {i + 1} · {fg.date.toUpperCase()}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>{fg.date.toUpperCase()}</div>
               {fg.matches.map(renderMatchCard)}
             </div>
           ))

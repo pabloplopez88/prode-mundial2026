@@ -62,7 +62,8 @@ export default function App() {
   const [results, setResults] = useState([])
   const [messages, setMessages] = useState([])
   const [stage, setStage] = useState("Grupos")
-  const [gruposView, setGruposView] = useState("grupo") // "fecha" | "grupo"
+  const [gruposView, setGruposView] = useState("grupo")
+  const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
@@ -575,7 +576,14 @@ export default function App() {
                 <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>⚠️ {todayUnbet.length} partido(s) hoy sin pronóstico</div>
                 <div style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{todayUnbet.map(m => `${m.home} vs ${m.away} (${formatTime(m.date)})`).join(" · ")}</div>
               </div>
-              <button onClick={() => setTab("fixture")} style={btn("primary", { padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" })}>Ir →</button>
+              <button onClick={() => {
+                const target = todayUnbet[0]
+                if (target) {
+                  setStage(target.stage || "Grupos")
+                  setScrollToMatchId(target.id)
+                }
+                setTab("fixture")
+              }} style={btn("primary", { padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" })}>Ir →</button>
             </div>
           )}
           <div style={crd({ display: "flex", gap: 0, padding: 0, overflow: "hidden" })}>
@@ -745,7 +753,7 @@ export default function App() {
         : new Date() < new Date(matchStart.getTime() + 2 * 60 * 60 * 1000) ? "inplay"
         : "finished"
       return (
-        <div key={match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
+        <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -810,6 +818,17 @@ export default function App() {
         </div>
       )
     }
+
+    // Scroll to target match after render
+    useEffect(() => {
+      if (scrollToMatchId && tab === "fixture") {
+        setTimeout(() => {
+          const el = document.getElementById("match-" + scrollToMatchId)
+          if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }) }
+          setScrollToMatchId(null)
+        }, 100)
+      }
+    }, [scrollToMatchId, tab])
 
     return (
     <div style={appStyle}>

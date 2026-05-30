@@ -386,7 +386,7 @@ export default function App() {
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
   const hasUnsaved = Object.keys(editPreds).length > 0
 
-  const appStyle = { minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", paddingBottom: 72 }
+  const appStyle = { minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", paddingTop: 56 }
 
   const Header = ({ title, right }) => (
     <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
@@ -396,9 +396,9 @@ export default function App() {
   )
 
   const BottomNav = () => (
-    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
+    <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
       {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "chat", icon: "💬", label: "Chat" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
-        <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderTop: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
+        <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
         </button>
@@ -907,7 +907,7 @@ export default function App() {
   if (tab === "chat") return (
     <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
       <Header title="💬 Chat del Prode" />
-      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 140 }}>
+      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
         {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
         {messages.map((msg, i) => {
           const isMe = msg.player_id === user.id
@@ -929,7 +929,7 @@ export default function App() {
         })}
         <div ref={chatEndRef} />
       </div>
-      <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 150 }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 150 }}>
         <input style={inp({ flex: 1, padding: "10px 14px", fontSize: 14 })} placeholder="Escribí algo..." value={chatMsg} onChange={e => setChatMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
         <button onClick={sendChat} style={btn("primary", { padding: "10px 18px", width: "auto" })}>➤</button>
       </div>

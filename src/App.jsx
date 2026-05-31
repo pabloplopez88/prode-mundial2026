@@ -706,9 +706,10 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
-                    {inPlay && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "2px 6px" }}>
-                      ⚽ en juego{result?.match_time ? ` · últ. ${result.match_time}'` : ""}
-                    </span>}
+                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
+                      {result?.match_time && <div style={{ fontSize: 9, color: C.green, fontWeight: 600 }}>act. {result.match_time}'</div>}
+                    </div>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
@@ -865,7 +866,10 @@ export default function App() {
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego{dbResult?.match_time ? ` · últ. ${dbResult.match_time}'` : ""}</span>}
+              {matchState === "inplay" && <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
+                {dbResult?.match_time && <div style={{ fontSize: 9, color: C.green, fontWeight: 600 }}>act. {dbResult.match_time}'</div>}
+              </div>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>
           </div>
@@ -1200,7 +1204,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: `⚽ en juego${cur.match_time ? ` · últ. ${cur.match_time}'` : ""}`, color: "#22c55e" }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: `⚽ en juego${cur.match_time ? `
+act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }
@@ -1208,7 +1213,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? "#22c55e" : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
-              {statusLabel.text && <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color, textAlign: "right" }}>{statusLabel.text}</div>}
+              {statusLabel.text && <div style={{ background: cur.status === "IN_PLAY" ? "#14532d" : "transparent", borderRadius: 4, padding: cur.status === "IN_PLAY" ? "3px 7px" : 0, textAlign: "center" }}>
+                {statusLabel.text.split("
+").map((line, i) => <div key={i} style={{ fontSize: i === 0 ? 11 : 9, fontWeight: i === 0 ? 800 : 600, color: statusLabel.color }}>{line}</div>)}
+              </div>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>

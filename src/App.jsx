@@ -4,6 +4,8 @@ import { MATCHES, FLAGS, AVATARS, STAGES, calcPoints, formatDate, formatTime, is
 
 const ADMIN_PASSWORD = "mundial2026"
 
+let _lastSyncTime = ""
+
 const C = {
   bg: "#0a0e1a", card: "#111827", card2: "#0f1624",
   border: "#1e2940", accent: "#c8a84b", accentDim: "#8a6e28",
@@ -181,7 +183,7 @@ export default function App() {
       if (result?.status === "FINISHED") return false
       return true
     })
-    if (!activeMatches.length) { setAutoSyncStatus("idle"); setLastSyncTime(new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })); return }
+    if (!activeMatches.length) { setAutoSyncStatus("idle"); _lastSyncTime = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }); setLastSyncTime(_lastSyncTime); return }
     setAutoSyncStatus("searching")
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -1406,8 +1408,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             : autoSyncStatus === "nothing" ? "sin cambios"
             : autoSyncStatus === "error" ? "⚠️ error al conectar"
             : "en espera"}
-          {lastSyncTime && autoSyncStatus !== "searching" && (
-            <span style={{ color: "#6b7280" }}> · {lastSyncTime}</span>
+          {_lastSyncTime && autoSyncStatus !== "searching" && (
+            <span style={{ color: "#6b7280" }}> · {_lastSyncTime}</span>
           )}
         </div>
       </div>

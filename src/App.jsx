@@ -196,41 +196,86 @@ export default function App() {
     return () => clearInterval(interval)
   }, [user])
 
-  // Auto-refresh results every 60s when there are matches today
+  // Smart auto-sync: only runs when there are active matches today
   useEffect(() => {
-    const autoSync = async () => {
-      const todayHasMatches = MATCHES.some(m => isSameDay(m.date))
-      if (!todayHasMatches) return
+    const token = import.meta.env.VITE_APIFOOTBALL_TOKEN || ""
+    if (!token) return
+
+    const syncResults = async () => {
+      const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+      if (!todayMatches.length) return
+
+      // Only call API if there are matches that could be in play
+      // (started but not yet marked FINISHED in our DB)
+      const now = new Date()
+      const activeMatches = todayMatches.filter(m => {
+        const start = new Date(m.date)
+        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false // not started yet
+        const result = results.find(r => r.match_id === m.id)
+        if (result?.status === "FINISHED") return false // already done
+        return true
+      })
+      if (!activeMatches.length) return
+
       try {
-        const token = import.meta.env.VITE_FOOTBALL_API_TOKEN || ""
-        if (!token) return // No token configured, skip
         const today = new Date().toISOString().slice(0, 10)
         const res = await fetch(
-          `https://api.football-data.org/v4/competitions/CL/matches?status=IN_PLAY,FINISHED&dateFrom=${today}&dateTo=${today}`,
-          { headers: { "X-Auth-Token": token } }
+          `https://v3.football.api-sports.io/fixtures?date=${today}`,
+          { headers: { "x-apisports-key": token } }
         )
         if (!res.ok) return
         const data = await res.json()
+        const fixtures = data.response || []
+
         const upserts = []
-        ;(data.matches || []).forEach(m => {
-          if (m.score?.fullTime?.home === null) return
-          // Match by team name against today's MATCHES
-          const local = MATCHES.find(lm =>
-            isSameDay(lm.date) &&
-            (lm.home.toLowerCase().includes((m.homeTeam?.shortName || m.homeTeam?.name || "").toLowerCase().slice(0, 4)) ||
-             lm.away.toLowerCase().includes((m.awayTeam?.shortName || m.awayTeam?.name || "").toLowerCase().slice(0, 4)))
-          )
-          if (local) upserts.push({ match_id: local.id, home_score: m.score.fullTime.home, away_score: m.score.fullTime.away, updated_at: new Date().toISOString() })
+        activeMatches.forEach(local => {
+          // Match by team name (fuzzy)
+          const match = fixtures.find(f => {
+            const home = (f.teams?.home?.name || "").toLowerCase()
+            const away = (f.teams?.away?.name || "").toLowerCase()
+            const localHome = local.home.toLowerCase()
+            const localAway = local.away.toLowerCase()
+            return (home.includes(localHome.slice(0, 4)) || localHome.includes(home.slice(0, 4))) &&
+                   (away.includes(localAway.slice(0, 4)) || localAway.includes(away.slice(0, 4)))
+          })
+          if (!match) return
+          const status = match.fixture?.status?.short // NS, 1H, HT, 2H, ET, P, FT, AET, PEN
+          const homeScore = match.goals?.home
+          const awayScore = match.goals?.away
+          const apiStatus = ["FT", "AET", "PEN"].includes(status) ? "FINISHED"
+            : ["1H", "HT", "2H", "ET", "P"].includes(status) ? "IN_PLAY"
+            : "SCHEDULED"
+          if (homeScore !== null && homeScore !== undefined) {
+            upserts.push({
+              match_id: local.id,
+              home_score: homeScore,
+              away_score: awayScore,
+              status: apiStatus,
+              updated_at: new Date().toISOString()
+            })
+          }
         })
-        if (upserts.length > 0) await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        if (upserts.length > 0) {
+          await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+          setResults(prev => {
+            const next = [...prev]
+            upserts.forEach(u => {
+              const idx = next.findIndex(r => r.match_id === u.match_id)
+              if (idx >= 0) next[idx] = { ...next[idx], ...u }
+              else next.push(u)
+            })
+            return next
+          })
+        }
       } catch (e) {
-        // Silently fail - manual override always available in admin
+        // Silently fail
       }
     }
-    const interval = setInterval(autoSync, 60000)
-    autoSync() // run immediately on load too
+
+    const interval = setInterval(syncResults, 10 * 60 * 1000) // every 10 min
+    syncResults() // run on load
     return () => clearInterval(interval)
-  }, [])
+  }, [results])
 
   const chatScrollRef = useRef(null)
 
@@ -374,9 +419,10 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count finished matches (more than 2hs since kickoff)
+      // Only count finished matches (status = FINISHED or fallback: 2hs since kickoff)
       const matchStart = new Date(m.date)
-      const finished = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
+      const finished = r.status === "FINISHED" ||
+        (!r.status && new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000))
       if (!finished) return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
@@ -614,8 +660,8 @@ export default function App() {
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
-                const matchStart = new Date(m.date)
-                const inPlay = locked && new Date() < new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
+                const dbRes = getResult(m.id)
+                const inPlay = locked && dbRes?.status !== "FINISHED"
                 const inProgress = locked && result && result.home_score !== null
                 const finished = inProgress // for now same signal; could add status field later
                 const showDefault = locked && !hasPred
@@ -757,10 +803,12 @@ export default function App() {
       const result = getResult(match.id)
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-      const matchStart = new Date(match.date)
+      const dbResult = getResult(match.id)
       const matchState = !locked ? "upcoming"
-        : new Date() < new Date(matchStart.getTime() + 2 * 60 * 60 * 1000) ? "inplay"
-        : "finished"
+        : (dbResult?.status === "FINISHED") ? "finished"
+        : (dbResult?.status === "IN_PLAY") ? "inplay"
+        : locked ? "inplay" // locked but no API status yet → assume in play
+        : "upcoming"
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>

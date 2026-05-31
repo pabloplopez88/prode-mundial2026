@@ -1153,17 +1153,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           ].map(({ label, key }) => (
             <button key={key} onClick={async () => {
               if (!window.confirm(`¿Seguro? Esto borra ${label.toLowerCase()} y no se puede deshacer.`)) return
-              if (key === "players") {
-                await supabase.from("predictions").delete().gte("match_id", 0)
-                await supabase.from("chat_messages").delete().gte("id", 0)
-                await supabase.from("players").delete().neq("id", "___IMPOSSIBLE___")
-              } else if (key === "predictions") {
-                await supabase.from("predictions").delete().gte("match_id", 0)
-              } else if (key === "results") {
-                await supabase.from("results").delete().gte("match_id", 0)
-              } else if (key === "chat_messages") {
-                await supabase.from("chat_messages").delete().gte("id", 0)
+              const fnMap = {
+                players: "clear_players",
+                predictions: "clear_predictions",
+                results: "clear_results",
+                chat_messages: "clear_chat",
               }
+              await supabase.rpc(fnMap[key])
               showFlash(`✓ ${label} completado`)
             }} style={{ background: "#1a1a2e", border: `1px solid #ef444433`, borderRadius: 8, padding: "8px 12px", color: "#ef4444aa", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
               🗑️ {label}

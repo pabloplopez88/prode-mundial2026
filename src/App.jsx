@@ -1029,7 +1029,9 @@ export default function App() {
 
     return (
     <div style={appStyle}>
-      <Header title="📅 Fixture" />
+      <Header title="📅 Fixture" right={
+        <button onClick={loadData} style={{ background: "none", border: "none", color: "#c8a84b", cursor: "pointer", fontSize: 20, padding: "4px 8px" }}>↻</button>
+      } />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
         {allStages.map(st => (
           <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
@@ -1321,8 +1323,54 @@ function LogoutConfirm({ onConfirm, onCancel }) {
   )
 }
 
+function renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults) {
+  const saved = getResult(match.id) || {}
+  const edited = editResults[match.id] || {}
+  const cur = { ...saved, ...edited }
+  const isInPlay = cur.status === "IN_PLAY"
+  const isFinished = cur.status === "FINISHED"
+  return (
+    <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
+          {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
+          {(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}
+        </div>
+        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          <input type="text" inputMode="numeric" maxLength={2}
+            style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+            value={cur.home_score ?? ""}
+            onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }}
+          />
+          <span style={{ color: "#6b7280", fontWeight: 900 }}>:</span>
+          <input type="text" inputMode="numeric" maxLength={2}
+            style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+            value={cur.away_score ?? ""}
+            onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }}
+          />
+        </div>
+        <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
+          {(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync }) {
   const getResult = (id) => results.find(r => r.match_id === id)
+  const [adminGruposView, setAdminGruposView] = React.useState("grupo")
+  const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+  const fechaGroups = [
+    { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
+    { date: "Fecha 2", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 25 && m.id <= 48) },
+    { date: "Fecha 3", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 49 && m.id <= 72) },
+  ]
 
   return (
     <div>
@@ -1366,45 +1414,56 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         ))}
       </div>
 
+      {/* Grupos sub-controls */}
+      {stage === "Grupos" && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2940", marginBottom: 8, width: "fit-content" }}>
+            {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
+              <button key={v} onClick={() => setAdminGruposView(v)}
+                style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none", background: adminGruposView === v ? "#c8a84b" : "transparent", color: adminGruposView === v ? "#0a0e1a" : "#94a3b8" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 5, overflowX: "auto" }}>
+            {adminGruposView === "grupo"
+              ? grupoLetters.map(g => (
+                <button key={g} onClick={() => setTimeout(() => document.getElementById("admin-grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  Gr. {g}
+                </button>
+              ))
+              : fechaGroups.map((fg, i) => (
+                <button key={i} onClick={() => setTimeout(() => document.getElementById("admin-fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {fg.date}
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
       {/* Match cards */}
-      {allMatches.filter(m => m.stage === stage).map(match => {
-        const saved = getResult(match.id) || {}
-        const edited = editResults[match.id] || {}
-        const cur = { ...saved, ...edited }
-        const isInPlay = cur.status === "IN_PLAY"
-        const isFinished = cur.status === "FINISHED"
+      {stage === "Grupos" && adminGruposView === "grupo" && grupoLetters.map(g => {
+        const gMatches = allMatches.filter(m => m.stage === "Grupos" && m.group === g)
+        if (!gMatches.length) return null
         return (
-          <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-                {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
-                {(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}
-              </div>
-              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <input type="text" inputMode="numeric" maxLength={2}
-                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
-                  value={cur.home_score ?? ""}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }}
-                />
-                <span style={{ color: "#6b7280", fontWeight: 900 }}>:</span>
-                <input type="text" inputMode="numeric" maxLength={2}
-                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
-                  value={cur.away_score ?? ""}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }}
-                />
-              </div>
-              <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
-                {(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}
-              </div>
-            </div>
+          <div key={g} id={"admin-grp-"+g}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#c8a84b", padding: "8px 4px 4px", letterSpacing: 1 }}>GRUPO {g}</div>
+            {gMatches.map(match => renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults))}
           </div>
         )
       })}
+      {stage === "Grupos" && adminGruposView === "fecha" && fechaGroups.map((fg, i) => (
+        <div key={i} id={"admin-fecha-"+i}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#c8a84b", padding: "8px 4px 4px", letterSpacing: 1 }}>{fg.date.toUpperCase()}</div>
+          {fg.matches.map(match => renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults))}
+        </div>
+      ))}
+      {stage !== "Grupos" && allMatches.filter(m => m.stage === stage).map(match =>
+        renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults)
+      )}
 
       {/* Save button */}
       {Object.keys(editResults).length > 0 && (

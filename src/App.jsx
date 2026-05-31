@@ -181,7 +181,7 @@ export default function App() {
       if (result?.status === "FINISHED") return false
       return true
     })
-    if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
+    if (!activeMatches.length) { setAutoSyncStatus("idle"); setLastSyncTime(new Date()); return }
     setAutoSyncStatus("searching")
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -200,11 +200,12 @@ export default function App() {
           fuzzyMatch(f.home_name || "", homeSearch) && fuzzyMatch(f.away_name || "", awaySearch)
         )
         if (!match) return
-        const apiStatus = match.status === "IN PLAY" ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
+        const apiStatus = ["IN PLAY", "HALF TIME"].includes(match.status) ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
         if (apiStatus === "SCHEDULED") return
         const parts = (match.score || "0 - 0").split(" - ")
         const hs = parseInt(parts[0]), as_ = parseInt(parts[1])
-        upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: match.time || null, updated_at: new Date().toISOString() })
+        const matchTime = match.status === "HALF TIME" ? "ET" : (match.time || null)
+        upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: matchTime, updated_at: new Date().toISOString() })
       })
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
@@ -825,7 +826,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time}'` : formatTime(m.date)}</div>
+                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}` : formatTime(m.date)}</div>
                       {result && result.home_score !== null
                         ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
@@ -988,7 +989,7 @@ export default function App() {
                     {matchState === "inplay" && <span style={{ marginRight: 3 }}>●</span>}{result.home_score} – {result.away_score}
                   </div>
                   {matchState === "inplay" && result.match_time && (
-                    <div style={{ fontSize: 9, color: C.green }}>Última act. {result.match_time}&apos;</div>
+                    <div style={{ fontSize: 9, color: C.green }}>{`Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}`}</div>
                   )}
                 </div>
               )}
@@ -1332,8 +1333,13 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
     <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-          {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
+            {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+          </div>
+          {isInPlay && cur.match_time && (
+            <div style={{ fontSize: 9, color: "#22c55e" }}>{`Última act. ${cur.match_time === "ET" ? "ET" : cur.match_time + "'"}`}</div>
+          )}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

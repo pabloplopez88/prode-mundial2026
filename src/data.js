@@ -1,9 +1,9 @@
 export const MATCHES = [
-  // PARTIDOS DE PRUEBA - HOY 30 MAY 2026
-  { id: 201, home: "PSG", away: "Arsenal", group: "", date: "2026-05-30T17:15", venue: "Budapest", stage: "Prueba" },
-  { id: 202, home: "Gim. Jujuy", away: "Belgrano", group: "", date: "2026-05-30T17:20", venue: "Santiago del Estero", stage: "Prueba" },
-  { id: 203, home: "Instituto", away: "Lanús", group: "", date: "2026-05-30T17:25", venue: "Rosario", stage: "Prueba" },
-  { id: 204, home: "Equipo 1", away: "Equipo 2", group: "", date: "2026-05-30T17:40", venue: "Córdoba", stage: "Prueba" },
+  // PARTIDOS DE PRUEBA - 31 MAY 2026 (amistosos internacionales)
+  { id: 201, home: "Japón", away: "Islandia", group: "", date: "2026-05-31T07:25", venue: "Japón", stage: "Prueba" },
+  { id: 202, home: "Alemania", away: "Finlandia", group: "", date: "2026-05-31T15:45", venue: "Alemania", stage: "Prueba" },
+  { id: 203, home: "Estados Unidos", away: "Senegal", group: "", date: "2026-05-31T16:30", venue: "Estados Unidos", stage: "Prueba" },
+  { id: 204, home: "Brasil", away: "Panamá", group: "", date: "2026-05-31T18:30", venue: "Brasil", stage: "Prueba" },
   { id: 1, home: "México", away: "Sudáfrica", group: "A", date: "2026-06-11T16:00", venue: "Ciudad de México", stage: "Grupos" },
   { id: 2, home: "Corea del Sur", away: "Rep. Checa", group: "A", date: "2026-06-11T23:00", venue: "Guadalajara", stage: "Grupos" },
   { id: 3, home: "Canadá", away: "Bosnia y Herz.", group: "B", date: "2026-06-12T16:00", venue: "Toronto", stage: "Grupos" },

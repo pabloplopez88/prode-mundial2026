@@ -36,9 +36,9 @@ function ScoreInput({ value, onChange }) {
 
 function ScoreBox({ value, matchState = "upcoming" }) {
   // matchState: "upcoming" = editable (not shown as box), "inplay" = green border gray text, "finished" = gray border gray text
-  const border = matchState === "inplay" ? C.red : "#2a2a2a"
-  const bg = matchState === "inplay" ? "#2a0f0f" : "#1a1a1a"
-  const textColor = matchState === "inplay" ? C.red : C.muted
+  const border = matchState === "inplay" ? C.green : "#2a2a2a"
+  const bg = matchState === "inplay" ? "#0f2a1a" : "#1a1a1a"
+  const textColor = C.muted
   return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color: textColor, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
 }
 
@@ -553,6 +553,13 @@ export default function App() {
 
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
+  // Combine group matches with knockout matches from Supabase
+  const allMatches = [
+    ...MATCHES,
+    ...knockoutMatches.map(m => ({ ...m, group: "" }))
+  ]
+  const allStages = ["Prueba", "Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
+
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
     MATCHES.forEach(m => {
@@ -569,13 +576,6 @@ export default function App() {
     })
     return { ...p, total, played, perfect }
   }).sort((a, b) => b.total - a.total)
-
-  // Combine group matches with knockout matches from Supabase
-  const allMatches = [
-    ...MATCHES,
-    ...knockoutMatches.map(m => ({ ...m, group: "" }))
-  ]
-  const allStages = ["Prueba", "Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
 
   const myPred = (matchId, locked = false) => {
     const edited = editPreds[matchId]
@@ -814,7 +814,7 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
-                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
@@ -824,9 +824,9 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: inPlay ? C.red : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time}'` : formatTime(m.date)}</div>
+                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time}'` : formatTime(m.date)}</div>
                       {result && result.home_score !== null
-                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.red : C.text }}>{result.home_score} – {result.away_score}</div>
+                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
                       {/* Before match */}
@@ -848,7 +848,7 @@ export default function App() {
                           </div>
                           {effectivePred.isDefault && <div style={{ fontSize: 10, color: inPlay ? C.accent : C.muted, fontWeight: 600 }}>(default)</div>}
                           {pts !== null && !inPlay && (
-                            <div style={{ fontSize: 11, color: pts > 0 ? C.green : C.muted, fontWeight: 700 }}>+{pts} pts</div>
+                            <div style={{ fontSize: 11, color: pts > 0 ? "#60a5fa" : C.muted, fontWeight: 700 }}>+{pts} pts</div>
                           )}
                         </div>
                       )}
@@ -968,8 +968,8 @@ export default function App() {
               {match.group && match.stage === "Grupos" && gruposView === "fecha" && (
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
-              {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {matchState === "inplay" && <div style={{ background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+              {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+              {matchState === "inplay" && <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
               </div>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
@@ -1363,12 +1363,12 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }
         return (
-          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? C.red : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? C.green : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
               {cur.status === "IN_PLAY"
-                ? <div style={{ background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: C.red }}>⚽ en juego</div>
+                ? <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.green }}>● en juego</div>
                   </div>
                 : statusLabel.text
                   ? <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>

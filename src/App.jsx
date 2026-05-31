@@ -36,8 +36,8 @@ function ScoreInput({ value, onChange }) {
 
 function ScoreBox({ value, matchState = "upcoming" }) {
   // matchState: "upcoming" = editable (not shown as box), "inplay" = green border gray text, "finished" = gray border gray text
-  const border = matchState === "inplay" ? "#22c55e" : "#2a2a2a"
-  const bg = matchState === "inplay" ? "#0f2a1a" : "#1a1a1a"
+  const border = matchState === "inplay" ? C.red : "#2a2a2a"
+  const bg = matchState === "inplay" ? "#2a0f0f" : "#1a1a1a"
   return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color: C.muted, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
 }
 
@@ -662,7 +662,7 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
-                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
@@ -817,7 +817,7 @@ export default function App() {
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {matchState === "inplay" && <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+              {matchState === "inplay" && <div style={{ background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
               </div>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
@@ -830,7 +830,7 @@ export default function App() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
               {result && result.home_score !== null && (
-                <div style={{ fontSize: 12, color: matchState === "inplay" ? C.green : C.text, fontWeight: 800 }}>
+                <div style={{ fontSize: 12, color: C.text, fontWeight: 800 }}>
                   {result.home_score} – {result.away_score}
                   {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 400 }}> ⚽</span>}
                 </div>
@@ -1151,17 +1151,17 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: "⚽ en juego", color: "#22c55e" }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: "⚽ en juego", color: C.red }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }
         return (
-          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? "#22c55e" : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? C.red : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
               {cur.status === "IN_PLAY"
-                ? <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#22c55e" }}>⚽ en juego</div>
+                ? <div style={{ background: "#3d0f0f", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.red }}>⚽ en juego</div>
                   </div>
                 : statusLabel.text
                   ? <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>

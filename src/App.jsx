@@ -1203,7 +1203,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} />
           )}
         </div>
       </div>
@@ -1321,18 +1321,16 @@ function LogoutConfirm({ onConfirm, onCancel }) {
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus }) {
-  const matchesByStage = allMatches.filter(m => m.stage === stage)
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync }) {
   const getResult = (id) => results.find(r => r.match_id === id)
-  const syncLive = async () => {
-    await doSync()
-    showFlash(autoSyncStatus === "found" ? "✓ Resultados actualizados" : autoSyncStatus === "error" ? "⚠️ Error al conectar" : "Sin partidos activos")
-  }
+
   return (
     <div>
-      <div style={{ marginBottom: 14, padding: 12, background: "#0f1624", borderRadius: 10, border: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8, fontWeight: 700 }}>🔒 Cierre de inscripciones</div>
-        <input type="datetime-local" style={{ width: "100%", background: "#1a2035", border: `2px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: C.text, outline: "none", boxSizing: "border-box", marginBottom: 8 }}
+      {/* Registration cutoff */}
+      <div style={{ marginBottom: 14, padding: 12, background: "#0f1624", borderRadius: 10, border: "1px solid #1e2940" }}>
+        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>🔒 Cierre de inscripciones</div>
+        <input type="datetime-local"
+          style={{ width: "100%", background: "#1a2035", border: "2px solid #1e2940", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#e2e8f0", outline: "none", boxSizing: "border-box", marginBottom: 8 }}
           defaultValue={regClosesAt}
           onChange={async (e) => {
             const val = e.target.value
@@ -1341,58 +1339,79 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             setRegistrationOpen(new Date() < new Date(val))
           }}
         />
-        <div style={{ fontSize: 11, color: registrationOpen ? C.green : C.red }}>
+        <div style={{ fontSize: 11, color: registrationOpen ? "#22c55e" : "#ef4444" }}>
           {registrationOpen ? "✓ Inscripciones abiertas" : "✗ Inscripciones cerradas"}
         </div>
       </div>
 
-      <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: autoSyncStatus === "searching" ? C.accent : autoSyncStatus === "found" ? C.green : autoSyncStatus === "error" ? C.red : "#333" }} />
-        <div style={{ fontSize: 12, color: C.textDim }}>
+      {/* Sync status */}
+      <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: "1px solid #1e2940", display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: autoSyncStatus === "searching" ? "#c8a84b" : autoSyncStatus === "found" ? "#22c55e" : autoSyncStatus === "error" ? "#ef4444" : "#333" }} />
+        <div style={{ fontSize: 12, color: "#94a3b8" }}>
           {autoSyncStatus === "searching" ? "🔍 buscando..." : autoSyncStatus === "found" ? "✓ actualizado" : autoSyncStatus === "error" ? "⚠️ error" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera"}
         </div>
       </div>
-      <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync manual</button>
+      <button onClick={async () => { await doSync(); showFlash("✓ Sync completado") }}
+        style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>
+        ⚡ Sync manual
+      </button>
+
+      {/* Stage tabs */}
       <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
-        {STAGES.map(st => (
-          <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
+        {allStages.map(st => (
+          <button key={st} onClick={() => setStage(st)}
+            style={{ background: stage === st ? "#c8a84b" : "transparent", color: stage === st ? "#0a0e1a" : "#94a3b8", border: "1px solid " + (stage === st ? "#c8a84b" : "#1e2940"), borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+            {st}
+          </button>
         ))}
       </div>
-      {matchesByStage.map(match => {
+
+      {/* Match cards */}
+      {allMatches.filter(m => m.stage === stage).map(match => {
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: "● en juego", color: C.green }
-          : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
-          : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
-          : { text: "", color: C.muted }
+        const isInPlay = cur.status === "IN_PLAY"
+        const isFinished = cur.status === "FINISHED"
         return (
-          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? C.green : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+          <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
-              {cur.status === "IN_PLAY"
-                ? <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: C.green }}>● en juego</div>
-                  </div>
-                : statusLabel.text
-                  ? <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>
-                  : null
-              }
+              <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
+                {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>
-              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.home_score ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }} />
-                <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 40, height: 40, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 7, color: C.accent, fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }} value={cur.away_score ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }} />
+              <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
+                {(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}
               </div>
-              <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.away] || "🏳️"} {match.away}</div>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                <input type="text" inputMode="numeric" maxLength={2}
+                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+                  value={cur.home_score ?? ""}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }}
+                />
+                <span style={{ color: "#6b7280", fontWeight: 900 }}>:</span>
+                <input type="text" inputMode="numeric" maxLength={2}
+                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+                  value={cur.away_score ?? ""}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }}
+                />
+              </div>
+              <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
+                {(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}
+              </div>
             </div>
           </div>
         )
       })}
+
+      {/* Save button */}
       {Object.keys(editResults).length > 0 && (
-        <button style={{ background: C.accent, color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }} onClick={saveResults} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar resultados"}</button>
+        <button onClick={saveResults} disabled={saving}
+          style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }}>
+          {saving ? "Guardando..." : "💾 Guardar resultados"}
+        </button>
       )}
     </div>
   )

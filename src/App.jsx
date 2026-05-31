@@ -197,88 +197,97 @@ export default function App() {
     return () => clearInterval(interval)
   }, [user])
 
-  // Smart auto-sync: only runs when there are active matches today
+  // Smart auto-sync using live-score-api.com
   useEffect(() => {
-    const token = import.meta.env.VITE_APIFOOTBALL_TOKEN || ""
-    if (!token) return
+    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
+    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
+    if (!LS_KEY || !LS_SECRET) return
+
+    const fuzzyMatch = (a, b) => {
+      const na = a.toLowerCase(), nb = b.toLowerCase()
+      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
+    }
+
+    const processFixtures = async (fixtures, activeMatches) => {
+      const upserts = []
+      activeMatches.forEach(local => {
+        // Use homeApi/awayApi if available, otherwise fall back to home/away
+        const homeSearch = local.homeApi || local.home
+        const awaySearch = local.awayApi || local.away
+        const match = fixtures.find(f =>
+          fuzzyMatch(f.home?.name || "", homeSearch) &&
+          fuzzyMatch(f.away?.name || "", awaySearch)
+        )
+        if (!match) return
+        const apiStatus = match.status === "IN PLAY" ? "IN_PLAY"
+          : match.status === "FINISHED" ? "FINISHED"
+          : "SCHEDULED"
+        const homeScore = parseInt(match.score?.split(" - ")[0])
+        const awayScore = parseInt(match.score?.split(" - ")[1])
+        if (!isNaN(homeScore)) {
+          upserts.push({ match_id: local.id, home_score: homeScore, away_score: awayScore, status: apiStatus, updated_at: new Date().toISOString() })
+        }
+      })
+      if (upserts.length > 0) {
+        await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        setResults(prev => {
+          const next = [...prev]
+          upserts.forEach(u => {
+            const idx = next.findIndex(r => r.match_id === u.match_id)
+            if (idx >= 0) next[idx] = { ...next[idx], ...u }
+            else next.push(u)
+          })
+          return next
+        })
+        setAutoSyncStatus("found")
+      } else {
+        setAutoSyncStatus("nothing")
+      }
+    }
 
     const syncResults = async () => {
       const todayMatches = MATCHES.filter(m => isSameDay(m.date))
       if (!todayMatches.length) return
 
-      // Only call API if there are matches that could be in play
-      // (started but not yet marked FINISHED in our DB)
       const now = new Date()
       const activeMatches = todayMatches.filter(m => {
         const start = new Date(m.date)
-        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false // not started yet
+        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
         const result = results.find(r => r.match_id === m.id)
-        if (result?.status === "FINISHED") return false // already done
+        if (result?.status === "FINISHED") return false
         return true
       })
       if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
 
       setAutoSyncStatus("searching")
       try {
-        const today = new Date().toISOString().slice(0, 10)
-        const res = await fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${today}`,
-          { headers: { "x-apisports-key": token } }
+        // Try live scores (filter to National Teams Friendlies + World Cup)
+        const liveRes = await fetch(
+          `https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`
         )
-        if (!res.ok) return
-        const data = await res.json()
-        const fixtures = data.response || []
+        if (liveRes.ok) {
+          const liveData = await liveRes.json()
+          const liveFixtures = liveData?.data?.match || []
+          await processFixtures(liveFixtures, activeMatches)
+        }
 
-        const upserts = []
-        activeMatches.forEach(local => {
-          // Match by team name (fuzzy)
-          const match = fixtures.find(f => {
-            const home = (f.teams?.home?.name || "").toLowerCase()
-            const away = (f.teams?.away?.name || "").toLowerCase()
-            const localHome = local.home.toLowerCase()
-            const localAway = local.away.toLowerCase()
-            return (home.includes(localHome.slice(0, 4)) || localHome.includes(home.slice(0, 4))) &&
-                   (away.includes(localAway.slice(0, 4)) || localAway.includes(away.slice(0, 4)))
-          })
-          if (!match) return
-          const status = match.fixture?.status?.short // NS, 1H, HT, 2H, ET, P, FT, AET, PEN
-          const homeScore = match.goals?.home
-          const awayScore = match.goals?.away
-          const apiStatus = ["FT", "AET", "PEN"].includes(status) ? "FINISHED"
-            : ["1H", "HT", "2H", "ET", "P"].includes(status) ? "IN_PLAY"
-            : "SCHEDULED"
-          if (homeScore !== null && homeScore !== undefined) {
-            upserts.push({
-              match_id: local.id,
-              home_score: homeScore,
-              away_score: awayScore,
-              status: apiStatus,
-              updated_at: new Date().toISOString()
-            })
-          }
-        })
-        if (upserts.length > 0) {
-          await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-          setResults(prev => {
-            const next = [...prev]
-            upserts.forEach(u => {
-              const idx = next.findIndex(r => r.match_id === u.match_id)
-              if (idx >= 0) next[idx] = { ...next[idx], ...u }
-              else next.push(u)
-            })
-            return next
-          })
-          setAutoSyncStatus("found")
-        } else {
-          setAutoSyncStatus("nothing")
+        // Also check history for recently finished matches
+        const today = new Date().toISOString().slice(0, 10)
+        const histRes = await fetch(
+          `https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${today}`
+        )
+        if (histRes.ok) {
+          const histData = await histRes.json()
+          const histFixtures = (histData?.data?.match || []).map(m => ({ ...m, status: "FINISHED" }))
+          await processFixtures(histFixtures, activeMatches)
         }
       } catch (e) {
         setAutoSyncStatus("error")
       }
     }
 
-    const interval = setInterval(syncResults, 10 * 60 * 1000) // every 10 min
-    syncResults() // run on load
+    const interval = setInterval(syncResults, 10 * 60 * 1000)
+    syncResults()
     return () => clearInterval(interval)
   }, [results])
 

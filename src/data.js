@@ -76,38 +76,6 @@ export const MATCHES = [
   { id: 70, home: "Colombia", away: "Uzbekistán", group: "K", date: "2026-07-01T21:00", venue: "Houston", stage: "Grupos" },
   { id: 71, home: "Croacia", away: "Inglaterra", group: "L", date: "2026-07-01T17:00", venue: "Seattle", stage: "Grupos" },
   { id: 72, home: "Panamá", away: "Ghana", group: "L", date: "2026-07-01T17:00", venue: "Vancouver", stage: "Grupos" },
-  { id: 73, home: "1°A", away: "3° mejor", group: "", date: "2026-07-02T21:00", venue: "Ciudad de México", stage: "16avos" },
-  { id: 74, home: "1°C", away: "3° mejor", group: "", date: "2026-07-02T17:00", venue: "Nueva Jersey", stage: "16avos" },
-  { id: 75, home: "1°B", away: "3° mejor", group: "", date: "2026-07-03T21:00", venue: "Dallas", stage: "16avos" },
-  { id: 76, home: "1°D", away: "3° mejor", group: "", date: "2026-07-03T17:00", venue: "Los Ángeles", stage: "16avos" },
-  { id: 77, home: "2°A", away: "2°B", group: "", date: "2026-07-04T21:00", venue: "Miami", stage: "16avos" },
-  { id: 78, home: "1°E", away: "3° mejor", group: "", date: "2026-07-04T17:00", venue: "Philadelphia", stage: "16avos" },
-  { id: 79, home: "1°F", away: "3° mejor", group: "", date: "2026-07-05T21:00", venue: "Boston", stage: "16avos" },
-  { id: 80, home: "2°C", away: "2°D", group: "", date: "2026-07-05T17:00", venue: "Atlanta", stage: "16avos" },
-  { id: 81, home: "1°G", away: "3° mejor", group: "", date: "2026-07-06T21:00", venue: "Houston", stage: "16avos" },
-  { id: 82, home: "2°E", away: "2°F", group: "", date: "2026-07-06T17:00", venue: "San Francisco", stage: "16avos" },
-  { id: 83, home: "1°H", away: "3° mejor", group: "", date: "2026-07-07T21:00", venue: "Seattle", stage: "16avos" },
-  { id: 84, home: "2°G", away: "2°H", group: "", date: "2026-07-07T17:00", venue: "Vancouver", stage: "16avos" },
-  { id: 85, home: "1°I", away: "3° mejor", group: "", date: "2026-07-08T21:00", venue: "Kansas City", stage: "16avos" },
-  { id: 86, home: "2°I", away: "2°J", group: "", date: "2026-07-08T17:00", venue: "Toronto", stage: "16avos" },
-  { id: 87, home: "1°J", away: "3° mejor", group: "", date: "2026-07-09T21:00", venue: "Monterrey", stage: "16avos" },
-  { id: 88, home: "2°K", away: "2°L", group: "", date: "2026-07-09T17:00", venue: "Guadalajara", stage: "16avos" },
-  { id: 89, home: "G.P73", away: "G.P74", group: "", date: "2026-07-11T21:00", venue: "Nueva Jersey", stage: "Cuartos" },
-  { id: 90, home: "G.P75", away: "G.P76", group: "", date: "2026-07-11T17:00", venue: "Dallas", stage: "Cuartos" },
-  { id: 91, home: "G.P77", away: "G.P78", group: "", date: "2026-07-12T21:00", venue: "Los Ángeles", stage: "Cuartos" },
-  { id: 92, home: "G.P79", away: "G.P80", group: "", date: "2026-07-12T17:00", venue: "Atlanta", stage: "Cuartos" },
-  { id: 93, home: "G.P81", away: "G.P82", group: "", date: "2026-07-13T21:00", venue: "Houston", stage: "Cuartos" },
-  { id: 94, home: "G.P83", away: "G.P84", group: "", date: "2026-07-13T17:00", venue: "Seattle", stage: "Cuartos" },
-  { id: 95, home: "G.P85", away: "G.P86", group: "", date: "2026-07-14T21:00", venue: "Kansas City", stage: "Cuartos" },
-  { id: 96, home: "G.P87", away: "G.P88", group: "", date: "2026-07-14T17:00", venue: "Boston", stage: "Cuartos" },
-  { id: 97, home: "G.P89", away: "G.P90", group: "", date: "2026-07-15T21:00", venue: "Dallas", stage: "Semis" },
-  { id: 98, home: "G.P91", away: "G.P92", group: "", date: "2026-07-15T17:00", venue: "Nueva Jersey", stage: "Semis" },
-  { id: 99, home: "G.P93", away: "G.P94", group: "", date: "2026-07-16T21:00", venue: "Los Ángeles", stage: "Semis" },
-  { id: 100, home: "G.P95", away: "G.P96", group: "", date: "2026-07-16T17:00", venue: "Kansas City", stage: "Semis" },
-  { id: 101, home: "Perdedor Semi 1", away: "Perdedor Semi 2", group: "", date: "2026-07-18T21:00", venue: "Miami", stage: "3er Puesto" },
-  { id: 102, home: "Perdedor Semi 3", away: "Perdedor Semi 4", group: "", date: "2026-07-18T17:00", venue: "Dallas", stage: "3er Puesto" },
-  { id: 103, home: "Ganador Semi 1", away: "Ganador Semi 2", group: "", date: "2026-07-19T17:00", venue: "Nueva Jersey", stage: "Final" },
-  { id: 104, home: "Ganador Semi 3", away: "Ganador Semi 4", group: "", date: "2026-07-19T21:00", venue: "Los Ángeles", stage: "Final" },
 ]
 
 export const FLAGS = {
@@ -131,7 +99,7 @@ export const AVATARS = [
   "🧠","💪","🐉","🦄","🎪","🚀","🌈","🍀","🎲","🃏"
 ]
 
-export const STAGES = ["Prueba", "Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
+export const STAGES = ["Prueba", "Grupos"]
 
 export function calcPoints(pred, result) {
   if (!pred || result.home_score === null || result.away_score === null) return null

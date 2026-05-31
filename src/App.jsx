@@ -38,7 +38,8 @@ function ScoreBox({ value, matchState = "upcoming" }) {
   // matchState: "upcoming" = editable (not shown as box), "inplay" = green border gray text, "finished" = gray border gray text
   const border = matchState === "inplay" ? C.red : "#2a2a2a"
   const bg = matchState === "inplay" ? "#2a0f0f" : "#1a1a1a"
-  return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color: C.muted, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
+  const textColor = matchState === "inplay" ? C.red : C.muted
+  return <div style={{ width: 44, height: 44, background: bg, border: `2px solid ${border}`, borderRadius: 8, color: textColor, fontSize: 20, fontWeight: 800, textAlign: "center", lineHeight: "40px", minWidth: 44 }}>{value ?? "—"}</div>
 }
 
 function FlashMsg({ msg }) {
@@ -60,7 +61,7 @@ export default function App() {
   const [players, setPlayers] = useState([])
   const [predictions, setPredictions] = useState([])
   const [results, setResults] = useState([])
-  const [messages, setMessages] = useState([])
+  const [knockoutMatches, setKnockoutMatches] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [gruposView, setGruposView] = useState("grupo")
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
@@ -76,8 +77,6 @@ export default function App() {
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
   const [loading, setLoading] = useState(true)
-  const [chatMsg, setChatMsg] = useState("")
-  const chatEndRef = useRef(null)
 
   // register form
   const [regName, setRegName] = useState("")
@@ -104,13 +103,15 @@ export default function App() {
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
 
   const loadData = useCallback(async () => {
-    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }] = await Promise.all([
+    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined"),
       supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
-      supabase.from("chat_messages").select("*").order("created_at", { ascending: true }).limit(200),
+      Promise.resolve({ data: [] }),
+      supabase.from("knockout_matches").select("*").order("id"),
     ])
     if (pl) setPlayers(pl)
+    if (km) setKnockoutMatches(km)
     if (pr) {
       setPredictions(pr)
       // Populate editPreds with user's saved predictions (single source of truth for inputs)
@@ -126,7 +127,6 @@ export default function App() {
       }
     }
     if (re) { setResults(re); resultsRef.current = re }
-    if (ms) setMessages(ms)
     setLoading(false)
   }, [])
 
@@ -158,9 +158,6 @@ export default function App() {
 
     const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
-        setMessages(prev => [...prev, payload.new])
-      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadData])
@@ -225,6 +222,162 @@ export default function App() {
     } catch { setAutoSyncStatus("error") }
   }, [])
 
+  // Auto-update knockout matches when groups are complete
+  useEffect(() => {
+    if (!knockoutMatches.length || !results.length) return
+
+    const ANNEX_C = {
+      "DEFGHIJKL": { 74: "3E", 77: "3I", 79: "3D", 80: "3J", 81: "3I", 82: "3H", 85: "3J", 87: "3L" },
+      // 1A=M79, 1B=M85, 1D=M81, 1E=M74, 1G=M82, 1I=M77, 1K=M87, 1L=M80
+      // Key = sorted string of 8 qualifying third groups
+      // Value = map of match_id -> which third place team plays there
+    }
+
+    const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+
+    // Calculate group standings
+    const getGroupStandings = (letter) => {
+      const gMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
+      const teams = {}
+      gMatches.forEach(m => {
+        if (!teams[m.home]) teams[m.home] = { name: m.home, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
+        if (!teams[m.away]) teams[m.away] = { name: m.away, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
+        const r = results.find(r => r.match_id === m.id)
+        if (!r || r.home_score === null) return
+        const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+        teams[m.home].pj++; teams[m.away].pj++
+        teams[m.home].gf += hs; teams[m.home].gc += as_
+        teams[m.away].gf += as_; teams[m.away].gc += hs
+        if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
+        else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
+        else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
+      })
+      return Object.values(teams).sort((a, b) =>
+        b.pts !== a.pts ? b.pts - a.pts :
+        (b.gf - b.gc) !== (a.gf - a.gc) ? (b.gf - b.gc) - (a.gf - a.gc) :
+        b.gf - a.gf
+      )
+    }
+
+    const isGroupComplete = (letter) => {
+      const gMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
+      return gMatches.every(m => {
+        const r = results.find(r => r.match_id === m.id)
+        return r && r.home_score !== null
+      })
+    }
+
+    const updateKnockout = async () => {
+      const updates = []
+
+      // Map of which knockout match needs which group's winner/runner-up
+      // Based on official fixture: 73=2A/2B, 75=1F/2C, 76=1C/2F, 78=2E/2I, 83=2K/2L, 84=1H/2J, 86=1J/2H, 88=2D/2G
+      // And: 74=1E, 79=1A, 80=1L, 81=1D, 82=1G, 85=1B, 87=1K, 77=1I
+      const groupToKnockout = {
+        A: { "1": { matchId: 79, side: "home" }, "2": { matchId: 73, side: "home" } },
+        B: { "1": { matchId: 85, side: "home" }, "2": { matchId: 73, side: "away" } },
+        C: { "1": { matchId: 76, side: "home" }, "2": { matchId: 75, side: "away" } },
+        D: { "1": { matchId: 81, side: "home" }, "2": { matchId: 88, side: "home" } },
+        E: { "1": { matchId: 74, side: "home" }, "2": { matchId: 78, side: "home" } },
+        F: { "1": { matchId: 75, side: "home" }, "2": { matchId: 76, side: "away" } },
+        G: { "1": { matchId: 82, side: "home" }, "2": { matchId: 88, side: "away" } },
+        H: { "1": { matchId: 84, side: "home" }, "2": { matchId: 86, side: "away" } },
+        I: { "1": { matchId: 77, side: "home" }, "2": { matchId: 78, side: "away" } },
+        J: { "1": { matchId: 86, side: "home" }, "2": { matchId: 84, side: "away" } },
+        K: { "1": { matchId: 87, side: "home" }, "2": { matchId: 83, side: "home" } },
+        L: { "1": { matchId: 80, side: "home" }, "2": { matchId: 83, side: "away" } },
+      }
+
+      // Update 1st and 2nd place for completed groups
+      grupoLetters.forEach(letter => {
+        if (!isGroupComplete(letter)) return
+        const standings = getGroupStandings(letter)
+        if (standings.length < 2) return
+        const first = standings[0].name
+        const second = standings[1].name
+        const mapping = groupToKnockout[letter]
+        if (mapping["1"]) updates.push({ id: mapping["1"].matchId, field: mapping["1"].side, value: first })
+        if (mapping["2"]) updates.push({ id: mapping["2"].matchId, field: mapping["2"].side, value: second })
+      })
+
+      // Apply updates to Supabase
+      for (const u of updates) {
+        const current = knockoutMatches.find(m => m.id === u.id)
+        if (!current) continue
+        const newVal = u.value
+        const currentVal = current[u.field]
+        // Only update if value changed and wasn't already a real team name (not a placeholder)
+        if (currentVal !== newVal && (currentVal.includes("°") || currentVal.includes("G.P") || currentVal.includes("Ganador") || currentVal.includes("Perdedor"))) {
+          await supabase.from("knockout_matches").update({ [u.field]: newVal }).eq("id", u.id)
+        }
+      }
+
+      // Check if ALL groups are complete for third-place logic
+      const allGroupsComplete = grupoLetters.every(isGroupComplete)
+      if (allGroupsComplete) {
+        // Get all thirds sorted
+        const allThirds = grupoLetters.map(letter => {
+          const s = getGroupStandings(letter)
+          return s[2] ? { ...s[2], group: letter } : null
+        }).filter(Boolean).sort((a, b) =>
+          b.pts !== a.pts ? b.pts - a.pts :
+          (b.gf - b.gc) !== (a.gf - a.gc) ? (b.gf - b.gc) - (a.gf - a.gc) :
+          b.gf - a.gf
+        )
+        const top8Thirds = allThirds.slice(0, 8)
+        const top8Groups = top8Thirds.map(t => t.group).sort().join("")
+
+        // Annex C lookup - maps group combo to which third plays in which match
+        // Format: { matchId: groupLetter } meaning team from that group plays in that match
+        const annexC = {
+          "EFGHIJKL": { 74: "E", 77: "I", 79: "F", 80: "K", 81: "J", 82: "H", 85: "J", 87: "L" },
+          "DFGHIJKL": { 74: "I", 77: "F", 79: "H", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
+          "DEGHIJKL": { 74: "I", 77: "H", 79: "D", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
+          "DEFHIJKL": { 74: "I", 77: "H", 79: "D", 80: "K", 81: "J", 82: "F", 85: "J", 87: "L" },
+          "DEFGIJKL": { 74: "I", 77: "G", 79: "D", 80: "K", 81: "J", 82: "F", 85: "G", 87: "L" },
+          "DEFGHJKL": { 74: "J", 77: "G", 79: "D", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
+          "DEFGHIKL": { 74: "I", 77: "G", 79: "D", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
+          "DEFGHIJL": { 74: "J", 77: "G", 79: "D", 80: "L", 81: "H", 82: "F", 85: "G", 87: "I" },
+          "DEFGHIJK": { 74: "J", 77: "G", 79: "D", 80: "I", 81: "H", 82: "F", 85: "G", 87: "K" },
+          "CFGHIJKL": { 74: "I", 77: "F", 79: "C", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
+          "CEGHIJKL": { 74: "I", 77: "H", 79: "C", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
+          "CEFHIJKL": { 74: "I", 77: "H", 79: "C", 80: "K", 81: "J", 82: "F", 85: "J", 87: "L" },
+          "CEFGIJKL": { 74: "I", 77: "G", 79: "C", 80: "K", 81: "J", 82: "F", 85: "G", 87: "L" },
+          "CEFGHJKL": { 74: "J", 77: "G", 79: "C", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
+          "CEFGHIKL": { 74: "I", 77: "G", 79: "C", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
+          "CEFGHIJL": { 74: "J", 77: "G", 79: "C", 80: "L", 81: "H", 82: "F", 85: "G", 87: "I" },
+          "CEFGHIJK": { 74: "J", 77: "G", 79: "C", 80: "I", 81: "H", 82: "F", 85: "G", 87: "K" },
+        }
+
+        const mapping = annexC[top8Groups]
+        if (mapping) {
+          const thirdsMap = {}
+          top8Thirds.forEach(t => { thirdsMap[t.group] = t.name })
+          for (const [matchId, grp] of Object.entries(mapping)) {
+            const team = thirdsMap[grp]
+            if (!team) continue
+            const current = knockoutMatches.find(m => m.id === parseInt(matchId))
+            if (!current) continue
+            // Find which side needs the third place team
+            if (current.away.includes("3°") || current.away.includes("mejor")) {
+              await supabase.from("knockout_matches").update({ away: team }).eq("id", parseInt(matchId))
+            } else if (current.home.includes("3°") || current.home.includes("mejor")) {
+              await supabase.from("knockout_matches").update({ home: team }).eq("id", parseInt(matchId))
+            }
+          }
+        }
+      }
+
+      // Reload knockout matches if we made changes
+      if (updates.length > 0) {
+        const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
+        if (km) setKnockoutMatches(km)
+      }
+    }
+
+    updateKnockout()
+  }, [results, knockoutMatches.length])
+
   // Auto-sync results from live-score-api on load
   useEffect(() => {
     const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
@@ -270,7 +423,6 @@ export default function App() {
 
 
 
-  const chatScrollRef = useRef(null)
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
@@ -398,14 +550,7 @@ export default function App() {
     showFlash("✓ Configuración guardada")
   }
 
-  // ── SEND CHAT ──────────────────────────────────────────────────────────────
-  const sendChat = async () => {
-    if (!chatMsg.trim() || !user) return
-    const msg = { player_id: user.id, player_name: user.name, avatar: user.avatar, message: chatMsg.trim(), created_at: new Date().toISOString(), id: Date.now() }
-    setMessages(prev => [...prev, msg])
-    setChatMsg("")
-    await supabase.from("chat_messages").insert({ player_id: user.id, player_name: user.name, avatar: user.avatar, message: msg.message })
-  }
+
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
   const board = players.map(p => {
@@ -425,13 +570,20 @@ export default function App() {
     return { ...p, total, played, perfect }
   }).sort((a, b) => b.total - a.total)
 
+  // Combine group matches with knockout matches from Supabase
+  const allMatches = [
+    ...MATCHES,
+    ...knockoutMatches.map(m => ({ ...m, group: "" }))
+  ]
+  const allStages = ["Prueba", "Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
+
   const myPred = (matchId, locked = false) => {
     const edited = editPreds[matchId]
     if (edited) return edited
     return {}
   }
   const getResult = (matchId) => results.find(r => r.match_id === matchId)
-  const matchesByStage = MATCHES.filter(m => m.stage === stage)
+  const matchesByStage = allMatches.filter(m => m.stage === stage)
   const hasUnsaved = Object.keys(editPreds).length > 0
 
   const appStyle = { minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", paddingTop: 56 }
@@ -445,7 +597,7 @@ export default function App() {
 
   const BottomNav = () => (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
-      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "chat", icon: "💬", label: "Chat" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🌍", label: "Grupos" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
         <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
@@ -672,9 +824,9 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{formatTime(m.date)}</div>
+                      <div style={{ fontSize: 11, color: inPlay ? C.red : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time}'` : formatTime(m.date)}</div>
                       {result && result.home_score !== null
-                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
+                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.red : C.text }}>{result.home_score} – {result.away_score}</div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
                       {/* Before match */}
@@ -789,9 +941,9 @@ export default function App() {
     // Build subgroups for Grupos stage
     const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
     const fechaGroups = [
-      { date: "Fecha 1", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
-      { date: "Fecha 2", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 25 && m.id <= 48) },
-      { date: "Fecha 3", matches: MATCHES.filter(m => m.stage === "Grupos" && m.id >= 49 && m.id <= 72) },
+      { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
+      { date: "Fecha 2", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 25 && m.id <= 48) },
+      { date: "Fecha 3", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 49 && m.id <= 72) },
     ]
 
     const renderMatchCard = (match) => {
@@ -875,7 +1027,7 @@ export default function App() {
     <div style={appStyle}>
       <Header title="📅 Fixture" />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
-        {STAGES.map(st => (
+        {allStages.map(st => (
           <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
         ))}
       </div>
@@ -922,7 +1074,7 @@ export default function App() {
       <div style={{ padding: "12px 14px", paddingBottom: 20 }}>
         {stage === "Grupos" && gruposView === "grupo" && (
           grupoLetters.map(g => {
-            const gMatches = MATCHES.filter(m => m.stage === "Grupos" && m.group === g)
+            const gMatches = allMatches.filter(m => m.stage === "Grupos" && m.group === g)
             if (!gMatches.length) return null
             return (
               <div key={g} id={"grp-"+g}>
@@ -971,42 +1123,6 @@ export default function App() {
             </div>
           ))
         }
-      </div>
-      <BottomNav />
-    </div>
-  )
-
-  // ════════════════════════════════════════════════════════════════════════════
-  // CHAT
-  // ════════════════════════════════════════════════════════════════════════════
-  if (tab === "chat") return (
-    <div style={{ ...appStyle, display: "flex", flexDirection: "column" }}>
-      <Header title="💬 Chat del Prode" />
-      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 14px", paddingBottom: 80 }}>
-        {messages.length === 0 && <div style={{ textAlign: "center", color: C.textDim, marginTop: 40, fontSize: 14 }}>¡Nadie habló todavía! Sé el primero 🎉</div>}
-        {messages.map((msg, i) => {
-          const isMe = msg.player_id === user.id
-          const showName = i === 0 || messages[i - 1].player_id !== msg.player_id
-          return (
-            <div key={msg.id} style={{ marginBottom: 6, display: "flex", flexDirection: isMe ? "row-reverse" : "row", gap: 8, alignItems: "flex-end" }}>
-              {!isMe && (showName ? <Avatar av={msg.avatar} size={30} name={msg.player_name} /> : <div style={{ width: 30 }} />)}
-              <div style={{ maxWidth: "75%" }}>
-                {showName && !isMe && <div style={{ fontSize: 11, color: C.textDim, marginBottom: 2, marginLeft: 2 }}>{msg.player_name}</div>}
-                <div style={{ background: isMe ? C.accentDim : "#1a2035", color: isMe ? "#fff" : C.text, borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px", padding: "8px 13px", fontSize: 14, lineHeight: 1.4, border: `1px solid ${isMe ? C.accent : C.border}` }}>
-                  {msg.message}
-                </div>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 2, textAlign: isMe ? "right" : "left" }}>
-                  {new Date(msg.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-        <div ref={chatEndRef} />
-      </div>
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderTop: `1px solid ${C.border}`, padding: "10px 14px", display: "flex", gap: 8, zIndex: 260 }}>
-        <input style={inp({ flex: 1, padding: "10px 14px", fontSize: 14 })} placeholder="Escribí algo..." value={chatMsg} onChange={e => setChatMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
-        <button onClick={sendChat} style={btn("primary", { padding: "10px 18px", width: "auto" })}>➤</button>
       </div>
       <BottomNav />
     </div>
@@ -1093,6 +1209,97 @@ export default function App() {
     </div>
   )
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // GRUPOS
+  // ════════════════════════════════════════════════════════════════════════════
+  if (tab === "grupos") {
+    const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+    const groupSubFilter = grupoLetters[0]
+
+    // Calculate standings for each group
+    const calcGroupStandings = (letter) => {
+      const groupMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
+      const teams = {}
+      groupMatches.forEach(m => {
+        if (!teams[m.home]) teams[m.home] = { name: m.home, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
+        if (!teams[m.away]) teams[m.away] = { name: m.away, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
+        const result = results.find(r => r.match_id === m.id)
+        if (!result || result.home_score === null) return
+        const hs = parseInt(result.home_score), as_ = parseInt(result.away_score)
+        teams[m.home].pj++; teams[m.away].pj++
+        teams[m.home].gf += hs; teams[m.home].gc += as_
+        teams[m.away].gf += as_; teams[m.away].gc += hs
+        if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
+        else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
+        else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
+      })
+      return Object.values(teams).sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts
+        const gdA = a.gf - a.gc, gdB = b.gf - b.gc
+        if (gdB !== gdA) return gdB - gdA
+        return b.gf - a.gf
+      })
+    }
+
+    return (
+      <div style={appStyle}>
+        <Header title="🌍 Grupos" />
+        {/* Group pills */}
+        <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
+          {grupoLetters.map(g => (
+            <button key={g} onClick={() => setTimeout(() => document.getElementById("grupo-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+              style={{ padding: "5px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
+              {g}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: "12px 14px" }}>
+          {grupoLetters.map(g => {
+            const standings = calcGroupStandings(g)
+            return (
+              <div key={g} id={"grupo-"+g} style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+                <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <th style={{ textAlign: "left", padding: "4px 14px", color: C.muted, fontWeight: 600 }}>Equipo</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>PJ</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>G</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>E</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>P</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>GF</th>
+                      <th style={{ textAlign: "center", padding: "4px 6px", color: C.muted, fontWeight: 600 }}>GC</th>
+                      <th style={{ textAlign: "center", padding: "4px 8px", color: C.accent, fontWeight: 700 }}>Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {standings.map((t, i) => (
+                      <tr key={t.name} style={{ borderBottom: i < standings.length - 1 ? `1px solid ${C.border}` : "none", background: i < 2 ? "#0f1a0f" : "transparent" }}>
+                        <td style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: i < 2 ? C.green : C.muted, fontWeight: 700, minWidth: 14 }}>{i + 1}</span>
+                          <span style={{ fontSize: 16 }}>{FLAGS[t.name] || "🏳️"}</span>
+                          <span style={{ color: C.text, fontWeight: i < 2 ? 700 : 400 }}>{t.name}</span>
+                        </td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.pj}</td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.g}</td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.e}</td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.p}</td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.gf}</td>
+                        <td style={{ textAlign: "center", padding: "8px 6px", color: C.textDim }}>{t.gc}</td>
+                        <td style={{ textAlign: "center", padding: "8px 8px", color: C.accent, fontWeight: 800, fontSize: 14 }}>{t.pts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
+        </div>
+        <BottomNav />
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -1111,7 +1318,7 @@ function LogoutConfirm({ onConfirm, onCancel }) {
 }
 
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus }) {
-  const matchesByStage = MATCHES.filter(m => m.stage === stage)
+  const matchesByStage = allMatches.filter(m => m.stage === stage)
   const getResult = (id) => results.find(r => r.match_id === id)
   const syncLive = async () => {
     await doSync()
@@ -1151,7 +1358,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: "⚽ en juego", color: C.red }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: "● en juego", color: C.red }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }

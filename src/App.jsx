@@ -297,15 +297,22 @@ export default function App() {
     }
 
     const syncIfNeeded = async () => {
-      // Check last sync time from Supabase config (shared across all users)
-      const { data } = await supabase.from("config").select("value").eq("key", "last_sync_at").single()
-      const lastSync = data?.value ? new Date(data.value).getTime() : 0
+      // Per-device throttle: don't sync if this device synced in the last 10 min
+      const lastLocal = parseInt(localStorage.getItem("lastSync") || "0")
       const tenMin = 10 * 60 * 1000
-      if (Date.now() - lastSync >= tenMin) {
-        // Mark sync time before calling API to prevent race conditions
-        await supabase.from("config").upsert({ key: "last_sync_at", value: new Date().toISOString() }, { onConflict: "key" })
-        syncResults()
+      if (Date.now() - lastLocal < tenMin) return
+      // Check global throttle: don't call API if another device synced recently
+      const { data } = await supabase.from("config").select("value").eq("key", "last_sync_at").single()
+      const lastGlobal = data?.value ? new Date(data.value).getTime() : 0
+      if (Date.now() - lastGlobal < tenMin) {
+        // Someone else synced recently - update our local timestamp so we don't retry
+        localStorage.setItem("lastSync", lastGlobal)
+        return
       }
+      // Both checks passed - sync
+      localStorage.setItem("lastSync", Date.now())
+      await supabase.from("config").upsert({ key: "last_sync_at", value: new Date().toISOString() }, { onConflict: "key" })
+      syncResults()
     }
     const interval = setInterval(syncIfNeeded, 10 * 60 * 1000)
     syncIfNeeded()
@@ -1164,12 +1171,18 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
   const getResult = (id) => results.find(r => r.match_id === id)
   const syncLive = async () => {
+    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
+    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
+    if (!LS_KEY) { showFlash("⚠️ Sin credenciales configuradas"); return }
     try {
-      const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches?status=IN_PLAY,FINISHED&season=2026", { headers: { "X-Auth-Token": "demo" } })
+      const res = await fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`)
       if (!res.ok) throw new Error()
       const data = await res.json()
-      showFlash(data.matches?.length > 0 ? `✓ ${data.matches.length} partidos` : "Sin datos aún (empieza 11 Jun)")
-    } catch { showFlash("⚠️ API no disponible") }
+      const count = data?.data?.match?.length || 0
+      // Also force a sync ignoring the 10min throttle
+      await supabase.from("config").upsert({ key: "last_sync_at", value: new Date(0).toISOString() }, { onConflict: "key" })
+      showFlash(count > 0 ? `✓ ${count} partido(s) en vivo` : "Sin partidos en vivo ahora")
+    } catch { showFlash("⚠️ Error al conectar con la API") }
   }
   return (
     <div>

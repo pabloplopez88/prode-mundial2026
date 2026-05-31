@@ -211,22 +211,31 @@ export default function App() {
     const processFixtures = async (fixtures, activeMatches) => {
       const upserts = []
       activeMatches.forEach(local => {
-        // Use homeApi/awayApi if available, otherwise fall back to home/away
         const homeSearch = local.homeApi || local.home
         const awaySearch = local.awayApi || local.away
+        // live-score-api uses home_name/away_name
         const match = fixtures.find(f =>
-          fuzzyMatch(f.home?.name || "", homeSearch) &&
-          fuzzyMatch(f.away?.name || "", awaySearch)
+          fuzzyMatch(f.home_name || f.home?.name || "", homeSearch) &&
+          fuzzyMatch(f.away_name || f.away?.name || "", awaySearch)
         )
         if (!match) return
         const apiStatus = match.status === "IN PLAY" ? "IN_PLAY"
           : match.status === "FINISHED" ? "FINISHED"
           : "SCHEDULED"
-        const homeScore = parseInt(match.score?.split(" - ")[0])
-        const awayScore = parseInt(match.score?.split(" - ")[1])
-        if (!isNaN(homeScore)) {
-          upserts.push({ match_id: local.id, home_score: homeScore, away_score: awayScore, status: apiStatus, updated_at: new Date().toISOString() })
-        }
+        // score comes as "0 - 0" string
+        const scoreParts = (match.score || match.ft_score || "").split(" - ")
+        const homeScore = parseInt(scoreParts[0])
+        const awayScore = parseInt(scoreParts[1])
+        // Only save if match is IN_PLAY or FINISHED and has valid score
+        if (apiStatus === "SCHEDULED") return
+        if (apiStatus === "FINISHED" && isNaN(homeScore)) return
+        upserts.push({
+          match_id: local.id,
+          home_score: isNaN(homeScore) ? 0 : homeScore,
+          away_score: isNaN(awayScore) ? 0 : awayScore,
+          status: apiStatus,
+          updated_at: new Date().toISOString()
+        })
       })
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })

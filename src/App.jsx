@@ -1404,13 +1404,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: autoSyncStatus === "searching" ? "#c8a84b" : autoSyncStatus === "found" ? "#22c55e" : autoSyncStatus === "error" ? "#ef4444" : "#333" }} />
         <div style={{ fontSize: 12, color: "#94a3b8" }}>
           {autoSyncStatus === "searching" ? "🔍 buscando..."
-            : autoSyncStatus === "found" ? "✓ datos actualizados"
-            : autoSyncStatus === "nothing" ? "sin cambios"
-            : autoSyncStatus === "error" ? "⚠️ error al conectar"
+            : autoSyncStatus.startsWith("found") ? "✓ datos actualizados · " + autoSyncStatus.split(" · ")[1]
+            : autoSyncStatus.startsWith("nothing") ? "sin cambios · " + autoSyncStatus.split(" · ")[1]
+            : autoSyncStatus.startsWith("error") ? "⚠️ error · " + autoSyncStatus.split(" · ")[1]
+            : autoSyncStatus.startsWith("idle") ? "en espera · " + autoSyncStatus.split(" · ")[1]
             : "en espera"}
-          {_lastSyncTime && autoSyncStatus !== "searching" && (
-            <span style={{ color: "#6b7280" }}> · {_lastSyncTime}</span>
-          )}
         </div>
       </div>
       <button onClick={async () => { await doSync(); showFlash("✓ Sync completado") }}

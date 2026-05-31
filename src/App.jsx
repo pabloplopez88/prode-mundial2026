@@ -982,9 +982,13 @@ export default function App() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
               {result && result.home_score !== null && (
-                <div style={{ fontSize: 12, color: C.text, fontWeight: 800 }}>
-                  {result.home_score} – {result.away_score}
-                  {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 400 }}> ⚽</span>}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 12, color: matchState === "inplay" ? C.green : C.text, fontWeight: 800 }}>
+                    {matchState === "inplay" && <span style={{ marginRight: 3 }}>●</span>}{result.home_score} – {result.away_score}
+                  </div>
+                  {matchState === "inplay" && result.match_time && (
+                    <div style={{ fontSize: 9, color: C.green }}>Última act. {result.match_time}&apos;</div>
+                  )}
                 </div>
               )}
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1358,7 +1362,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: "● en juego", color: C.red }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: "● en juego", color: C.green }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }

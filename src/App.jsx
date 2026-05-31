@@ -183,7 +183,7 @@ export default function App() {
       if (result?.status === "FINISHED") return false
       return true
     })
-    if (!activeMatches.length) { setAutoSyncStatus("idle"); _lastSyncTime = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }); setLastSyncTime(_lastSyncTime); return }
+    if (!activeMatches.length) { setAutoSyncStatus("idle · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })); return }
     setAutoSyncStatus("searching")
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -221,9 +221,9 @@ export default function App() {
           resultsRef.current = next
           return next
         })
-        setAutoSyncStatus("found")
-      } else { setAutoSyncStatus("nothing") }
-    } catch { setAutoSyncStatus("error") }
+        setAutoSyncStatus("found · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
+      } else { setAutoSyncStatus("nothing · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
+    } catch { setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
   }, [])
 
   // Auto-update knockout matches when groups are complete

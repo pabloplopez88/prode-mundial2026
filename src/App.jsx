@@ -68,6 +68,7 @@ export default function App() {
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
+  const [autoSyncStatus, setAutoSyncStatus] = useState("idle") // idle | searching | found | nothing | error
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -215,8 +216,9 @@ export default function App() {
         if (result?.status === "FINISHED") return false // already done
         return true
       })
-      if (!activeMatches.length) return
+      if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
 
+      setAutoSyncStatus("searching")
       try {
         const today = new Date().toISOString().slice(0, 10)
         const res = await fetch(
@@ -266,9 +268,12 @@ export default function App() {
             })
             return next
           })
+          setAutoSyncStatus("found")
+        } else {
+          setAutoSyncStatus("nothing")
         }
       } catch (e) {
-        // Silently fail
+        setAutoSyncStatus("error")
       }
     }
 
@@ -661,7 +666,9 @@ export default function App() {
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
                 const dbRes = getResult(m.id)
-                const inPlay = locked && dbRes?.status !== "FINISHED"
+                const matchStart2 = new Date(m.date)
+                const twoHrsPast = new Date() >= new Date(matchStart2.getTime() + 2 * 60 * 60 * 1000)
+                const inPlay = locked && dbRes?.status !== "FINISHED" && !twoHrsPast
                 const inProgress = locked && result && result.home_score !== null
                 const finished = inProgress // for now same signal; could add status field later
                 const showDefault = locked && !hasPred
@@ -804,11 +811,13 @@ export default function App() {
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
       const dbResult = getResult(match.id)
+      const matchStart = new Date(match.date)
+      const twoHoursPast = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
       const matchState = !locked ? "upcoming"
         : (dbResult?.status === "FINISHED") ? "finished"
         : (dbResult?.status === "IN_PLAY") ? "inplay"
-        : locked ? "inplay" // locked but no API status yet → assume in play
-        : "upcoming"
+        : twoHoursPast ? "finished" // fallback: 2hrs since kickoff = finished
+        : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1087,7 +1096,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} />
           )}
         </div>
       </div>
@@ -1114,7 +1123,7 @@ function LogoutConfirm({ onConfirm, onCancel }) {
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus }) {
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
   const getResult = (id) => results.find(r => r.match_id === id)
   const syncLive = async () => {
@@ -1142,7 +1151,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           {registrationOpen ? "✓ Inscripciones abiertas" : "✗ Inscripciones cerradas"}
         </div>
       </div>
-      <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync automática (desde 11 Jun)</button>
+      <div style={{ marginBottom: 10, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: autoSyncStatus === "searching" ? C.accent : autoSyncStatus === "found" ? C.green : autoSyncStatus === "error" ? C.red : autoSyncStatus === "nothing" ? C.muted : "#333", flexShrink: 0 }} />
+        <div style={{ fontSize: 12, color: C.textDim }}>
+          Auto-sync: {autoSyncStatus === "searching" ? "🔍 buscando resultados..." : autoSyncStatus === "found" ? "✓ resultados actualizados" : autoSyncStatus === "error" ? "⚠️ error al conectar" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera (sin partidos activos)"}
+        </div>
+      </div>
+      <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync manual</button>
       <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
         {STAGES.map(st => (
           <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>

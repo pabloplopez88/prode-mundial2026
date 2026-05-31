@@ -70,6 +70,7 @@ export default function App() {
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
   const [autoSyncStatus, setAutoSyncStatus] = useState("idle")
+  const [lastSyncTime, setLastSyncTime] = useState(null)
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -1203,7 +1204,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} lastSyncTime={lastSyncTime} />
           )}
         </div>
       </div>
@@ -1360,7 +1361,7 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, lastSyncTime }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
@@ -1394,7 +1395,14 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: "1px solid #1e2940", display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: autoSyncStatus === "searching" ? "#c8a84b" : autoSyncStatus === "found" ? "#22c55e" : autoSyncStatus === "error" ? "#ef4444" : "#333" }} />
         <div style={{ fontSize: 12, color: "#94a3b8" }}>
-          {autoSyncStatus === "searching" ? "🔍 buscando..." : autoSyncStatus === "found" ? "✓ actualizado" : autoSyncStatus === "error" ? "⚠️ error" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera"}
+          {autoSyncStatus === "searching" ? "🔍 buscando..."
+            : autoSyncStatus === "found" ? "✓ datos actualizados"
+            : autoSyncStatus === "nothing" ? "sin cambios"
+            : autoSyncStatus === "error" ? "⚠️ error al conectar"
+            : "en espera"}
+          {lastSyncTime && autoSyncStatus !== "searching" && (
+            <span style={{ color: "#6b7280" }}> · {lastSyncTime.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>
+          )}
         </div>
       </div>
       <button onClick={async () => { await doSync(); showFlash("✓ Sync completado") }}

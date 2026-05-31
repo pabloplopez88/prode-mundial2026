@@ -68,7 +68,7 @@ export default function App() {
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
-  const [autoSyncStatus, setAutoSyncStatus] = useState("idle") // idle | searching | found | nothing | error
+  const [autoSyncStatus, setAutoSyncStatus] = useState("idle")
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -165,6 +165,74 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
+  // Auto-sync results from live-score-api on load
+  useEffect(() => {
+    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
+    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
+    if (!LS_KEY || !LS_SECRET) return
+
+    const fuzzyMatch = (a, b) => {
+      const na = a.toLowerCase(), nb = b.toLowerCase()
+      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
+    }
+
+    const syncResults = async () => {
+      const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+      if (!todayMatches.length) return
+      const now = new Date()
+      const activeMatches = todayMatches.filter(m => {
+        const start = new Date(m.date)
+        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
+        const result = resultsRef.current.find(r => r.match_id === m.id)
+        if (result?.status === "FINISHED") return false
+        return true
+      })
+      if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
+      setAutoSyncStatus("searching")
+      try {
+        const liveRes = await fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`)
+        const histRes = await fetch(`https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${new Date().toISOString().slice(0,10)}`)
+        const liveFixtures = liveRes.ok ? ((await liveRes.json())?.data?.match || []) : []
+        const histFixtures = histRes.ok ? ((await histRes.json())?.data?.match || []).map(m => ({ ...m, status: "FINISHED" })) : []
+        const allFixtures = [...liveFixtures, ...histFixtures]
+        const upserts = []
+        activeMatches.forEach(local => {
+          const homeSearch = local.homeApi || local.home
+          const awaySearch = local.awayApi || local.away
+          const match = allFixtures.find(f =>
+            fuzzyMatch(f.home_name || "", homeSearch) && fuzzyMatch(f.away_name || "", awaySearch)
+          )
+          if (!match) return
+          const apiStatus = match.status === "IN PLAY" ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
+          if (apiStatus === "SCHEDULED") return
+          const parts = (match.score || "0 - 0").split(" - ")
+          const hs = parseInt(parts[0]), as_ = parseInt(parts[1])
+          upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: match.time || null, updated_at: new Date().toISOString() })
+        })
+        if (upserts.length > 0) {
+          await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+          setResults(prev => {
+            const next = [...prev]
+            upserts.forEach(u => {
+              const idx = next.findIndex(r => r.match_id === u.match_id)
+              if (idx >= 0) next[idx] = { ...next[idx], ...u }
+              else next.push(u)
+            })
+            resultsRef.current = next
+            return next
+          })
+          setAutoSyncStatus("found")
+        } else {
+          setAutoSyncStatus("nothing")
+        }
+      } catch { setAutoSyncStatus("error") }
+    }
+
+    syncResults()
+    const interval = setInterval(syncResults, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Auto-save default prediction when a match locks and user has no prediction
   useEffect(() => {
     if (!user) return
@@ -197,127 +265,7 @@ export default function App() {
     return () => clearInterval(interval)
   }, [user])
 
-  // Smart auto-sync using live-score-api.com
-  useEffect(() => {
-    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
-    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
-    if (!LS_KEY || !LS_SECRET) return
 
-    const fuzzyMatch = (a, b) => {
-      const na = a.toLowerCase(), nb = b.toLowerCase()
-      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
-    }
-
-    const processFixtures = async (fixtures, activeMatches) => {
-      const upserts = []
-      activeMatches.forEach(local => {
-        const homeSearch = local.homeApi || local.home
-        const awaySearch = local.awayApi || local.away
-        // live-score-api uses home_name/away_name
-        const match = fixtures.find(f =>
-          fuzzyMatch(f.home_name || f.home?.name || "", homeSearch) &&
-          fuzzyMatch(f.away_name || f.away?.name || "", awaySearch)
-        )
-        if (!match) return
-        const apiStatus = match.status === "IN PLAY" ? "IN_PLAY"
-          : match.status === "FINISHED" ? "FINISHED"
-          : "SCHEDULED"
-        // score comes as "0 - 0" string
-        const scoreParts = (match.score || match.ft_score || "").split(" - ")
-        const homeScore = parseInt(scoreParts[0])
-        const awayScore = parseInt(scoreParts[1])
-        // Only save if match is IN_PLAY or FINISHED and has valid score
-        if (apiStatus === "SCHEDULED") return
-        if (apiStatus === "FINISHED" && isNaN(homeScore)) return
-        upserts.push({
-          match_id: local.id,
-          home_score: isNaN(homeScore) ? 0 : homeScore,
-          away_score: isNaN(awayScore) ? 0 : awayScore,
-          status: apiStatus,
-          match_time: match.time || null,
-          updated_at: new Date().toISOString()
-        })
-      })
-      if (upserts.length > 0) {
-        await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-        setResults(prev => {
-          const next = [...prev]
-          upserts.forEach(u => {
-            const idx = next.findIndex(r => r.match_id === u.match_id)
-            if (idx >= 0) next[idx] = { ...next[idx], ...u }
-            else next.push(u)
-          })
-          return next
-        })
-        setAutoSyncStatus("found")
-      } else {
-        setAutoSyncStatus("nothing")
-      }
-    }
-
-    const syncResults = async () => {
-      const todayMatches = MATCHES.filter(m => isSameDay(m.date))
-      if (!todayMatches.length) return
-
-      const now = new Date()
-      const activeMatches = todayMatches.filter(m => {
-        const start = new Date(m.date)
-        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
-        const result = resultsRef.current.find(r => r.match_id === m.id)
-        if (result?.status === "FINISHED") return false
-        return true
-      })
-      if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
-
-      setAutoSyncStatus("searching")
-      try {
-        // Try live scores (filter to National Teams Friendlies + World Cup)
-        const liveRes = await fetch(
-          `https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`
-        )
-        if (liveRes.ok) {
-          const liveData = await liveRes.json()
-          const liveFixtures = liveData?.data?.match || []
-          await processFixtures(liveFixtures, activeMatches)
-        }
-
-        // Also check history for recently finished matches
-        const today = new Date().toISOString().slice(0, 10)
-        const histRes = await fetch(
-          `https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${today}`
-        )
-        if (histRes.ok) {
-          const histData = await histRes.json()
-          const histFixtures = (histData?.data?.match || []).map(m => ({ ...m, status: "FINISHED" }))
-          await processFixtures(histFixtures, activeMatches)
-        }
-      } catch (e) {
-        setAutoSyncStatus("error")
-      }
-    }
-
-    const syncIfNeeded = async () => {
-      // Per-device throttle: don't sync if this device synced in the last 10 min
-      const lastLocal = parseInt(localStorage.getItem("lastSync") || "0")
-      const tenMin = 10 * 60 * 1000
-      if (Date.now() - lastLocal < tenMin) return
-      // Check global throttle: don't call API if another device synced recently
-      const { data } = await supabase.from("config").select("value").eq("key", "last_sync_at").single()
-      const lastGlobal = data?.value ? new Date(data.value).getTime() : 0
-      if (Date.now() - lastGlobal < tenMin) {
-        // Someone else synced recently - update our local timestamp so we don't retry
-        localStorage.setItem("lastSync", lastGlobal)
-        return
-      }
-      // Both checks passed - sync
-      localStorage.setItem("lastSync", Date.now())
-      await supabase.from("config").upsert({ key: "last_sync_at", value: new Date().toISOString() }, { onConflict: "key" })
-      syncResults()
-    }
-    const interval = setInterval(syncIfNeeded, 10 * 60 * 1000)
-    syncIfNeeded()
-    return () => clearInterval(interval)
-  }, []) // eslint-disable-line
 
   const chatScrollRef = useRef(null)
 
@@ -462,10 +410,9 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count finished matches (status = FINISHED or fallback: 2hs since kickoff)
+      // Only count finished matches (2hs since kickoff)
       const matchStart = new Date(m.date)
-      const finished = r.status === "FINISHED" ||
-        (!r.status && new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000))
+      const finished = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
       if (!finished) return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
@@ -703,10 +650,9 @@ export default function App() {
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
-                const dbRes = getResult(m.id)
                 const matchStart2 = new Date(m.date)
                 const twoHrsPast = new Date() >= new Date(matchStart2.getTime() + 2 * 60 * 60 * 1000)
-                const inPlay = locked && dbRes?.status !== "FINISHED" && !twoHrsPast
+                const inPlay = locked && !twoHrsPast
                 const inProgress = locked && result && result.home_score !== null
                 const finished = inProgress // for now same signal; could add status field later
                 const showDefault = locked && !hasPred
@@ -715,7 +661,6 @@ export default function App() {
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
-                      {result?.match_time && <div style={{ fontSize: 9, color: C.green, fontWeight: 600 }}>act. {result.match_time}'</div>}
                     </div>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -854,11 +799,7 @@ export default function App() {
       const dbResult = getResult(match.id)
       const matchStart = new Date(match.date)
       const twoHoursPast = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
-      const matchState = !locked ? "upcoming"
-        : (dbResult?.status === "FINISHED") ? "finished"
-        : (dbResult?.status === "IN_PLAY") ? "inplay"
-        : twoHoursPast ? "finished" // fallback: 2hrs since kickoff = finished
-        : "inplay"
+      const matchState = !locked ? "upcoming" : twoHoursPast ? "finished" : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -875,7 +816,6 @@ export default function App() {
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {matchState === "inplay" && <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
-                {dbResult?.match_time && <div style={{ fontSize: 9, color: C.green, fontWeight: 600 }}>act. {dbResult.match_time}'</div>}
               </div>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>
@@ -1173,16 +1113,16 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const syncLive = async () => {
     const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
     const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
-    if (!LS_KEY) { showFlash("⚠️ Sin credenciales configuradas"); return }
+    if (!LS_KEY) { showFlash("⚠️ Sin credenciales"); return }
+    setAutoSyncStatus("searching")
     try {
       const res = await fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       const count = data?.data?.match?.length || 0
-      // Also force a sync ignoring the 10min throttle
-      await supabase.from("config").upsert({ key: "last_sync_at", value: new Date(0).toISOString() }, { onConflict: "key" })
+      setAutoSyncStatus(count > 0 ? "found" : "nothing")
       showFlash(count > 0 ? `✓ ${count} partido(s) en vivo` : "Sin partidos en vivo ahora")
-    } catch { showFlash("⚠️ Error al conectar con la API") }
+    } catch { setAutoSyncStatus("error"); showFlash("⚠️ Error al conectar") }
   }
   return (
     <div>
@@ -1201,10 +1141,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           {registrationOpen ? "✓ Inscripciones abiertas" : "✗ Inscripciones cerradas"}
         </div>
       </div>
-      <div style={{ marginBottom: 10, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: autoSyncStatus === "searching" ? C.accent : autoSyncStatus === "found" ? C.green : autoSyncStatus === "error" ? C.red : autoSyncStatus === "nothing" ? C.muted : "#333", flexShrink: 0 }} />
+
+      <div style={{ marginBottom: 8, padding: "8px 12px", background: "#0f1624", borderRadius: 8, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: autoSyncStatus === "searching" ? C.accent : autoSyncStatus === "found" ? C.green : autoSyncStatus === "error" ? C.red : "#333" }} />
         <div style={{ fontSize: 12, color: C.textDim }}>
-          Auto-sync: {autoSyncStatus === "searching" ? "🔍 buscando resultados..." : autoSyncStatus === "found" ? "✓ resultados actualizados" : autoSyncStatus === "error" ? "⚠️ error al conectar" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera (sin partidos activos)"}
+          {autoSyncStatus === "searching" ? "🔍 buscando..." : autoSyncStatus === "found" ? "✓ actualizado" : autoSyncStatus === "error" ? "⚠️ error" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera"}
         </div>
       </div>
       <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync manual</button>
@@ -1217,8 +1158,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: `⚽ en juego${cur.match_time ? `
-act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: "⚽ en juego", color: "#22c55e" }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }
@@ -1229,7 +1169,6 @@ act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
               {cur.status === "IN_PLAY"
                 ? <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: "#22c55e" }}>⚽ en juego</div>
-                    {cur.match_time && <div style={{ fontSize: 9, fontWeight: 600, color: "#22c55e" }}>act. {cur.match_time}&apos;</div>}
                   </div>
                 : statusLabel.text
                   ? <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>

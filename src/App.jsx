@@ -125,7 +125,7 @@ export default function App() {
         editPredsRef.current = myPreds
       }
     }
-    if (re) setResults(re)
+    if (re) { setResults(re); resultsRef.current = re }
     if (ms) setMessages(ms)
     setLoading(false)
   }, [])
@@ -253,7 +253,7 @@ export default function App() {
       const activeMatches = todayMatches.filter(m => {
         const start = new Date(m.date)
         if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
-        const result = results.find(r => r.match_id === m.id)
+        const result = resultsRef.current.find(r => r.match_id === m.id)
         if (result?.status === "FINISHED") return false
         return true
       })
@@ -289,13 +289,14 @@ export default function App() {
     const interval = setInterval(syncResults, 10 * 60 * 1000)
     syncResults()
     return () => clearInterval(interval)
-  }, [results])
+  }, []) // eslint-disable-line
 
   const chatScrollRef = useRef(null)
 
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
   const editPredsRef = useRef({})
+  const resultsRef = useRef([])
 
   const autoSavePredictions = useCallback(async () => {
     const preds = editPredsRef.current

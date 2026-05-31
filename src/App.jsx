@@ -1141,32 +1141,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           {autoSyncStatus === "searching" ? "🔍 buscando..." : autoSyncStatus === "found" ? "✓ actualizado" : autoSyncStatus === "error" ? "⚠️ error" : autoSyncStatus === "nothing" ? "sin cambios" : "en espera"}
         </div>
       </div>
-      {/* Clear data buttons */}
-      <div style={{ marginBottom: 14, padding: 12, background: "#0f1624", borderRadius: 10, border: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 10, fontWeight: 700 }}>🗑️ Limpiar datos</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[
-            { label: "Borrar todos los jugadores", key: "players" },
-            { label: "Borrar todos los pronósticos", key: "predictions" },
-            { label: "Borrar todos los resultados", key: "results" },
-            { label: "Borrar el chat", key: "chat_messages" },
-          ].map(({ label, key }) => (
-            <button key={key} onClick={async () => {
-              if (!window.confirm(`¿Seguro? Esto borra ${label.toLowerCase()} y no se puede deshacer.`)) return
-              const fnMap = {
-                players: "clear_players",
-                predictions: "clear_predictions",
-                results: "clear_results",
-                chat_messages: "clear_chat",
-              }
-              await supabase.rpc(fnMap[key])
-              showFlash(`✓ ${label} completado`)
-            }} style={{ background: "#1a1a2e", border: `1px solid #ef444433`, borderRadius: 8, padding: "8px 12px", color: "#ef4444aa", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
-              🗑️ {label}
-            </button>
-          ))}
-        </div>
-      </div>
       <button onClick={syncLive} style={{ background: "#1a2035", border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", color: C.textDim, fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>⚡ Sync manual</button>
       <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
         {STAGES.map(st => (

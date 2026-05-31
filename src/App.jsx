@@ -296,8 +296,19 @@ export default function App() {
       }
     }
 
-    const interval = setInterval(syncResults, 10 * 60 * 1000)
-    syncResults()
+    const syncIfNeeded = async () => {
+      // Check last sync time from Supabase config (shared across all users)
+      const { data } = await supabase.from("config").select("value").eq("key", "last_sync_at").single()
+      const lastSync = data?.value ? new Date(data.value).getTime() : 0
+      const tenMin = 10 * 60 * 1000
+      if (Date.now() - lastSync >= tenMin) {
+        // Mark sync time before calling API to prevent race conditions
+        await supabase.from("config").upsert({ key: "last_sync_at", value: new Date().toISOString() }, { onConflict: "key" })
+        syncResults()
+      }
+    }
+    const interval = setInterval(syncIfNeeded, 10 * 60 * 1000)
+    syncIfNeeded()
     return () => clearInterval(interval)
   }, []) // eslint-disable-line
 
@@ -695,10 +706,9 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
-                    {inPlay && <div style={{ position: "absolute", top: 6, right: 14, textAlign: "right" }}>
-                      <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "2px 6px" }}>⚽ en juego</span>
-                      {result?.match_time && <div style={{ fontSize: 9, color: C.green, marginTop: 2 }}>act. {result.match_time}'</div>}
-                    </div>}
+                    {inPlay && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "2px 6px" }}>
+                      ⚽ en juego{result?.match_time ? ` · últ. ${result.match_time}'` : ""}
+                    </span>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
@@ -855,10 +865,7 @@ export default function App() {
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#14532d" : "#1e2940", color: pts > 0 ? "#4ade80" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
-              {matchState === "inplay" && <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego</span>
-                {dbResult?.match_time && <div style={{ fontSize: 9, color: C.green, marginTop: 1 }}>act. {dbResult.match_time}'</div>}
-              </div>}
+              {matchState === "inplay" && <span style={{ fontSize: 10, color: C.green, fontWeight: 800, background: "#14532d", borderRadius: 4, padding: "1px 5px" }}>⚽ en juego{dbResult?.match_time ? ` · últ. ${dbResult.match_time}'` : ""}</span>}
               {locked && !result && matchState === "finished" && <span style={{ fontSize: 11, color: C.muted }}>🔒</span>}
             </div>
           </div>
@@ -1193,8 +1200,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
-        const statusLabel = cur.status === "IN_PLAY" ? { text: `⚽ en juego${cur.match_time ? `
-act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: `⚽ en juego${cur.match_time ? ` · últ. ${cur.match_time}'` : ""}`, color: "#22c55e" }
           : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
           : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
           : { text: "", color: C.muted }
@@ -1202,7 +1208,7 @@ act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
           <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? "#22c55e" : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
-              {statusLabel.text && <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color, textAlign: "right", whiteSpace: "pre-line", lineHeight: 1.4 }}>{statusLabel.text}</div>}
+              {statusLabel.text && <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color, textAlign: "right" }}>{statusLabel.text}</div>}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>

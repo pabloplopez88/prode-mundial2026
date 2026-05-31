@@ -70,7 +70,7 @@ export default function App() {
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
   const [autoSyncStatus, setAutoSyncStatus] = useState("idle")
-  const [lastSyncTime, setLastSyncTime] = useState(null)
+  const [lastSyncTime, setLastSyncTime] = useState("")
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -181,7 +181,7 @@ export default function App() {
       if (result?.status === "FINISHED") return false
       return true
     })
-    if (!activeMatches.length) { setAutoSyncStatus("idle"); setLastSyncTime(new Date()); return }
+    if (!activeMatches.length) { setAutoSyncStatus("idle"); setLastSyncTime(new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })); return }
     setAutoSyncStatus("searching")
     try {
       const today = new Date().toISOString().slice(0, 10)
@@ -1407,7 +1407,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             : autoSyncStatus === "error" ? "⚠️ error al conectar"
             : "en espera"}
           {lastSyncTime && autoSyncStatus !== "searching" && (
-            <span style={{ color: "#6b7280" }}> · {lastSyncTime.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span style={{ color: "#6b7280" }}> · {lastSyncTime}</span>
           )}
         </div>
       </div>

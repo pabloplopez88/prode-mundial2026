@@ -1213,10 +1213,15 @@ act. ${cur.match_time}'` : ""}`, color: "#22c55e" }
           <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? "#22c55e" : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
-              {statusLabel.text && <div style={{ background: cur.status === "IN_PLAY" ? "#14532d" : "transparent", borderRadius: 4, padding: cur.status === "IN_PLAY" ? "3px 7px" : 0, textAlign: "center" }}>
-                {statusLabel.text.split("
-").map((line, i) => <div key={i} style={{ fontSize: i === 0 ? 11 : 9, fontWeight: i === 0 ? 800 : 600, color: statusLabel.color }}>{line}</div>)}
-              </div>}
+              {cur.status === "IN_PLAY"
+                ? <div style={{ background: "#14532d", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#22c55e" }}>⚽ en juego</div>
+                    {cur.match_time && <div style={{ fontSize: 9, fontWeight: 600, color: "#22c55e" }}>act. {cur.match_time}&apos;</div>}
+                  </div>
+                : statusLabel.text
+                  ? <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>
+                  : null
+              }
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>

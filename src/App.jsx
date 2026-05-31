@@ -165,73 +165,76 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
+  const doSync = useCallback(async () => {
+    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
+    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
+    if (!LS_KEY || !LS_SECRET) return
+    const fuzzyMatch = (a, b) => {
+      const na = a.toLowerCase(), nb = b.toLowerCase()
+      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
+    }
+    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+    if (!todayMatches.length) return
+    const now = new Date()
+    const activeMatches = todayMatches.filter(m => {
+      const start = new Date(m.date)
+      if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
+      const result = resultsRef.current.find(r => r.match_id === m.id)
+      if (result?.status === "FINISHED") return false
+      return true
+    })
+    if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
+    setAutoSyncStatus("searching")
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const [liveRes, histRes] = await Promise.all([
+        fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`),
+        fetch(`https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${today}`)
+      ])
+      const liveFixtures = liveRes.ok ? ((await liveRes.json())?.data?.match || []) : []
+      const histFixtures = histRes.ok ? ((await histRes.json())?.data?.match || []).map(m => ({ ...m, status: "FINISHED" })) : []
+      const allFixtures = [...liveFixtures, ...histFixtures]
+      const upserts = []
+      activeMatches.forEach(local => {
+        const homeSearch = local.homeApi || local.home
+        const awaySearch = local.awayApi || local.away
+        const match = allFixtures.find(f =>
+          fuzzyMatch(f.home_name || "", homeSearch) && fuzzyMatch(f.away_name || "", awaySearch)
+        )
+        if (!match) return
+        const apiStatus = match.status === "IN PLAY" ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
+        if (apiStatus === "SCHEDULED") return
+        const parts = (match.score || "0 - 0").split(" - ")
+        const hs = parseInt(parts[0]), as_ = parseInt(parts[1])
+        upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: match.time || null, updated_at: new Date().toISOString() })
+      })
+      if (upserts.length > 0) {
+        await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        setResults(prev => {
+          const next = [...prev]
+          upserts.forEach(u => {
+            const idx = next.findIndex(r => r.match_id === u.match_id)
+            if (idx >= 0) next[idx] = { ...next[idx], ...u }
+            else next.push(u)
+          })
+          resultsRef.current = next
+          return next
+        })
+        setAutoSyncStatus("found")
+      } else { setAutoSyncStatus("nothing") }
+    } catch { setAutoSyncStatus("error") }
+  }, [])
+
   // Auto-sync results from live-score-api on load
   useEffect(() => {
     const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
     const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
     if (!LS_KEY || !LS_SECRET) return
-
-    const fuzzyMatch = (a, b) => {
-      const na = a.toLowerCase(), nb = b.toLowerCase()
-      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
-    }
-
-    const syncResults = async () => {
-      const todayMatches = MATCHES.filter(m => isSameDay(m.date))
-      if (!todayMatches.length) return
-      const now = new Date()
-      const activeMatches = todayMatches.filter(m => {
-        const start = new Date(m.date)
-        if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
-        const result = resultsRef.current.find(r => r.match_id === m.id)
-        if (result?.status === "FINISHED") return false
-        return true
-      })
-      if (!activeMatches.length) { setAutoSyncStatus("idle"); return }
-      setAutoSyncStatus("searching")
-      try {
-        const liveRes = await fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`)
-        const histRes = await fetch(`https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${new Date().toISOString().slice(0,10)}`)
-        const liveFixtures = liveRes.ok ? ((await liveRes.json())?.data?.match || []) : []
-        const histFixtures = histRes.ok ? ((await histRes.json())?.data?.match || []).map(m => ({ ...m, status: "FINISHED" })) : []
-        const allFixtures = [...liveFixtures, ...histFixtures]
-        const upserts = []
-        activeMatches.forEach(local => {
-          const homeSearch = local.homeApi || local.home
-          const awaySearch = local.awayApi || local.away
-          const match = allFixtures.find(f =>
-            fuzzyMatch(f.home_name || "", homeSearch) && fuzzyMatch(f.away_name || "", awaySearch)
-          )
-          if (!match) return
-          const apiStatus = match.status === "IN PLAY" ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
-          if (apiStatus === "SCHEDULED") return
-          const parts = (match.score || "0 - 0").split(" - ")
-          const hs = parseInt(parts[0]), as_ = parseInt(parts[1])
-          upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: match.time || null, updated_at: new Date().toISOString() })
-        })
-        if (upserts.length > 0) {
-          await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-          setResults(prev => {
-            const next = [...prev]
-            upserts.forEach(u => {
-              const idx = next.findIndex(r => r.match_id === u.match_id)
-              if (idx >= 0) next[idx] = { ...next[idx], ...u }
-              else next.push(u)
-            })
-            resultsRef.current = next
-            return next
-          })
-          setAutoSyncStatus("found")
-        } else {
-          setAutoSyncStatus("nothing")
-        }
-      } catch { setAutoSyncStatus("error") }
-    }
-
-    syncResults()
-    const interval = setInterval(syncResults, 10 * 60 * 1000)
+    const fuzzyMatch = (a, b) => { return true } // unused - doSync handles this
+    doSync()
+    const interval = setInterval(doSync, 10 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [doSync])
 
   // Auto-save default prediction when a match locks and user has no prediction
   useEffect(() => {
@@ -1111,18 +1114,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const matchesByStage = MATCHES.filter(m => m.stage === stage)
   const getResult = (id) => results.find(r => r.match_id === id)
   const syncLive = async () => {
-    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
-    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
-    if (!LS_KEY) { showFlash("⚠️ Sin credenciales"); return }
-    setAutoSyncStatus("searching")
-    try {
-      const res = await fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      const count = data?.data?.match?.length || 0
-      setAutoSyncStatus(count > 0 ? "found" : "nothing")
-      showFlash(count > 0 ? `✓ ${count} partido(s) en vivo` : "Sin partidos en vivo ahora")
-    } catch { setAutoSyncStatus("error"); showFlash("⚠️ Error al conectar") }
+    await doSync()
+    showFlash(autoSyncStatus === "found" ? "✓ Resultados actualizados" : autoSyncStatus === "error" ? "⚠️ Error al conectar" : "Sin partidos activos")
   }
   return (
     <div>

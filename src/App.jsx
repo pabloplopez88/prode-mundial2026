@@ -1029,9 +1029,7 @@ export default function App() {
 
     return (
     <div style={appStyle}>
-      <Header title="📅 Fixture" right={
-        <button onClick={loadData} style={{ background: "none", border: "none", color: "#c8a84b", cursor: "pointer", fontSize: 20, padding: "4px 8px" }}>↻</button>
-      } />
+      <Header title="📅 Fixture" />
       <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
         {allStages.map(st => (
           <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>

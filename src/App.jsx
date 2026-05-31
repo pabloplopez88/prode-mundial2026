@@ -1186,9 +1186,16 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const saved = getResult(match.id) || {}
         const edited = editResults[match.id] || {}
         const cur = { ...saved, ...edited }
+        const statusLabel = cur.status === "IN_PLAY" ? { text: "⚽ en juego", color: "#22c55e" }
+          : cur.status === "FINISHED" ? { text: "✓ finalizado", color: C.text }
+          : isLocked(match.date) ? { text: "🔒 bloqueado", color: C.muted }
+          : { text: "", color: C.muted }
         return (
-          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{formatDate(match.date)}</div>
+          <div key={match.id} style={{ background: "#0f1624", border: `1px solid ${cur.status === "IN_PLAY" ? "#22c55e" : cur.status === "FINISHED" ? "#2a3a2a" : C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}</div>
+              {statusLabel.text && <div style={{ fontSize: 11, fontWeight: 700, color: statusLabel.color }}>{statusLabel.text}</div>}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>{FLAGS[match.home] || "🏳️"} {match.home}</div>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>

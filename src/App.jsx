@@ -1362,7 +1362,7 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
 
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync }) {
   const getResult = (id) => results.find(r => r.match_id === id)
-  const [adminGruposView, setAdminGruposView] = React.useState("grupo")
+  const [adminGruposView, setAdminGruposView] = useState("grupo")
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
     { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },

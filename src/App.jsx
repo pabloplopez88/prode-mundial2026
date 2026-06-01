@@ -235,227 +235,6 @@ export default function App() {
     } catch { setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
   }, [])
 
-  // Auto-update knockout matches when groups are complete
-  useEffect(() => {
-    if (!knockoutMatches.length || !results.length) return
-
-    const ANNEX_C = {
-      "DEFGHIJKL": { 74: "3E", 77: "3I", 79: "3D", 80: "3J", 81: "3I", 82: "3H", 85: "3J", 87: "3L" },
-      // 1A=M79, 1B=M85, 1D=M81, 1E=M74, 1G=M82, 1I=M77, 1K=M87, 1L=M80
-      // Key = sorted string of 8 qualifying third groups
-      // Value = map of match_id -> which third place team plays there
-    }
-
-    const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-
-    // Calculate group standings
-    const getGroupStandings = (letter) => {
-      const gMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
-      const teams = {}
-      gMatches.forEach(m => {
-        if (!teams[m.home]) teams[m.home] = { name: m.home, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
-        if (!teams[m.away]) teams[m.away] = { name: m.away, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }
-        const r = results.find(r => r.match_id === m.id)
-        if (!r || r.home_score === null) return
-        const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
-        teams[m.home].pj++; teams[m.away].pj++
-        teams[m.home].gf += hs; teams[m.home].gc += as_
-        teams[m.away].gf += as_; teams[m.away].gc += hs
-        if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
-        else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
-        else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
-      })
-      return Object.values(teams).sort((a, b) =>
-        b.pts !== a.pts ? b.pts - a.pts :
-        (b.gf - b.gc) !== (a.gf - a.gc) ? (b.gf - b.gc) - (a.gf - a.gc) :
-        b.gf - a.gf
-      )
-    }
-
-    const isGroupComplete = (letter) => {
-      const gMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
-      return gMatches.every(m => {
-        const r = results.find(r => r.match_id === m.id)
-        return r && r.home_score !== null
-      })
-    }
-
-    const updateKnockout = async () => {
-      const updates = []
-
-      // Map of which knockout match needs which group's winner/runner-up
-      // Based on official fixture: 73=2A/2B, 75=1F/2C, 76=1C/2F, 78=2E/2I, 83=2K/2L, 84=1H/2J, 86=1J/2H, 88=2D/2G
-      // And: 74=1E, 79=1A, 80=1L, 81=1D, 82=1G, 85=1B, 87=1K, 77=1I
-      const groupToKnockout = {
-        A: { "1": { matchId: 79, side: "home" }, "2": { matchId: 73, side: "home" } },
-        B: { "1": { matchId: 85, side: "home" }, "2": { matchId: 73, side: "away" } },
-        C: { "1": { matchId: 76, side: "home" }, "2": { matchId: 75, side: "away" } },
-        D: { "1": { matchId: 81, side: "home" }, "2": { matchId: 88, side: "home" } },
-        E: { "1": { matchId: 74, side: "home" }, "2": { matchId: 78, side: "home" } },
-        F: { "1": { matchId: 75, side: "home" }, "2": { matchId: 76, side: "away" } },
-        G: { "1": { matchId: 82, side: "home" }, "2": { matchId: 88, side: "away" } },
-        H: { "1": { matchId: 84, side: "home" }, "2": { matchId: 86, side: "away" } },
-        I: { "1": { matchId: 77, side: "home" }, "2": { matchId: 78, side: "away" } },
-        J: { "1": { matchId: 86, side: "home" }, "2": { matchId: 84, side: "away" } },
-        K: { "1": { matchId: 87, side: "home" }, "2": { matchId: 83, side: "home" } },
-        L: { "1": { matchId: 80, side: "home" }, "2": { matchId: 83, side: "away" } },
-      }
-
-      // Update 1st and 2nd place for completed groups
-      grupoLetters.forEach(letter => {
-        if (!isGroupComplete(letter)) return
-        const standings = getGroupStandings(letter)
-        if (standings.length < 2) return
-        const first = standings[0].name
-        const second = standings[1].name
-        const mapping = groupToKnockout[letter]
-        if (mapping["1"]) updates.push({ id: mapping["1"].matchId, field: mapping["1"].side, value: first })
-        if (mapping["2"]) updates.push({ id: mapping["2"].matchId, field: mapping["2"].side, value: second })
-      })
-
-      // Apply updates to Supabase
-      for (const u of updates) {
-        const current = knockoutMatches.find(m => m.id === u.id)
-        if (!current) continue
-        const newVal = u.value
-        const currentVal = current[u.field]
-        // Only update if value changed and wasn't already a real team name (not a placeholder)
-        if (currentVal !== newVal && (currentVal.includes("°") || currentVal.includes("G.P") || currentVal.includes("Ganador") || currentVal.includes("Perdedor"))) {
-          await supabase.from("knockout_matches").update({ [u.field]: newVal }).eq("id", u.id)
-        }
-      }
-
-      // Check if ALL groups are complete for third-place logic
-      const allGroupsComplete = grupoLetters.every(isGroupComplete)
-      if (allGroupsComplete) {
-        // Get all thirds sorted
-        const allThirds = grupoLetters.map(letter => {
-          const s = getGroupStandings(letter)
-          return s[2] ? { ...s[2], group: letter } : null
-        }).filter(Boolean).sort((a, b) =>
-          b.pts !== a.pts ? b.pts - a.pts :
-          (b.gf - b.gc) !== (a.gf - a.gc) ? (b.gf - b.gc) - (a.gf - a.gc) :
-          b.gf - a.gf
-        )
-        const top8Thirds = allThirds.slice(0, 8)
-        const top8Groups = top8Thirds.map(t => t.group).sort().join("")
-
-        // Annex C lookup - maps group combo to which third plays in which match
-        // Format: { matchId: groupLetter } meaning team from that group plays in that match
-        const annexC = {
-          "EFGHIJKL": { 74: "E", 77: "I", 79: "F", 80: "K", 81: "J", 82: "H", 85: "J", 87: "L" },
-          "DFGHIJKL": { 74: "I", 77: "F", 79: "H", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
-          "DEGHIJKL": { 74: "I", 77: "H", 79: "D", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
-          "DEFHIJKL": { 74: "I", 77: "H", 79: "D", 80: "K", 81: "J", 82: "F", 85: "J", 87: "L" },
-          "DEFGIJKL": { 74: "I", 77: "G", 79: "D", 80: "K", 81: "J", 82: "F", 85: "G", 87: "L" },
-          "DEFGHJKL": { 74: "J", 77: "G", 79: "D", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
-          "DEFGHIKL": { 74: "I", 77: "G", 79: "D", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
-          "DEFGHIJL": { 74: "J", 77: "G", 79: "D", 80: "L", 81: "H", 82: "F", 85: "G", 87: "I" },
-          "DEFGHIJK": { 74: "J", 77: "G", 79: "D", 80: "I", 81: "H", 82: "F", 85: "G", 87: "K" },
-          "CFGHIJKL": { 74: "I", 77: "F", 79: "C", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
-          "CEGHIJKL": { 74: "I", 77: "H", 79: "C", 80: "K", 81: "J", 82: "G", 85: "J", 87: "L" },
-          "CEFHIJKL": { 74: "I", 77: "H", 79: "C", 80: "K", 81: "J", 82: "F", 85: "J", 87: "L" },
-          "CEFGIJKL": { 74: "I", 77: "G", 79: "C", 80: "K", 81: "J", 82: "F", 85: "G", 87: "L" },
-          "CEFGHJKL": { 74: "J", 77: "G", 79: "C", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
-          "CEFGHIKL": { 74: "I", 77: "G", 79: "C", 80: "K", 81: "H", 82: "F", 85: "G", 87: "L" },
-          "CEFGHIJL": { 74: "J", 77: "G", 79: "C", 80: "L", 81: "H", 82: "F", 85: "G", 87: "I" },
-          "CEFGHIJK": { 74: "J", 77: "G", 79: "C", 80: "I", 81: "H", 82: "F", 85: "G", 87: "K" },
-        }
-
-        const mapping = annexC[top8Groups]
-        if (mapping) {
-          const thirdsMap = {}
-          top8Thirds.forEach(t => { thirdsMap[t.group] = t.name })
-          for (const [matchId, grp] of Object.entries(mapping)) {
-            const team = thirdsMap[grp]
-            if (!team) continue
-            const current = knockoutMatches.find(m => m.id === parseInt(matchId))
-            if (!current) continue
-            // Find which side needs the third place team
-            if (current.away.includes("3°") || current.away.includes("mejor")) {
-              await supabase.from("knockout_matches").update({ away: team }).eq("id", parseInt(matchId))
-            } else if (current.home.includes("3°") || current.home.includes("mejor")) {
-              await supabase.from("knockout_matches").update({ home: team }).eq("id", parseInt(matchId))
-            }
-          }
-        }
-      }
-
-      // Propagate winners through knockout rounds
-      // Map: finished match id -> { winnersGoTo: matchId, side: home|away }
-      const winnerPropagation = {
-        // 16avos → 8vos (based on official FIFA bracket)
-        74: { matchId: 89, side: "home" },  77: { matchId: 89, side: "away" },
-        73: { matchId: 90, side: "home" },  75: { matchId: 90, side: "away" },
-        76: { matchId: 91, side: "home" },  78: { matchId: 91, side: "away" },
-        79: { matchId: 92, side: "home" },  80: { matchId: 92, side: "away" },
-        83: { matchId: 93, side: "home" },  84: { matchId: 93, side: "away" },
-        81: { matchId: 94, side: "home" },  82: { matchId: 94, side: "away" },
-        86: { matchId: 95, side: "home" },  88: { matchId: 95, side: "away" },
-        85: { matchId: 96, side: "home" },  87: { matchId: 96, side: "away" },
-        // 8vos → 4tos
-        89: { matchId: 97, side: "home" },  90: { matchId: 97, side: "away" },
-        91: { matchId: 98, side: "home" },  92: { matchId: 98, side: "away" },
-        93: { matchId: 99, side: "home" },  94: { matchId: 99, side: "away" },
-        95: { matchId: 100, side: "home" }, 96: { matchId: 100, side: "away" },
-        // 4tos → Semis
-        97: { matchId: 101, side: "home" }, 98: { matchId: 101, side: "away" },
-        99: { matchId: 102, side: "home" }, 100: { matchId: 102, side: "away" },
-        // Semis → Final
-        101: { matchId: 104, side: "home" }, 102: { matchId: 104, side: "away" },
-      }
-      const loserPropagation = {
-        // Semis → 3er puesto
-        101: { matchId: 103, side: "home" }, 102: { matchId: 103, side: "away" },
-      }
-
-      // Check each knockout match for a finished result and propagate winner
-      for (const [matchIdStr, dest] of Object.entries(winnerPropagation)) {
-        const matchId = parseInt(matchIdStr)
-        const r = results.find(r => r.match_id === matchId)
-        if (!r || r.home_score === null || r.away_score === null) continue
-        const km = knockoutMatches.find(m => m.id === matchId)
-        if (!km) continue
-        const winner = r.home_score > r.away_score ? km.home : r.away_score > r.home_score ? km.away : null
-        if (!winner) continue
-        const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
-        if (!destMatch) continue
-        const currentVal = destMatch[dest.side]
-        if (currentVal !== winner && (currentVal.startsWith("G.P") || currentVal.startsWith("Ganador") || currentVal.startsWith("Ganador 4to"))) {
-          updates.push({ id: dest.matchId, field: dest.side, value: winner })
-        }
-      }
-      for (const [matchIdStr, dest] of Object.entries(loserPropagation)) {
-        const matchId = parseInt(matchIdStr)
-        const r = results.find(r => r.match_id === matchId)
-        if (!r || r.home_score === null || r.away_score === null) continue
-        const km = knockoutMatches.find(m => m.id === matchId)
-        if (!km) continue
-        const loser = r.home_score < r.away_score ? km.home : r.away_score < r.home_score ? km.away : null
-        if (!loser) continue
-        const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
-        if (!destMatch) continue
-        const currentVal = destMatch[dest.side]
-        if (currentVal !== loser && (currentVal.startsWith("G.P") || currentVal.startsWith("Perdedor") || currentVal.startsWith("Ganador 4to"))) {
-          updates.push({ id: dest.matchId, field: dest.side, value: loser })
-        }
-      }
-
-      // Apply all updates
-      for (const u of updates) {
-        await supabase.from("knockout_matches").update({ [u.field]: u.value }).eq("id", u.id)
-      }
-
-      // Reload knockout matches if we made changes
-      if (updates.length > 0) {
-        const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
-        if (km) setKnockoutMatches(km)
-      }
-    }
-
-    updateKnockout()
-  }, [results, knockoutMatches.length])
-
   // Auto-sync results from live-score-api on load
   useEffect(() => {
     const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
@@ -631,10 +410,69 @@ export default function App() {
 
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
+  // Resolve placeholder team names to real team names based on results
+  const resolveTeam = (placeholder) => {
+    if (!placeholder) return placeholder
+    
+    // 1st/2nd of group: "1°A", "2°B" etc
+    const groupMatch = placeholder.match(/^([12])°([A-L])$/)
+    if (groupMatch) {
+      const pos = parseInt(groupMatch[1]) - 1
+      const letter = groupMatch[2]
+      const gMatches = MATCHES.filter(m => m.group === letter && m.stage === "Grupos")
+      const teams = {}
+      gMatches.forEach(m => {
+        if (!teams[m.home]) teams[m.home] = { name: m.home, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+        if (!teams[m.away]) teams[m.away] = { name: m.away, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+        const r = results.find(r => r.match_id === m.id)
+        if (!r || r.home_score === null) return
+        const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+        teams[m.home].pj++; teams[m.away].pj++
+        teams[m.home].gf += hs; teams[m.home].gc += as_
+        teams[m.away].gf += as_; teams[m.away].gc += hs
+        if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
+        else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
+        else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
+      })
+      const sorted = Object.values(teams).sort((a,b) =>
+        b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf
+      )
+      if (sorted[pos]) return sorted[pos].name
+      return placeholder
+    }
+
+    // Winner of match: "G.P73", "G.P89" etc
+    const wpMatch = placeholder.match(/^G\.P(\d+)$/)
+    if (wpMatch) {
+      const matchId = parseInt(wpMatch[1])
+      const r = results.find(r => r.match_id === matchId)
+      if (!r || r.home_score === null) return placeholder
+      const km = allMatches.find(m => m.id === matchId)
+      if (!km) return placeholder
+      const homeRes = resolveTeam(km.home)
+      const awayRes = resolveTeam(km.away)
+      if (parseInt(r.home_score) > parseInt(r.away_score)) return homeRes
+      if (parseInt(r.away_score) > parseInt(r.home_score)) return awayRes
+      return placeholder // draw - shouldn't happen in knockout
+    }
+
+    // Loser of match: "Perdedor Semi X" -> not resolved dynamically (manual)
+    // Already a real team name or 3° placeholder
+    return placeholder
+  }
+
   // Combine group matches with knockout matches from Supabase
   const allMatches = [
     ...MATCHES,
-    ...knockoutMatches.map(m => ({ ...m, group: "" }))
+    ...knockoutMatches.map(m => ({
+      ...m,
+      group: "",
+      home: resolveTeam(m.home) || m.home,
+      away: resolveTeam(m.away) || m.away,
+      // Keep originals for admin picker logic
+      _homeRaw: m.home,
+      _awayRaw: m.away,
+    }))
   ]
   const allStages = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
 
@@ -1683,8 +1521,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const isInPlay = cur.status === "IN_PLAY"
         const isFinished = cur.status === "FINISHED"
         const isSixteens = match.stage === "16avos"
-        const homeIsTercero = isSixteens && (match.home.includes("3°") || match.home.includes("mejor"))
-        const awayIsTercero = isSixteens && (match.away.includes("3°") || match.away.includes("mejor"))
+        const homeIsTercero = isSixteens && ((match._homeRaw || match.home).includes("3°") || (match._homeRaw || match.home).includes("mejor"))
+        const awayIsTercero = isSixteens && ((match._awayRaw || match.away).includes("3°") || (match._awayRaw || match.away).includes("mejor"))
         return (
           <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>

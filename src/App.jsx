@@ -1615,19 +1615,21 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         ⚡ Sync manual
       </button>
 
-      {/* Stage tabs */}
-      <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 12 }}>
-        {allStages.map(st => (
-          <button key={st} onClick={() => setStage(st)}
-            style={{ background: stage === st ? "#c8a84b" : "transparent", color: stage === st ? "#0a0e1a" : "#94a3b8", border: "1px solid " + (stage === st ? "#c8a84b" : "#1e2940"), borderRadius: 7, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
-            {st}
-          </button>
-        ))}
+      {/* Stage tabs - sticky */}
+      <div style={{ position: "sticky", top: 56, zIndex: 90, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+          {allStages.map(st => (
+            <button key={st} onClick={() => setStage(st)}
+              style={{ background: stage === st ? "#c8a84b" : "transparent", color: stage === st ? "#0a0e1a" : "#94a3b8", border: "1px solid " + (stage === st ? "#c8a84b" : "#1e2940"), borderRadius: 7, padding: "5px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+              {st}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Grupos sub-controls */}
+      {/* Grupos sub-controls - sticky */}
       {stage === "Grupos" && (
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ position: "sticky", top: 112, zIndex: 89, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>
           <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: "1px solid #1e2940", marginBottom: 8, width: "fit-content" }}>
             {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
               <button key={v} onClick={() => setAdminGruposView(v)}
@@ -1636,22 +1638,24 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 5, overflowX: "auto" }}>
-            {adminGruposView === "grupo"
-              ? grupoLetters.map(g => (
-                <button key={g} onClick={() => scrollToElement("admin-grp-"+g)}
-                  style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {g}
-                </button>
-              ))
-              : fechaGroups.map((fg, i) => (
-                <button key={i} onClick={() => scrollToElement("admin-fecha-"+i)}
-                  style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {fg.date}
-                </button>
-              ))
-            }
-          </div>
+          {adminGruposView === "grupo"
+            ? <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
+                {grupoLetters.map(g => (
+                  <button key={g} onClick={() => scrollToElement("admin-grp-"+g, 180)}
+                    style={{ padding: "4px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", textAlign: "center" }}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+            : <div style={{ display: "flex", gap: 5 }}>
+                {fechaGroups.map((fg, i) => (
+                  <button key={i} onClick={() => scrollToElement("admin-fecha-"+i, 180)}
+                    style={{ flex: 1, padding: "4px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", textAlign: "center" }}>
+                    {fg.date}
+                  </button>
+                ))}
+              </div>
+          }
         </div>
       )}
 
@@ -1678,8 +1682,12 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const cur = { ...saved, ...edited }
         const isInPlay = cur.status === "IN_PLAY"
         const isFinished = cur.status === "FINISHED"
-        const homeIsTercero = match.home.includes("3°") || match.home.includes("mejor")
-        const awayIsTercero = match.away.includes("3°") || match.away.includes("mejor")
+        const isSixteens = match.stage === "16avos"
+        const homeIsTercero = isSixteens && (match.home.includes("3°") || match.home.includes("mejor"))
+        const awayIsTercero = isSixteens && (match.away.includes("3°") || match.away.includes("mejor"))
+        // Already picked tercero (no placeholder) - still clickable in 16avos
+        const homePickedTercero = isSixteens && !homeIsTercero && !match.home.startsWith("1°") && !match.home.startsWith("2°") && !match.home.startsWith("G.P") && !match.home.includes("Ganador") && !match.home.includes("Perdedor") && match.home.length > 2
+        const awayPickedTercero = isSixteens && !awayIsTercero && !match.away.startsWith("1°") && !match.away.startsWith("2°") && !match.away.startsWith("G.P") && !match.away.includes("Ganador") && !match.away.includes("Perdedor") && match.away.length > 2
         return (
           <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -1693,10 +1701,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
-                {homeIsTercero
+                {(homeIsTercero || homePickedTercero)
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
-                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      {match.home} ✏️
+                      style={{ background: "#1a2035", border: homeIsTercero ? "1px dashed #c8a84b" : "1px solid #c8a84b44", borderRadius: 6, padding: "4px 8px", color: homeIsTercero ? "#c8a84b" : "#94a3b8", fontSize: 11, cursor: "pointer" }}>
+                      {(FLAGS && FLAGS[match.home]) || ""} {match.home} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1715,10 +1723,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 />
               </div>
               <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
-                {awayIsTercero
+                {(awayIsTercero || awayPickedTercero)
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
-                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {match.away}
+                      style={{ background: "#1a2035", border: awayIsTercero ? "1px dashed #c8a84b" : "1px solid #c8a84b44", borderRadius: 6, padding: "4px 8px", color: awayIsTercero ? "#c8a84b" : "#94a3b8", fontSize: 11, cursor: "pointer" }}>
+                      ✏️ {match.away} {(FLAGS && FLAGS[match.away]) || ""}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }

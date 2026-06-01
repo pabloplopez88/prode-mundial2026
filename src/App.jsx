@@ -437,7 +437,12 @@ export default function App() {
       const sorted = Object.values(teams).sort((a,b) =>
         b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf
       )
-      if (sorted[pos]) return sorted[pos].name
+      // Only resolve if ALL matches in this group have results
+      const groupComplete = gMatches.every(m => {
+        const r = results.find(r => r.match_id === m.id)
+        return r && r.home_score !== null
+      })
+      if (groupComplete && sorted[pos]) return sorted[pos].name
       return placeholder
     }
 

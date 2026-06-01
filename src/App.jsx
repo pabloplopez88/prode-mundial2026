@@ -381,6 +381,70 @@ export default function App() {
         }
       }
 
+      // Propagate winners through knockout rounds
+      // Map: finished match id -> { winnersGoTo: matchId, side: home|away }
+      const winnerPropagation = {
+        73: { matchId: 89, side: "home" },  74: { matchId: 89, side: "away" },
+        75: { matchId: 90, side: "home" },  76: { matchId: 90, side: "away" },
+        77: { matchId: 91, side: "home" },  78: { matchId: 91, side: "away" },
+        79: { matchId: 92, side: "home" },  80: { matchId: 92, side: "away" },
+        81: { matchId: 93, side: "home" },  82: { matchId: 93, side: "away" },
+        83: { matchId: 94, side: "home" },  84: { matchId: 94, side: "away" },
+        85: { matchId: 95, side: "home" },  86: { matchId: 95, side: "away" },
+        87: { matchId: 96, side: "home" },  88: { matchId: 96, side: "away" },
+        // Cuartos → Semis
+        89: { matchId: 97, side: "home" },  90: { matchId: 97, side: "away" },
+        91: { matchId: 98, side: "home" },  92: { matchId: 98, side: "away" },
+        93: { matchId: 99, side: "home" },  94: { matchId: 99, side: "away" },
+        95: { matchId: 100, side: "home" }, 96: { matchId: 100, side: "away" },
+        // Semis → Final + 3er puesto
+        97: { matchId: 103, side: "home" }, 98: { matchId: 103, side: "away" },
+        99: { matchId: 104, side: "home" }, 100: { matchId: 104, side: "away" },
+        // Losers semis → 3er puesto
+        // (handled separately below)
+      }
+      const loserPropagation = {
+        97: { matchId: 101, side: "home" }, 98: { matchId: 101, side: "away" },
+        99: { matchId: 102, side: "home" }, 100: { matchId: 102, side: "away" },
+      }
+
+      // Check each knockout match for a finished result and propagate winner
+      for (const [matchIdStr, dest] of Object.entries(winnerPropagation)) {
+        const matchId = parseInt(matchIdStr)
+        const r = results.find(r => r.match_id === matchId)
+        if (!r || r.home_score === null || r.away_score === null) continue
+        const km = knockoutMatches.find(m => m.id === matchId)
+        if (!km) continue
+        const winner = r.home_score > r.away_score ? km.home : r.away_score > r.home_score ? km.away : null
+        if (!winner) continue
+        const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
+        if (!destMatch) continue
+        const currentVal = destMatch[dest.side]
+        if (currentVal !== winner && (currentVal.startsWith("G.P") || currentVal.startsWith("Ganador"))) {
+          updates.push({ id: dest.matchId, field: dest.side, value: winner })
+        }
+      }
+      for (const [matchIdStr, dest] of Object.entries(loserPropagation)) {
+        const matchId = parseInt(matchIdStr)
+        const r = results.find(r => r.match_id === matchId)
+        if (!r || r.home_score === null || r.away_score === null) continue
+        const km = knockoutMatches.find(m => m.id === matchId)
+        if (!km) continue
+        const loser = r.home_score < r.away_score ? km.home : r.away_score < r.home_score ? km.away : null
+        if (!loser) continue
+        const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
+        if (!destMatch) continue
+        const currentVal = destMatch[dest.side]
+        if (currentVal !== loser && (currentVal.startsWith("G.P") || currentVal.startsWith("Perdedor"))) {
+          updates.push({ id: dest.matchId, field: dest.side, value: loser })
+        }
+      }
+
+      // Apply all updates
+      for (const u of updates) {
+        await supabase.from("knockout_matches").update({ [u.field]: u.value }).eq("id", u.id)
+      }
+
       // Reload knockout matches if we made changes
       if (updates.length > 0) {
         const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
@@ -1408,6 +1472,56 @@ function LogoutConfirm({ onConfirm, onCancel }) {
   )
 }
 
+function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect }) {
+  // Calculate all group thirds
+  const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+  const thirds = grupoLetters.map(letter => {
+    const gMatches = allMatches.filter(m => m.group === letter && m.stage === "Grupos")
+    const teams = {}
+    gMatches.forEach(m => {
+      if (!teams[m.home]) teams[m.home] = { name: m.home, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+      if (!teams[m.away]) teams[m.away] = { name: m.away, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+      const r = results.find(r => r.match_id === m.id)
+      if (!r || r.home_score === null) return
+      const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+      teams[m.home].pj++; teams[m.away].pj++
+      teams[m.home].gf += hs; teams[m.home].gc += as_
+      teams[m.away].gf += as_; teams[m.away].gc += hs
+      if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
+      else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
+      else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
+    })
+    const sorted = Object.values(teams).sort((a,b) => b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf)
+    return sorted[2] ? { ...sorted[2], group: letter } : null
+  }).filter(Boolean)
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      onClick={() => onSelect(null)}>
+      <div style={{ background: "#0f1624", border: "1px solid #c8a84b", borderRadius: 16, padding: 20, width: "100%", maxWidth: 380 }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "#c8a84b", marginBottom: 4 }}>Elegir 3° para este cruce</div>
+        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>
+          {match.home} vs {match.away}
+        </div>
+        {thirds.length === 0
+          ? <div style={{ fontSize: 13, color: "#6b7280" }}>No hay terceros calculados todavía</div>
+          : thirds.map(t => (
+            <div key={t.group} onClick={() => onSelect(t)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 4, background: "#1a2035" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
+              onMouseLeave={e => e.currentTarget.style.background = "#1a2035"}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>3° Grupo {t.group} — {t.name}</span>
+              <span style={{ fontSize: 12, color: "#c8a84b" }}>{t.pts}pts</span>
+            </div>
+          ))
+        }
+        <button onClick={() => onSelect(null)} style={{ marginTop: 12, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
 function renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults) {
   const saved = getResult(match.id) || {}
   const edited = editResults[match.id] || {}
@@ -1455,6 +1569,7 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, lastSyncTime }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
+  const [tercerosPicker, setTercerosPicker] = useState(null) // { matchId, side }
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
     { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
@@ -1556,8 +1671,75 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           {fg.matches.map(match => renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults))}
         </div>
       ))}
-      {stage !== "Grupos" && allMatches.filter(m => m.stage === stage).map(match =>
-        renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults)
+      {stage !== "Grupos" && allMatches.filter(m => m.stage === stage).map(match => {
+        const saved = getResult(match.id) || {}
+        const edited = editResults[match.id] || {}
+        const cur = { ...saved, ...edited }
+        const isInPlay = cur.status === "IN_PLAY"
+        const isFinished = cur.status === "FINISHED"
+        const homeIsTercero = match.home.includes("3°") || match.home.includes("mejor")
+        const awayIsTercero = match.away.includes("3°") || match.away.includes("mejor")
+        return (
+          <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
+                  {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+                </div>
+                {isInPlay && cur.match_time && <div style={{ fontSize: 9, color: "#22c55e" }}>{cur.match_time === "ET" ? "Última act. ET" : `Última act. ${cur.match_time}'`}</div>}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
+                {homeIsTercero
+                  ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
+                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
+                      {match.home} ✏️
+                    </button>
+                  : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
+                }
+              </div>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                <input type="text" inputMode="numeric" maxLength={2}
+                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+                  value={cur.home_score ?? ""}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], home_score: v } })) }}
+                />
+                <span style={{ color: "#6b7280", fontWeight: 900 }}>:</span>
+                <input type="text" inputMode="numeric" maxLength={2}
+                  style={{ width: 40, height: 40, background: "#1a2035", border: "2px solid #c8a84b", borderRadius: 7, color: "#c8a84b", fontSize: 18, fontWeight: 800, textAlign: "center", outline: "none" }}
+                  value={cur.away_score ?? ""}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], away_score: v } })) }}
+                />
+              </div>
+              <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
+                {awayIsTercero
+                  ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
+                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
+                      ✏️ {match.away}
+                    </button>
+                  : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
+                }
+              </div>
+            </div>
+          </div>
+        )
+      })}
+      {tercerosPicker && (
+        <TercerosPicker
+          match={allMatches.find(m => m.id === tercerosPicker.matchId)}
+          knockoutMatches={allMatches.filter(m => m.id >= 73)}
+          allMatches={allMatches}
+          results={results}
+          onSelect={async (tercero) => {
+            if (tercero) {
+              await supabase.from("knockout_matches").update({ [tercerosPicker.side]: tercero.name }).eq("id", tercerosPicker.matchId)
+              showFlash(`✓ ${tercero.name} asignado`)
+            }
+            setTercerosPicker(null)
+          }}
+        />
       )}
 
       {/* Save button */}

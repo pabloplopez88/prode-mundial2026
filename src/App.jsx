@@ -1044,9 +1044,34 @@ export default function App() {
 
       {/* Grupos sub-controls */}
       {stage === "Grupos" && (
-        <>
-
-        </>
+        <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
+          <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}`, marginBottom: 8, width: "fit-content" }}>
+            {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
+              <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }}
+                style={{ padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {gruposView === "grupo"
+            ? <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
+                {grupoLetters.map(g => (
+                  <button key={g} onClick={() => setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                    style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
+                    Gr. {g}
+                  </button>
+                ))}
+              </div>
+            : <div style={{ display: "flex", gap: 5 }}>
+                {fechaGroups.map((fg, i) => (
+                  <button key={i} onClick={() => setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                    style={{ flex: 1, padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
+                    {fg.date}
+                  </button>
+                ))}
+              </div>
+          }
+        </div>
       )}
 
       {todayUnbet.length > 0 && (

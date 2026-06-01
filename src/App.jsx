@@ -6,6 +6,15 @@ const ADMIN_PASSWORD = "mundial2026"
 
 let _lastSyncTime = ""
 
+function scrollToElement(id, offset = 200) {
+  setTimeout(() => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top, behavior: "smooth" })
+  }, 50)
+}
+
 const C = {
   bg: "#0a0e1a", card: "#111827", card2: "#0f1624",
   border: "#1e2940", accent: "#c8a84b", accentDim: "#8a6e28",
@@ -1056,7 +1065,7 @@ export default function App() {
           {gruposView === "grupo"
             ? <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
                 {grupoLetters.map(g => (
-                  <button key={g} onClick={() => setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  <button key={g} onClick={() => scrollToElement("grp-"+g)}
                     style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                     {g}
                   </button>
@@ -1064,7 +1073,7 @@ export default function App() {
               </div>
             : <div style={{ display: "flex", gap: 5 }}>
                 {fechaGroups.map((fg, i) => (
-                  <button key={i} onClick={() => setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                  <button key={i} onClick={() => scrollToElement("fecha-"+i)}
                     style={{ flex: 1, padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                     {fg.date}
                   </button>
@@ -1257,7 +1266,7 @@ export default function App() {
         <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
-              <button key={g} onClick={() => setTimeout(() => document.getElementById("grupo-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+              <button key={g} onClick={() => scrollToElement("grupo-"+g)}
                 style={{ padding: "5px 4px", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                 {g}
               </button>
@@ -1443,13 +1452,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           <div style={{ display: "flex", gap: 5, overflowX: "auto" }}>
             {adminGruposView === "grupo"
               ? grupoLetters.map(g => (
-                <button key={g} onClick={() => setTimeout(() => document.getElementById("admin-grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                <button key={g} onClick={() => scrollToElement("admin-grp-"+g)}
                   style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {g}
                 </button>
               ))
               : fechaGroups.map((fg, i) => (
-                <button key={i} onClick={() => setTimeout(() => document.getElementById("admin-fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                <button key={i} onClick={() => scrollToElement("admin-fecha-"+i)}
                   style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {fg.date}
                 </button>

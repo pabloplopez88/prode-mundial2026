@@ -1,9 +1,4 @@
 export const MATCHES = [
-  // PARTIDOS DE PRUEBA - 31 MAY 2026 (amistosos internacionales)
-  { id: 201, home: "Japón", away: "Islandia", homeApi: "Japan", awayApi: "Iceland", group: "", date: "2026-05-31T07:25", venue: "Tokyo", stage: "Prueba" },
-  { id: 202, home: "Alemania", away: "Finlandia", homeApi: "Germany", awayApi: "Finland", group: "", date: "2026-05-31T15:45", venue: "Berlín", stage: "Prueba" },
-  { id: 203, home: "Estados Unidos", away: "Senegal", homeApi: "USA", awayApi: "Senegal", group: "", date: "2026-05-31T16:30", venue: "Charlotte", stage: "Prueba" },
-  { id: 204, home: "Brasil", away: "Panamá", homeApi: "Brazil", awayApi: "Panama", group: "", date: "2026-05-31T18:30", venue: "Maracanã", stage: "Prueba" },
   { id: 1, home: "México", away: "Sudáfrica", group: "A", date: "2026-06-11T16:00", venue: "Ciudad de México", stage: "Grupos" },
   { id: 2, home: "Corea del Sur", away: "Rep. Checa", group: "A", date: "2026-06-11T23:00", venue: "Guadalajara", stage: "Grupos" },
   { id: 3, home: "Canadá", away: "Bosnia y Herz.", group: "B", date: "2026-06-12T16:00", venue: "Toronto", stage: "Grupos" },
@@ -125,7 +120,7 @@ export function formatTime(dateStr) {
 }
 
 export function isLocked(dateStr) {
-  return new Date() >= new Date(new Date(dateStr).getTime() - 5 * 60 * 1000)
+  return new Date() >= new Date(dateStr)
 }
 
 export function isSameDay(dateStr) {

@@ -571,7 +571,7 @@ export default function App() {
     ...MATCHES,
     ...knockoutMatches.map(m => ({ ...m, group: "" }))
   ]
-  const allStages = ["Prueba", "Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
+  const allStages = ["Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0

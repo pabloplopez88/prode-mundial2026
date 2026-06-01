@@ -384,15 +384,15 @@ export default function App() {
       // Propagate winners through knockout rounds
       // Map: finished match id -> { winnersGoTo: matchId, side: home|away }
       const winnerPropagation = {
-        // 16avos → 8vos
-        73: { matchId: 89, side: "home" },  74: { matchId: 89, side: "away" },
-        75: { matchId: 90, side: "home" },  76: { matchId: 90, side: "away" },
-        77: { matchId: 91, side: "home" },  78: { matchId: 91, side: "away" },
+        // 16avos → 8vos (based on official FIFA bracket)
+        74: { matchId: 89, side: "home" },  77: { matchId: 89, side: "away" },
+        73: { matchId: 90, side: "home" },  75: { matchId: 90, side: "away" },
+        76: { matchId: 91, side: "home" },  78: { matchId: 91, side: "away" },
         79: { matchId: 92, side: "home" },  80: { matchId: 92, side: "away" },
-        81: { matchId: 93, side: "home" },  82: { matchId: 93, side: "away" },
-        83: { matchId: 94, side: "home" },  84: { matchId: 94, side: "away" },
-        85: { matchId: 95, side: "home" },  86: { matchId: 95, side: "away" },
-        87: { matchId: 96, side: "home" },  88: { matchId: 96, side: "away" },
+        83: { matchId: 93, side: "home" },  84: { matchId: 93, side: "away" },
+        81: { matchId: 94, side: "home" },  82: { matchId: 94, side: "away" },
+        86: { matchId: 95, side: "home" },  88: { matchId: 95, side: "away" },
+        85: { matchId: 96, side: "home" },  87: { matchId: 96, side: "away" },
         // 8vos → 4tos
         89: { matchId: 97, side: "home" },  90: { matchId: 97, side: "away" },
         91: { matchId: 98, side: "home" },  92: { matchId: 98, side: "away" },

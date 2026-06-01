@@ -1685,9 +1685,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const isSixteens = match.stage === "16avos"
         const homeIsTercero = isSixteens && (match.home.includes("3°") || match.home.includes("mejor"))
         const awayIsTercero = isSixteens && (match.away.includes("3°") || match.away.includes("mejor"))
-        // Already picked tercero (no placeholder) - still clickable in 16avos
-        const homePickedTercero = isSixteens && !homeIsTercero && !match.home.startsWith("1°") && !match.home.startsWith("2°") && !match.home.startsWith("G.P") && !match.home.includes("Ganador") && !match.home.includes("Perdedor") && match.home.length > 2
-        const awayPickedTercero = isSixteens && !awayIsTercero && !match.away.startsWith("1°") && !match.away.startsWith("2°") && !match.away.startsWith("G.P") && !match.away.includes("Ganador") && !match.away.includes("Perdedor") && match.away.length > 2
         return (
           <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -1701,10 +1698,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
-                {(homeIsTercero || homePickedTercero)
+                {homeIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
-                      style={{ background: "#1a2035", border: homeIsTercero ? "1px dashed #c8a84b" : "1px solid #c8a84b44", borderRadius: 6, padding: "4px 8px", color: homeIsTercero ? "#c8a84b" : "#94a3b8", fontSize: 11, cursor: "pointer" }}>
-                      {(FLAGS && FLAGS[match.home]) || ""} {match.home} ✏️
+                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
+                      {match.home} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1723,10 +1720,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 />
               </div>
               <div style={{ flex: 1, textAlign: "left", fontSize: 12, fontWeight: 700 }}>
-                {(awayIsTercero || awayPickedTercero)
+                {awayIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
-                      style={{ background: "#1a2035", border: awayIsTercero ? "1px dashed #c8a84b" : "1px solid #c8a84b44", borderRadius: 6, padding: "4px 8px", color: awayIsTercero ? "#c8a84b" : "#94a3b8", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {match.away} {(FLAGS && FLAGS[match.away]) || ""}
+                      style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
+                      ✏️ {match.away}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }
@@ -1744,6 +1741,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           onSelect={async (tercero) => {
             if (tercero) {
               await supabase.from("knockout_matches").update({ [tercerosPicker.side]: tercero.name }).eq("id", tercerosPicker.matchId)
+              const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
+              if (km) setKnockoutMatches(km)
               showFlash(`✓ ${tercero.name} asignado`)
             }
             setTercerosPicker(null)

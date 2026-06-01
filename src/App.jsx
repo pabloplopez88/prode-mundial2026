@@ -1045,33 +1045,7 @@ export default function App() {
       {/* Grupos sub-controls */}
       {stage === "Grupos" && (
         <>
-          {/* Por Fecha / Por Grupo toggle */}
-          <div style={{ padding: "8px 14px 0", background: C.card2, display: "flex", gap: 8, alignItems: "center" }}>
-            <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}`, flexShrink: 0 }}>
-              {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
-                <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }} style={{ padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Subfilter pills */}
-          <div style={{ display: "flex", gap: 5, padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, overflowX: "auto" }}>
-            {gruposView === "grupo"
-              ? grupoLetters.map(g => (
-                <button key={g} onClick={() => setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
-                  style={{ padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
-                  Gr. {g}
-                </button>
-              ))
-              : fechaGroups.map((fg, i) => (
-                <button key={i} onClick={() => setTimeout(() => document.getElementById("fecha-"+i)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
-                  style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {fg.date}
-                </button>
-              ))
-            }
-          </div>
+
         </>
       )}
 

@@ -1058,7 +1058,7 @@ export default function App() {
                 {grupoLetters.map(g => (
                   <button key={g} onClick={() => setTimeout(() => document.getElementById("grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
                     style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
-                    Gr. {g}
+                    {g}
                   </button>
                 ))}
               </div>
@@ -1252,7 +1252,7 @@ export default function App() {
 
     return (
       <div style={appStyle}>
-        <Header title="🌍 Grupos" />
+        <Header title="🌍 Mundial" />
         {/* Group pills */}
         <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
@@ -1445,7 +1445,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
               ? grupoLetters.map(g => (
                 <button key={g} onClick={() => setTimeout(() => document.getElementById("admin-grp-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
                   style={{ padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: "1px solid #1e2940", background: "transparent", color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  Gr. {g}
+                  {g}
                 </button>
               ))
               : fechaGroups.map((fg, i) => (

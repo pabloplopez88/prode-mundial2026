@@ -1034,10 +1034,12 @@ export default function App() {
     return (
     <div style={appStyle}>
       <Header title="📅 Fixture" />
-      <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
-        {allStages.map(st => (
-          <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 13px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{st}</button>
-        ))}
+      <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+          {allStages.map(st => (
+            <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>{st}</button>
+          ))}
+        </div>
       </div>
 
       {/* Grupos sub-controls */}
@@ -1253,7 +1255,7 @@ export default function App() {
       <div style={appStyle}>
         <Header title="🌍 Grupos" />
         {/* Group pills */}
-        <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
               <button key={g} onClick={() => setTimeout(() => document.getElementById("grupo-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}

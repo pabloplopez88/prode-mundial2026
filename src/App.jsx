@@ -631,11 +631,11 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (!user) {
     const AuthHeader = () => (
-      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "36px 20px 28px", textAlign: "center" }}>
-        <div style={{ fontSize: 52 }}>🏆</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: C.accent, marginTop: 10, letterSpacing: -0.5 }}>PRODE AMIGOS DEL CAMPÍN</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 4 }}>Mundial 2026</div>
-        <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>USA · México · Canadá · 11 jun – 19 jul</div>
+      <div style={{ background: "linear-gradient(160deg,#060d1f 0%,#0f1e3d 50%,#1a1200 100%)", borderBottom: `1px solid ${C.border}`, padding: "40px 20px 32px", textAlign: "center" }}>
+        <div style={{ fontSize: 56 }}>🏆</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: C.accent, marginTop: 12, letterSpacing: 1, textTransform: "uppercase" }}>Prode Amigos del Campin</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginTop: 6 }}>Mundial 2026</div>
+        <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>🇺🇸 USA · 🇲🇽 México · 🇨🇦 Canadá · 11 jun – 19 jul</div>
       </div>
     )
 
@@ -643,37 +643,85 @@ export default function App() {
     if (authScreen === "choose") return (
       <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
-        <div style={{ padding: 20 }}>
-          <div style={crd({ background: "#0f1624", marginBottom: 14, padding: 20 })}>
-            <div style={{ color: C.accent, fontWeight: 800, fontSize: 14, marginBottom: 14, letterSpacing: 0.5 }}>📋 REGLAMENTO</div>
-            {[
-              ["⏱", "Cargás tu pronóstico antes de que arranque cada partido. Una vez que empieza, se cierra."],
-              ["🔁", "Si no cargás un pronóstico, se usa tu resultado por defecto (se puede cambiar en Config)."],
-              ["📊", "+3 pts por acertar ganador o empate · +1 pt goles del local · +1 pt goles del visitante · Máximo 5 puntos por partido."],
-              ["📅", "Las inscripciones cierran el jueves 11 de junio a las 16:00."],
-              ["💸", <span>Inscripción: <strong style={{color:C.text}}>$25.000</strong>. Transferir a <strong style={{color:C.accent}}>topati.lopez</strong> y mandar el comprobante por privado.</span>],
-            ].map(([icon, text], i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 4 ? 10 : 0 }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
-                <span style={{ fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>{text}</span>
+        <div style={{ padding: "20px 16px" }}>
+
+          {/* Reglamento */}
+          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>📋</span>
+              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>REGLAMENTO</span>
+            </div>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 0 }}>
+
+              {/* Pronósticos */}
+              <div style={{ paddingBottom: 16 }}>
+                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>⏱ Pronósticos</div>
+                <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
+                  Cargá tu pronóstico antes de que arranque cada partido. Si no cargás uno, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong> — elegís uno al registrarte y lo podés cambiar en Config.
+                </div>
               </div>
-            ))}
+
+              {/* Puntos */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, paddingBottom: 16 }}>
+                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>📊 Puntos por partido</div>
+                <div style={{ background: "#0a0e1a", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                  {[
+                    ["+3", "pts", "Acertás ganador o empate"],
+                    ["+1", "pt", "Acertás goles del local"],
+                    ["+1", "pt", "Acertás goles del visitante"],
+                  ].map(([n, unit, desc], i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
+                        <span style={{ fontSize: 18, fontWeight: 900, color: C.accent }}>{n}</span>
+                        <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 600 }}>{unit}</span>
+                      </div>
+                      <span style={{ fontSize: 13, color: C.textDim }}>{desc}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", background: "#14532d22" }}>
+                    <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: "#4ade80" }}>5</span>
+                      <span style={{ fontSize: 11, color: "#4ade80aa", fontWeight: 600 }}>pts</span>
+                    </div>
+                    <span style={{ fontSize: 13, color: C.textDim }}>Máximo por partido 🔥</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Inscripción */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
+                <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
+                  Cierre de inscripciones: <strong style={{ color: C.text }}>jueves 11 de junio, 16:00</strong>.<br />
+                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado.
+                </div>
+              </div>
+
+            </div>
           </div>
-          <div style={crd({ background: "#0f1624", marginBottom: 14, padding: 20 })}>
-            <div style={{ color: C.accent, fontWeight: 800, fontSize: 14, marginBottom: 14, letterSpacing: 0.5 }}>🗺 LAS SECCIONES</div>
-            {[
-              ["📅", "Fixture", "Todos los partidos. Cargá tus pronósticos acá."],
-              ["🏅", "Tabla", "Posiciones del prode."],
-              ["🌍", "Mundial", "Tabla de posiciones de los equipos durante la fase de grupos, actualizada en tiempo real."],
-              ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
-            ].map(([icon, title, desc], i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 3 ? 10 : 0 }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
-                <span style={{ fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
-                  <strong style={{ color: C.text }}>{title}</strong> — {desc}
-                </span>
-              </div>
-            ))}
+
+          {/* Secciones */}
+          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🗺</span>
+              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>LAS SECCIONES</span>
+            </div>
+            <div style={{ padding: "8px 0" }}>
+              {[
+                ["📅", "Fixture", "Todos los partidos. Cargá tus pronósticos acá."],
+                ["🏅", "Tabla", "Posiciones del prode."],
+                ["🌍", "Mundial", "Tabla de posiciones de los equipos durante la fase de grupos."],
+                ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
+              ].map(([icon, title, desc], i, arr) => (
+                <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  <div style={{ width: 38, height: 38, background: "#1a2035", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{title}</div>
+                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {registrationOpen
             ? <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>

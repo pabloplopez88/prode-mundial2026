@@ -1508,7 +1508,7 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
         {thirds.length === 0
           ? <div style={{ fontSize: 13, color: "#6b7280" }}>No hay terceros calculados todavía</div>
           : thirds.map(t => (
-            <div key={t.group} onClick={() => onSelect(t)}
+            <div key={t.group} onClick={e => { e.stopPropagation(); onSelect(t) }}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 4, background: "#1a2035" }}
               onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
               onMouseLeave={e => e.currentTarget.style.background = "#1a2035"}>

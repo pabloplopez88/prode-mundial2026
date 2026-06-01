@@ -610,7 +610,7 @@ export default function App() {
 
   const BottomNav = () => (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
-      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🌍", label: "Grupos" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🌍", label: "Mundial" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
         <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
@@ -1065,7 +1065,7 @@ export default function App() {
           {gruposView === "grupo"
             ? <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
                 {grupoLetters.map(g => (
-                  <button key={g} onClick={() => scrollToElement("grp-"+g)}
+                  <button key={g} onClick={() => scrollToElement("grp-"+g, 270)}
                     style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                     {g}
                   </button>
@@ -1073,7 +1073,7 @@ export default function App() {
               </div>
             : <div style={{ display: "flex", gap: 5 }}>
                 {fechaGroups.map((fg, i) => (
-                  <button key={i} onClick={() => scrollToElement("fecha-"+i)}
+                  <button key={i} onClick={() => scrollToElement("fecha-"+i, 270)}
                     style={{ flex: 1, padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                     {fg.date}
                   </button>
@@ -1266,7 +1266,7 @@ export default function App() {
         <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
-              <button key={g} onClick={() => scrollToElement("grupo-"+g)}
+              <button key={g} onClick={() => scrollToElement("grupo-"+g, 155)}
                 style={{ padding: "5px 4px", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
                 {g}
               </button>

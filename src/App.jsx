@@ -384,6 +384,7 @@ export default function App() {
       // Propagate winners through knockout rounds
       // Map: finished match id -> { winnersGoTo: matchId, side: home|away }
       const winnerPropagation = {
+        // 16avos → 8vos
         73: { matchId: 89, side: "home" },  74: { matchId: 89, side: "away" },
         75: { matchId: 90, side: "home" },  76: { matchId: 90, side: "away" },
         77: { matchId: 91, side: "home" },  78: { matchId: 91, side: "away" },
@@ -392,20 +393,20 @@ export default function App() {
         83: { matchId: 94, side: "home" },  84: { matchId: 94, side: "away" },
         85: { matchId: 95, side: "home" },  86: { matchId: 95, side: "away" },
         87: { matchId: 96, side: "home" },  88: { matchId: 96, side: "away" },
-        // Cuartos → Semis
+        // 8vos → 4tos
         89: { matchId: 97, side: "home" },  90: { matchId: 97, side: "away" },
         91: { matchId: 98, side: "home" },  92: { matchId: 98, side: "away" },
         93: { matchId: 99, side: "home" },  94: { matchId: 99, side: "away" },
         95: { matchId: 100, side: "home" }, 96: { matchId: 100, side: "away" },
-        // Semis → Final + 3er puesto
-        97: { matchId: 103, side: "home" }, 98: { matchId: 103, side: "away" },
-        99: { matchId: 104, side: "home" }, 100: { matchId: 104, side: "away" },
-        // Losers semis → 3er puesto
-        // (handled separately below)
-      }
-      const loserPropagation = {
+        // 4tos → Semis
         97: { matchId: 101, side: "home" }, 98: { matchId: 101, side: "away" },
         99: { matchId: 102, side: "home" }, 100: { matchId: 102, side: "away" },
+        // Semis → Final
+        101: { matchId: 104, side: "home" }, 102: { matchId: 104, side: "away" },
+      }
+      const loserPropagation = {
+        // Semis → 3er puesto
+        101: { matchId: 103, side: "home" }, 102: { matchId: 103, side: "away" },
       }
 
       // Check each knockout match for a finished result and propagate winner
@@ -420,7 +421,7 @@ export default function App() {
         const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
         if (!destMatch) continue
         const currentVal = destMatch[dest.side]
-        if (currentVal !== winner && (currentVal.startsWith("G.P") || currentVal.startsWith("Ganador"))) {
+        if (currentVal !== winner && (currentVal.startsWith("G.P") || currentVal.startsWith("Ganador") || currentVal.startsWith("Ganador 4to"))) {
           updates.push({ id: dest.matchId, field: dest.side, value: winner })
         }
       }
@@ -435,7 +436,7 @@ export default function App() {
         const destMatch = knockoutMatches.find(m => m.id === dest.matchId)
         if (!destMatch) continue
         const currentVal = destMatch[dest.side]
-        if (currentVal !== loser && (currentVal.startsWith("G.P") || currentVal.startsWith("Perdedor"))) {
+        if (currentVal !== loser && (currentVal.startsWith("G.P") || currentVal.startsWith("Perdedor") || currentVal.startsWith("Ganador 4to"))) {
           updates.push({ id: dest.matchId, field: dest.side, value: loser })
         }
       }
@@ -635,7 +636,7 @@ export default function App() {
     ...MATCHES,
     ...knockoutMatches.map(m => ({ ...m, group: "" }))
   ]
-  const allStages = ["Grupos", "16avos", "Cuartos", "Semis", "3er Puesto", "Final"]
+  const allStages = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0

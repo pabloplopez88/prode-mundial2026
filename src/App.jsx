@@ -631,7 +631,7 @@ export default function App() {
 
     // CHOOSE: register or login
     if (authScreen === "choose") return (
-      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
         <div style={{ padding: 20 }}>
           <div style={crd({ background: "#1a2035", marginBottom: 16 })}>
@@ -675,7 +675,7 @@ export default function App() {
 
     // REGISTER
     if (authScreen === "register") return (
-      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
         <div style={{ padding: 20 }}>
           <div style={crd()}>
@@ -718,7 +718,7 @@ export default function App() {
 
     // LOGIN
     if (authScreen === "login") return (
-      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
         <div style={{ padding: 20 }}>
           <div style={crd()}>
@@ -1253,13 +1253,15 @@ export default function App() {
       <div style={appStyle}>
         <Header title="🌍 Grupos" />
         {/* Group pills */}
-        <div style={{ display: "flex", gap: 5, padding: "10px 14px", overflowX: "auto", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
-          {grupoLetters.map(g => (
-            <button key={g} onClick={() => setTimeout(() => document.getElementById("grupo-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
-              style={{ padding: "5px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>
-              {g}
-            </button>
-          ))}
+        <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
+            {grupoLetters.map(g => (
+              <button key={g} onClick={() => setTimeout(() => document.getElementById("grupo-"+g)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)}
+                style={{ padding: "5px 4px", fontSize: 13, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
         <div style={{ padding: "12px 14px" }}>
           {grupoLetters.map(g => {

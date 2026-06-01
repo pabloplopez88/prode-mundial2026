@@ -631,10 +631,11 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (!user) {
     const AuthHeader = () => (
-      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "32px 20px 24px", textAlign: "center" }}>
+      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", borderBottom: `1px solid ${C.border}`, padding: "36px 20px 28px", textAlign: "center" }}>
         <div style={{ fontSize: 52 }}>🏆</div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.accent, marginTop: 8 }}>PRODE MUNDIAL 2026</div>
-        <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>USA · México · Canadá · 11 Jun – 19 Jul</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: C.accent, marginTop: 10, letterSpacing: -0.5 }}>PRODE AMIGOS DEL CAMPÍN</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 4 }}>Mundial 2026</div>
+        <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>USA · México · Canadá · 11 jun – 19 jul</div>
       </div>
     )
 
@@ -643,14 +644,36 @@ export default function App() {
       <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
         <div style={{ padding: 20 }}>
-          <div style={crd({ background: "#1a2035", marginBottom: 16 })}>
-            <div style={{ color: C.accent, fontWeight: 700, marginBottom: 8 }}>📊 Sistema de puntos</div>
-            <div style={{ fontSize: 13, color: C.textDim, lineHeight: 2.1 }}>
-              +3 pts — Acertás ganador o empate<br />
-              +1 pt &nbsp;— Acertás goles del local<br />
-              +1 pt &nbsp;— Acertás goles del visitante<br />
-              <span style={{ color: C.accent, fontWeight: 700 }}>Máximo 5 puntos por partido 🔥</span>
-            </div>
+          <div style={crd({ background: "#0f1624", marginBottom: 14, padding: 20 })}>
+            <div style={{ color: C.accent, fontWeight: 800, fontSize: 14, marginBottom: 14, letterSpacing: 0.5 }}>📋 REGLAMENTO</div>
+            {[
+              ["⏱", "Cargás tu pronóstico antes de que arranque cada partido. Una vez que empieza, se cierra."],
+              ["🔁", "Si no cargás un pronóstico, se usa tu resultado por defecto (se puede cambiar en Config)."],
+              ["📊", "+3 pts por acertar ganador o empate · +1 pt goles del local · +1 pt goles del visitante · Máximo 5 puntos por partido."],
+              ["📅", "Las inscripciones cierran el jueves 11 de junio a las 16:00."],
+              ["💸", <span>Inscripción: <strong style={{color:C.text}}>$25.000</strong>. Transferir a <strong style={{color:C.accent}}>topati.lopez</strong> y mandar el comprobante por privado.</span>],
+            ].map(([icon, text], i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 4 ? 10 : 0 }}>
+                <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
+                <span style={{ fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>{text}</span>
+              </div>
+            ))}
+          </div>
+          <div style={crd({ background: "#0f1624", marginBottom: 14, padding: 20 })}>
+            <div style={{ color: C.accent, fontWeight: 800, fontSize: 14, marginBottom: 14, letterSpacing: 0.5 }}>🗺 LAS SECCIONES</div>
+            {[
+              ["📅", "Fixture", "Todos los partidos. Cargá tus pronósticos acá."],
+              ["🏅", "Tabla", "Posiciones del prode."],
+              ["🌍", "Mundial", "Tabla de posiciones de los equipos durante la fase de grupos, actualizada en tiempo real."],
+              ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
+            ].map(([icon, title, desc], i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 3 ? 10 : 0 }}>
+                <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
+                <span style={{ fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
+                  <strong style={{ color: C.text }}>{title}</strong> — {desc}
+                </span>
+              </div>
+            ))}
           </div>
           {registrationOpen
             ? <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>

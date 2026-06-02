@@ -1418,7 +1418,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
   const [editKnockout, setEditKnockout] = useState({})
-  const [editKnockout, setEditKnockout] = useState({})
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
     { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },

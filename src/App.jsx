@@ -1360,7 +1360,8 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
             </div>
           ))
         }
-        <button onClick={() => onSelect(null)} style={{ marginTop: 12, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+        <button onClick={() => onSelect("reset")} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno (volver al original)</button>
+        <button onClick={() => onSelect(null)} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
       </div>
     </div>
   )
@@ -1590,8 +1591,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           onSelect={(tercero) => {
             const matchId = tercerosPicker.matchId
             const side = tercerosPicker.side
+            const originalMatch = knockoutMatches.find(m => m.id === matchId)
             setTercerosPicker(null)
-            if (tercero) {
+            if (tercero === "reset") {
+              // Restore original placeholder from Supabase
+              const original = originalMatch?.[side] || ""
+              setEditKnockout(prev => ({ ...prev, [matchId + "_" + side]: original }))
+            } else if (tercero) {
               setEditKnockout(prev => ({ ...prev, [matchId + "_" + side]: tercero.name }))
             }
           }}

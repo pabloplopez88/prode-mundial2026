@@ -582,7 +582,7 @@ export default function App() {
               <div style={{ paddingBottom: 16 }}>
                 <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>⏱ Pronósticos</div>
                 <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
-                  Cargá tu pronóstico antes de que arranque cada partido. Si no cargás uno, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong>
+                  Tenés hasta el comienzo de cada partido para cargar tus pronósticos. Si alguna vez te olvidás, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong>
                 </div>
               </div>
 

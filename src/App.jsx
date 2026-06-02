@@ -1589,9 +1589,14 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           onSelect={async (tercero) => {
             setTercerosPicker(null) // close immediately
             if (tercero) {
+              // Update local state immediately so UI reflects change without refresh
+              setKnockoutMatches(prev => prev.map(m =>
+                m.id === tercerosPicker.matchId
+                  ? { ...m, [tercerosPicker.side]: tercero.name }
+                  : m
+              ))
+              // Then persist to Supabase
               await supabase.from("knockout_matches").update({ [tercerosPicker.side]: tercero.name }).eq("id", tercerosPicker.matchId)
-              const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
-              if (km) setKnockoutMatches(km)
               showFlash(`✓ ${tercero.name} asignado`)
             }
           }}

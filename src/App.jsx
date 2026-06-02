@@ -1413,7 +1413,8 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
 function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, lastSyncTime }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
-  const [tercerosPicker, setTercerosPicker] = useState(null) // { matchId, side }
+  const [tercerosPicker, setTercerosPicker] = useState(null)
+  const [editKnockout, setEditKnockout] = useState({})
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
     { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
@@ -1549,7 +1550,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {homeIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      {match.home} ✏️
+                      {editKnockout[match.id + "_home"] || match.home} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1571,7 +1572,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {awayIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {match.away}
+                      ✏️ {editKnockout[match.id + "_away"] || match.away}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }
@@ -1586,27 +1587,34 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           knockoutMatches={allMatches.filter(m => m.id >= 73)}
           allMatches={allMatches}
           results={results}
-          onSelect={async (tercero) => {
-            // Capture values before clearing state
+          onSelect={(tercero) => {
             const matchId = tercerosPicker.matchId
             const side = tercerosPicker.side
             setTercerosPicker(null)
             if (tercero) {
-              setKnockoutMatches(prev => prev.map(m =>
-                m.id === matchId ? { ...m, [side]: tercero.name } : m
-              ))
-              await supabase.from("knockout_matches").update({ [side]: tercero.name }).eq("id", matchId)
-              showFlash(`✓ ${tercero.name} asignado`)
+              setEditKnockout(prev => ({ ...prev, [matchId + "_" + side]: tercero.name }))
             }
           }}
         />
       )}
 
       {/* Save button */}
-      {Object.keys(editResults).length > 0 && (
-        <button onClick={saveResults} disabled={saving}
+      {(Object.keys(editResults).length > 0 || Object.keys(editKnockout).length > 0) && (
+        <button onClick={async () => {
+          if (Object.keys(editResults).length > 0) await saveResults()
+          if (Object.keys(editKnockout).length > 0) {
+            for (const [key, value] of Object.entries(editKnockout)) {
+              const [matchId, side] = key.split("_")
+              await supabase.from("knockout_matches").update({ [side]: value }).eq("id", parseInt(matchId))
+            }
+            const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
+            if (km) setKnockoutMatches(km)
+            setEditKnockout({})
+            showFlash("✓ Guardado")
+          }
+        }} disabled={saving}
           style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }}>
-          {saving ? "Guardando..." : "💾 Guardar resultados"}
+          {saving ? "Guardando..." : "💾 Guardar cambios"}
         </button>
       )}
     </div>

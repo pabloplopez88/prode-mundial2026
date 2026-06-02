@@ -1317,7 +1317,6 @@ function LogoutConfirm({ onConfirm, onCancel }) {
 }
 
 function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect }) {
-  // Calculate all group thirds
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const thirds = grupoLetters.map(letter => {
     const gMatches = allMatches.filter(m => m.group === letter && m.stage === "Grupos")
@@ -1340,27 +1339,22 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
   }).filter(Boolean)
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-      onClick={e => { if (e.target === e.currentTarget) onSelect(null) }}>
+    <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: "#0f1624", border: "1px solid #c8a84b", borderRadius: 16, padding: 20, width: "100%", maxWidth: 380 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: "#c8a84b", marginBottom: 4 }}>Elegir 3° para este cruce</div>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>
-          {match.home} vs {match.away}
-        </div>
+        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>{match.home} vs {match.away}</div>
         {thirds.length === 0
           ? <div style={{ fontSize: 13, color: "#6b7280" }}>No hay terceros calculados todavía</div>
           : thirds.map(t => (
-            <div key={t.group} onClick={e => { e.stopPropagation(); e.preventDefault(); onSelect(t) }}
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 4, background: "#1a2035" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
-              onMouseLeave={e => e.currentTarget.style.background = "#1a2035"}>
+            <button key={t.group} onClick={() => onSelect(t)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 4, background: "#1a2035", width: "100%", border: "none" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>3° Grupo {t.group} — {t.name}</span>
               <span style={{ fontSize: 12, color: "#c8a84b" }}>{t.pts}pts</span>
-            </div>
+            </button>
           ))
         }
-        <button onClick={e => { e.stopPropagation(); onSelect("reset") }} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno (volver al original)</button>
-        <button onClick={e => { e.stopPropagation(); onSelect(null) }} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+        <button onClick={() => onSelect("reset")} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno</button>
+        <button onClick={() => onSelect(null)} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
       </div>
     </div>
   )

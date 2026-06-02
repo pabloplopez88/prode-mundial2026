@@ -1362,7 +1362,8 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
             </div>
           ))
         }
-        <button onClick={() => onSelect(null)} style={{ marginTop: 12, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+        <button onClick={() => onSelect("reset")} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno (volver al label original)</button>
+        <button onClick={() => onSelect(null)} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
       </div>
     </div>
   )
@@ -1416,6 +1417,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
+  const [editKnockout, setEditKnockout] = useState({})
   const [editKnockout, setEditKnockout] = useState({})
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
@@ -1552,7 +1554,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {homeIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      {editKnockout[match.id + "_home"] || match.home} ✏️
+                      {editKnockout[match.id + "_home"] ?? knockoutOverrides.find(o => o.match_id === match.id && o.side === "home")?.team_name ?? match._homeRaw ?? match.home} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1574,7 +1576,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {awayIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {editKnockout[match.id + "_away"] || match.away}
+                      ✏️ {editKnockout[match.id + "_away"] ?? knockoutOverrides.find(o => o.match_id === match.id && o.side === "away")?.team_name ?? match._awayRaw ?? match.away}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }
@@ -1593,28 +1595,35 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             const matchId = tercerosPicker.matchId
             const side = tercerosPicker.side
             setTercerosPicker(null)
-            if (tercero) {
+            if (tercero === "reset") {
+              setEditKnockout(prev => ({ ...prev, [matchId + "_" + side]: null }))
+            } else if (tercero) {
               setEditKnockout(prev => ({ ...prev, [matchId + "_" + side]: tercero.name }))
             }
           }}
         />
       )}
 
-      {/* Save button */}
       {(Object.keys(editResults).length > 0 || Object.keys(editKnockout).length > 0) && (
         <button onClick={async () => {
           if (Object.keys(editResults).length > 0) await saveResults()
-          if (Object.keys(editKnockout).length > 0) {
-            for (const [key, value] of Object.entries(editKnockout)) {
-              const [matchId, side] = key.split("_")
-              await supabase.from("knockout_matches").update({ [side]: value }).eq("id", parseInt(matchId))
+          for (const [key, value] of Object.entries(editKnockout)) {
+            const parts = key.split("_")
+            const matchId = parseInt(parts[0])
+            const side = parts[1]
+            if (value === null) {
+              await supabase.from("knockout_overrides").delete().eq("match_id", matchId).eq("side", side)
+              setKnockoutOverrides(prev => prev.filter(o => !(o.match_id === matchId && o.side === side)))
+            } else {
+              await supabase.from("knockout_overrides").upsert({ match_id: matchId, side, team_name: value }, { onConflict: "match_id,side" })
+              setKnockoutOverrides(prev => {
+                const next = prev.filter(o => !(o.match_id === matchId && o.side === side))
+                return [...next, { match_id: matchId, side, team_name: value }]
+              })
             }
-            const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
-            if (km) setKnockoutMatches(km)
-    supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })
-            setEditKnockout({})
-            showFlash("✓ Guardado")
           }
+          setEditKnockout({})
+          showFlash("✓ Guardado")
         }} disabled={saving}
           style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }}>
           {saving ? "Guardando..." : "💾 Guardar cambios"}

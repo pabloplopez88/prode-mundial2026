@@ -1351,7 +1351,7 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
         {thirds.length === 0
           ? <div style={{ fontSize: 13, color: "#6b7280" }}>No hay terceros calculados todavía</div>
           : thirds.map(t => (
-            <div key={t.group} onClick={e => { e.stopPropagation(); onSelect(t) }}
+            <div key={t.group} onClick={e => { e.stopPropagation(); e.preventDefault(); onSelect(t) }}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", marginBottom: 4, background: "#1a2035" }}
               onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
               onMouseLeave={e => e.currentTarget.style.background = "#1a2035"}>
@@ -1526,8 +1526,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         const isInPlay = cur.status === "IN_PLAY"
         const isFinished = cur.status === "FINISHED"
         const isSixteens = match.stage === "16avos"
-        const homeIsTercero = isSixteens && ((match._homeRaw || match.home).includes("3°") || (match._homeRaw || match.home).includes("mejor"))
-        const awayIsTercero = isSixteens && ((match._awayRaw || match.away).includes("3°") || (match._awayRaw || match.away).includes("mejor"))
+        // Slots that are tercero positions (fixed based on official bracket)
+        const terceroHomeSlots = new Set([]) // none have tercero on home side
+        const terceroAwaySlots = new Set([74, 77, 79, 80, 81, 82, 85, 87])
+        const homeRaw = match._homeRaw || match.home
+        const awayRaw = match._awayRaw || match.away
+        const homeIsTercero = isSixteens && (homeRaw.includes("3°") || homeRaw.includes("mejor") || terceroHomeSlots.has(match.id))
+        const awayIsTercero = isSixteens && (awayRaw.includes("3°") || awayRaw.includes("mejor") || terceroAwaySlots.has(match.id))
         return (
           <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -1582,13 +1587,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           allMatches={allMatches}
           results={results}
           onSelect={async (tercero) => {
+            setTercerosPicker(null) // close immediately
             if (tercero) {
               await supabase.from("knockout_matches").update({ [tercerosPicker.side]: tercero.name }).eq("id", tercerosPicker.matchId)
               const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
               if (km) setKnockoutMatches(km)
               showFlash(`✓ ${tercero.name} asignado`)
             }
-            setTercerosPicker(null)
           }}
         />
       )}

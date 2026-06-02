@@ -1562,7 +1562,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {homeIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      {editKnockout[match.id + "_home"] ?? knockoutOverrides.find(o => o.match_id === match.id && o.side === "home")?.team_name ?? match._homeRaw ?? match.home} ✏️
+                      {(match.id + "_home") in editKnockout ? (editKnockout[match.id + "_home"] ?? match._homeRaw ?? match.home) : (knockoutOverrides.find(o => o.match_id === match.id && o.side === "home")?.team_name ?? match._homeRaw ?? match.home)} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1584,7 +1584,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {awayIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {editKnockout[match.id + "_away"] ?? knockoutOverrides.find(o => o.match_id === match.id && o.side === "away")?.team_name ?? match._awayRaw ?? match.away}
+                      ✏️ {(match.id + "_away") in editKnockout ? (editKnockout[match.id + "_away"] ?? match._awayRaw ?? match.away) : (knockoutOverrides.find(o => o.match_id === match.id && o.side === "away")?.team_name ?? match._awayRaw ?? match.away)}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }

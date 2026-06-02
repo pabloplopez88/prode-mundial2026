@@ -115,17 +115,19 @@ export default function App() {
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
 
   const loadData = useCallback(async () => {
-    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }, { data: ko }] = await Promise.all([
+    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined"),
       supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
       Promise.resolve({ data: [] }),
       supabase.from("knockout_matches").select("*").order("id"),
-      supabase.from("knockout_overrides").select("*"),
     ])
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
-    if (ko) setKnockoutOverrides(ko)
+    // Load overrides separately so it doesn't block if table doesn't exist yet
+    supabase.from("knockout_overrides").select("*").then(({ data: ko }) => {
+      if (ko) setKnockoutOverrides(ko)
+    })
     if (pr) {
       setPredictions(pr)
       // Populate editPreds with user's saved predictions (single source of truth for inputs)

@@ -372,15 +372,23 @@ export default function App() {
 
   // ── SAVE RESULTS ───────────────────────────────────────────────────────────
   const saveResults = async () => {
-    setSaving(true)
-    const upserts = Object.entries(editResults).map(([match_id, sc]) => ({
-      match_id: parseInt(match_id),
-      home_score: sc.home_score === "" ? null : parseInt(sc.home_score),
-      away_score: sc.away_score === "" ? null : parseInt(sc.away_score),
-      updated_at: new Date().toISOString(),
-    }))
-    await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-    setEditResults({}); setSaving(false); showFlash("✓ Resultados guardados"); loadData()
+    try {
+      setSaving(true)
+      const upserts = Object.entries(editResults).map(([match_id, sc]) => ({
+        match_id: parseInt(match_id),
+        home_score: sc.home_score === "" ? null : parseInt(sc.home_score),
+        away_score: sc.away_score === "" ? null : parseInt(sc.away_score),
+        updated_at: new Date().toISOString(),
+      }))
+      await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+      setEditResults({})
+      showFlash("✓ Resultados guardados")
+      loadData()
+    } catch(e) {
+      showFlash("⚠️ Error: " + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── SAVE SETTINGS ──────────────────────────────────────────────────────────

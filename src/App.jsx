@@ -535,7 +535,7 @@ export default function App() {
 
   const BottomNav = () => (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
-      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🌍", label: "Grupos" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🌍", label: "Mundial" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
         <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
@@ -582,7 +582,7 @@ export default function App() {
               <div style={{ paddingBottom: 16 }}>
                 <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>⏱ Pronósticos</div>
                 <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
-                  Tenés hasta el comienzo de cada partido para cargar tus pronósticos. Si alguna vez te olvidás, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong>
+                  Cargá tu pronóstico antes de que arranque cada partido. Si no cargás uno, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong> — elegís uno al registrarte y lo podés cambiar en Config.
                 </div>
               </div>
 
@@ -608,7 +608,7 @@ export default function App() {
                       <span style={{ fontSize: 18, fontWeight: 900, color: "#4ade80" }}>5</span>
                       <span style={{ fontSize: 11, color: "#4ade80aa", fontWeight: 600 }}>pts</span>
                     </div>
-                    <span style={{ fontSize: 13, color: C.textDim }}>Máximo por partido 😱</span>
+                    <span style={{ fontSize: 13, color: C.textDim }}>Máximo por partido 🔥</span>
                   </div>
                 </div>
               </div>
@@ -635,7 +635,7 @@ export default function App() {
               {[
                 ["📅", "Fixture", "Todos los partidos. Cargá tus pronósticos acá."],
                 ["🏅", "Tabla", "Posiciones del prode."],
-                ["🌍", "Grupos", "Tabla de posiciones de los equipos durante la fase de grupos."],
+                ["🌍", "Mundial", "Tabla de posiciones de los equipos durante la fase de grupos."],
                 ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
               ].map(([icon, title, desc], i, arr) => (
                 <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
@@ -807,7 +807,7 @@ export default function App() {
           <div style={crd({ padding: 0, overflow: "hidden" })}>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
             {todayMatches.length === 0
-              ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, amigo del campin </div>
+              ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, campión 😎</div>
               : todayMatches.map((m, i) => {
                 const locked = isLocked(m.date)
                 const result = getResult(m.id)
@@ -1005,6 +1005,9 @@ export default function App() {
                   </div>
                   {matchState === "inplay" && result.match_time && (
                     <div style={{ fontSize: 9, color: C.green }}>{`Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}`}</div>
+                  )}
+                  {result.penalty_home != null && result.penalty_away != null && (
+                    <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home}) pen ({result.penalty_away})</div>
                   )}
                 </div>
               )}
@@ -1265,7 +1268,7 @@ export default function App() {
 
     return (
       <div style={appStyle}>
-        <Header title="🌍 Grupos" />
+        <Header title="🌍 Mundial" />
         {/* Group pills */}
         <div style={{ padding: "10px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>

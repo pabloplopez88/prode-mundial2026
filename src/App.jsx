@@ -1587,16 +1587,15 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           allMatches={allMatches}
           results={results}
           onSelect={async (tercero) => {
-            setTercerosPicker(null) // close immediately
+            // Capture values before clearing state
+            const matchId = tercerosPicker.matchId
+            const side = tercerosPicker.side
+            setTercerosPicker(null)
             if (tercero) {
-              // Update local state immediately so UI reflects change without refresh
               setKnockoutMatches(prev => prev.map(m =>
-                m.id === tercerosPicker.matchId
-                  ? { ...m, [tercerosPicker.side]: tercero.name }
-                  : m
+                m.id === matchId ? { ...m, [side]: tercero.name } : m
               ))
-              // Then persist to Supabase
-              await supabase.from("knockout_matches").update({ [tercerosPicker.side]: tercero.name }).eq("id", tercerosPicker.matchId)
+              await supabase.from("knockout_matches").update({ [side]: tercero.name }).eq("id", matchId)
               showFlash(`✓ ${tercero.name} asignado`)
             }
           }}

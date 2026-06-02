@@ -124,10 +124,6 @@ export default function App() {
     ])
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
-    // Load overrides separately so it doesn't block if table doesn't exist yet
-    supabase.from("knockout_overrides").select("*").then(({ data: ko }) => {
-      if (ko) setKnockoutOverrides(ko)
-    })
     if (pr) {
       setPredictions(pr)
       // Populate editPreds with user's saved predictions (single source of truth for inputs)
@@ -466,30 +462,22 @@ export default function App() {
     }
 
     // Loser of match: "Perdedor Semi X" -> not resolved dynamically (manual)
-    // Check knockoutOverrides for manually assigned terceros
-    // placeholder here is like "3° B/E/F/I/J" - we need matchId and side from context
-    // This is handled at the allMatches level below
+    // Already a real team name or 3° placeholder
     return placeholder
   }
 
   // Combine group matches with knockout matches from Supabase
   const allMatches = [
     ...MATCHES,
-    ...knockoutMatches.map(m => {
-      // Check knockoutOverrides for manually assigned teams
-      const homeOverride = knockoutOverrides.find(o => o.match_id === m.id && o.side === "home")
-      const awayOverride = knockoutOverrides.find(o => o.match_id === m.id && o.side === "away")
-      const resolvedHome = homeOverride ? homeOverride.team_name : (resolveTeam(m.home) || m.home)
-      const resolvedAway = awayOverride ? awayOverride.team_name : (resolveTeam(m.away) || m.away)
-      return {
-        ...m,
-        group: "",
-        home: resolvedHome,
-        away: resolvedAway,
-        _homeRaw: m.home,
-        _awayRaw: m.away,
-      }
-    })
+    ...knockoutMatches.map(m => ({
+      ...m,
+      group: "",
+      home: resolveTeam(m.home) || m.home,
+      away: resolveTeam(m.away) || m.away,
+      // Keep originals for admin picker logic
+      _homeRaw: m.home,
+      _awayRaw: m.away,
+    }))
   ]
   const allStages = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
 
@@ -1426,7 +1414,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
-  const [knockoutOverrides, setKnockoutOverrides] = useState([])
+  const [editKnockout, setEditKnockout] = useState({})
   const grupoLetters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
   const fechaGroups = [
     { date: "Fecha 1", matches: allMatches.filter(m => m.stage === "Grupos" && m.id >= 1  && m.id <= 24) },
@@ -1562,7 +1550,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {homeIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "home" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      {match._homeRaw || match.home} ✏️
+                      {editKnockout[match.id + "_home"] || match.home} ✏️
                     </button>
                   : <>{(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}</>
                 }
@@ -1584,7 +1572,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 {awayIsTercero
                   ? <button onClick={() => setTercerosPicker({ matchId: match.id, side: "away" })}
                       style={{ background: "#1a2035", border: "1px dashed #c8a84b", borderRadius: 6, padding: "4px 8px", color: "#c8a84b", fontSize: 11, cursor: "pointer" }}>
-                      ✏️ {match._awayRaw || match.away}
+                      ✏️ {editKnockout[match.id + "_away"] || match.away}
                     </button>
                   : <>{(FLAGS && FLAGS[match.away]) || "🏳️"} {match.away}</>
                 }
@@ -1621,7 +1609,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             }
             const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
             if (km) setKnockoutMatches(km)
-    if (ko) setKnockoutOverrides(ko)
             setEditKnockout({})
             showFlash("✓ Guardado")
           }

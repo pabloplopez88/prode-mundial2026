@@ -73,6 +73,7 @@ export default function App() {
   const [predictions, setPredictions] = useState([])
   const [results, setResults] = useState([])
   const [knockoutMatches, setKnockoutMatches] = useState([])
+  const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [gruposView, setGruposView] = useState("grupo")
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
@@ -124,6 +125,7 @@ export default function App() {
     ])
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
+    supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })
     if (pr) {
       setPredictions(pr)
       // Populate editPreds with user's saved predictions (single source of truth for inputs)
@@ -1609,6 +1611,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             }
             const { data: km } = await supabase.from("knockout_matches").select("*").order("id")
             if (km) setKnockoutMatches(km)
+    supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })
             setEditKnockout({})
             showFlash("✓ Guardado")
           }

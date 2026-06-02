@@ -835,7 +835,12 @@ export default function App() {
                     <div style={{ textAlign: "center", minWidth: 110 }}>
                       <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}` : formatTime(m.date)}</div>
                       {result && result.home_score !== null
-                        ? <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
+                        ? <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
+                          {result.penalty_home != null && result.penalty_away != null && (
+                            <div style={{ fontSize: 11, color: C.muted }}>({result.penalty_home}) pen ({result.penalty_away})</div>
+                          )}
+                        </div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       }
                       {/* Before match */}

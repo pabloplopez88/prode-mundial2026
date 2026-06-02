@@ -462,7 +462,8 @@ export default function App() {
       const matchId = parseInt(wpMatch[1])
       const r = results.find(r => r.match_id === matchId)
       if (!r || r.home_score === null) return placeholder
-      const km = allMatches.find(m => m.id === matchId)
+      // Use knockoutMatches (raw) to avoid circular reference with allMatches
+      const km = knockoutMatches.find(m => m.id === matchId)
       if (!km) return placeholder
       const homeRes = resolveTeam(km.home)
       const awayRes = resolveTeam(km.away)

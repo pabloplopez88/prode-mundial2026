@@ -1198,7 +1198,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} lastSyncTime={lastSyncTime} />
           )}
         </div>
       </div>
@@ -1413,7 +1413,7 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, lastSyncTime, knockoutOverrides, setKnockoutOverrides }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, lastSyncTime }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
@@ -1605,28 +1605,24 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
 
       {(Object.keys(editResults).length > 0 || Object.keys(editKnockout).length > 0) && (
         <button onClick={async () => {
-          try {
-            if (Object.keys(editResults).length > 0) await saveResults()
-            for (const [key, value] of Object.entries(editKnockout)) {
-              const parts = key.split("_")
-              const matchId = parseInt(parts[0])
-              const side = parts[1]
-              if (value === null) {
-                await supabase.from("knockout_overrides").delete().eq("match_id", matchId).eq("side", side)
-                setKnockoutOverrides(prev => prev.filter(o => !(o.match_id === matchId && o.side === side)))
-              } else {
-                await supabase.from("knockout_overrides").upsert({ match_id: matchId, side, team_name: value }, { onConflict: "match_id,side" })
-                setKnockoutOverrides(prev => {
-                  const next = prev.filter(o => !(o.match_id === matchId && o.side === side))
-                  return [...next, { match_id: matchId, side, team_name: value }]
-                })
-              }
+          if (Object.keys(editResults).length > 0) await saveResults()
+          for (const [key, value] of Object.entries(editKnockout)) {
+            const parts = key.split("_")
+            const matchId = parseInt(parts[0])
+            const side = parts[1]
+            if (value === null) {
+              await supabase.from("knockout_overrides").delete().eq("match_id", matchId).eq("side", side)
+              setKnockoutOverrides(prev => prev.filter(o => !(o.match_id === matchId && o.side === side)))
+            } else {
+              await supabase.from("knockout_overrides").upsert({ match_id: matchId, side, team_name: value }, { onConflict: "match_id,side" })
+              setKnockoutOverrides(prev => {
+                const next = prev.filter(o => !(o.match_id === matchId && o.side === side))
+                return [...next, { match_id: matchId, side, team_name: value }]
+              })
             }
-            setEditKnockout({})
-            showFlash("✓ Guardado")
-          } catch(e) {
-            showFlash("⚠️ Error al guardar: " + e.message)
           }
+          setEditKnockout({})
+          showFlash("✓ Guardado")
         }} disabled={saving}
           style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", marginTop: 8 }}>
           {saving ? "Guardando..." : "💾 Guardar cambios"}

@@ -1558,7 +1558,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         return (
           <div key={match.id} style={{ background: "#0f1624", border: "1px solid " + (isInPlay ? "#22c55e" : isFinished ? "#2a3a2a" : "#1e2940"), borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
+              <div style={{ fontSize: 11, color: "#6b7280" }}><><span style={{ color: "#c8a84b", fontWeight: 700, marginRight: 6 }}>P{match.id}</span>{formatDate(match.date)}</></div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
                   {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
@@ -1599,6 +1599,31 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
                 }
               </div>
             </div>
+            {(() => {
+              const isDraw = cur.home_score != null && cur.away_score != null &&
+                cur.home_score !== "" && cur.away_score !== "" &&
+                parseInt(cur.home_score) === parseInt(cur.away_score)
+              return isDraw ? (
+                <div style={{ marginTop: 8, padding: "8px 10px", background: "#0a0e1a", borderRadius: 8, border: "1px solid #3b82f6" }}>
+                  <div style={{ fontSize: 11, color: "#60a5fa", marginBottom: 6, fontWeight: 700 }}>🥅 Penales</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ flex: 1, textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{match.home}</div>
+                    <input type="text" inputMode="numeric" maxLength={2}
+                      style={{ width: 36, height: 36, background: "#1a2035", border: "2px solid #3b82f6", borderRadius: 7, color: "#60a5fa", fontSize: 16, fontWeight: 800, textAlign: "center", outline: "none" }}
+                      value={cur.penalty_home ?? ""}
+                      onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], penalty_home: v } })) }}
+                    />
+                    <span style={{ color: "#6b7280", fontWeight: 900 }}>:</span>
+                    <input type="text" inputMode="numeric" maxLength={2}
+                      style={{ width: 36, height: 36, background: "#1a2035", border: "2px solid #3b82f6", borderRadius: 7, color: "#60a5fa", fontSize: 16, fontWeight: 800, textAlign: "center", outline: "none" }}
+                      value={cur.penalty_away ?? ""}
+                      onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setEditResults(p => ({ ...p, [match.id]: { ...p[match.id], penalty_away: v } })) }}
+                    />
+                    <div style={{ flex: 1, textAlign: "left", fontSize: 11, color: "#94a3b8" }}>{match.away}</div>
+                  </div>
+                </div>
+              ) : null
+            })()}
           </div>
         )
       })}

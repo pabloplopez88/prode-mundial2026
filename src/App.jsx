@@ -378,6 +378,8 @@ export default function App() {
         match_id: parseInt(match_id),
         home_score: sc.home_score === "" ? null : parseInt(sc.home_score),
         away_score: sc.away_score === "" ? null : parseInt(sc.away_score),
+        penalty_home: sc.penalty_home === "" || sc.penalty_home == null ? null : parseInt(sc.penalty_home),
+        penalty_away: sc.penalty_away === "" || sc.penalty_away == null ? null : parseInt(sc.penalty_away),
         updated_at: new Date().toISOString(),
       }))
       await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
@@ -469,6 +471,10 @@ export default function App() {
       const awayRes = resolveTeam(km.away)
       if (parseInt(r.home_score) > parseInt(r.away_score)) return homeRes
       if (parseInt(r.away_score) > parseInt(r.home_score)) return awayRes
+      // Draw - check penalties
+      if (r.penalty_home != null && r.penalty_away != null) {
+        return parseInt(r.penalty_home) > parseInt(r.penalty_away) ? homeRes : awayRes
+      }
       return placeholder // draw - shouldn't happen in knockout
     }
 
@@ -961,7 +967,10 @@ export default function App() {
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: C.muted }}>{formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>
+              {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}
+              {formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}
+            </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               {match.stage === "Grupos" && gruposView === "grupo" && (
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>

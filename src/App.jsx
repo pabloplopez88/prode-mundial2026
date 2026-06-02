@@ -1341,9 +1341,8 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-      onClick={() => onSelect(null)}>
-      <div style={{ background: "#0f1624", border: "1px solid #c8a84b", borderRadius: 16, padding: 20, width: "100%", maxWidth: 380 }}
-        onClick={e => e.stopPropagation()}>
+      onClick={e => { if (e.target === e.currentTarget) onSelect(null) }}>
+      <div style={{ background: "#0f1624", border: "1px solid #c8a84b", borderRadius: 16, padding: 20, width: "100%", maxWidth: 380 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: "#c8a84b", marginBottom: 4 }}>Elegir 3° para este cruce</div>
         <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>
           {match.home} vs {match.away}
@@ -1360,8 +1359,8 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
             </div>
           ))
         }
-        <button onClick={() => onSelect("reset")} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno (volver al original)</button>
-        <button onClick={() => onSelect(null)} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+        <button onClick={e => { e.stopPropagation(); onSelect("reset") }} style={{ marginTop: 8, width: "100%", padding: "8px", background: "transparent", border: "1px solid #ef444433", borderRadius: 8, color: "#ef4444aa", cursor: "pointer", fontSize: 13 }}>↩ Ninguno (volver al original)</button>
+        <button onClick={e => { e.stopPropagation(); onSelect(null) }} style={{ marginTop: 6, width: "100%", padding: "8px", background: "transparent", border: "1px solid #1e2940", borderRadius: 8, color: "#6b7280", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
       </div>
     </div>
   )

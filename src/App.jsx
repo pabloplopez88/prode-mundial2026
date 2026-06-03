@@ -663,7 +663,7 @@ export default function App() {
               {[
                 ["📅", "Fixture", "Todos los partidos del Mundial. Cargá tus pronósticos y seguí la tabla de posiciones de cada grupo."],
                 ["🏅", "Tabla", "Posiciones del prode."],
-                ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
+                ["⚙️", "Config", "Perfil, avatar, resultado por defecto, contraseña y ya vamos a ver qué más."],
               ].map(([icon, title, desc], i, arr) => (
                 <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
                   <div style={{ width: 38, height: 38, background: "#1a2035", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>

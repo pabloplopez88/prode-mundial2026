@@ -1273,6 +1273,11 @@ export default function App() {
               {AVATARS.map(av => (
                 <button key={av} onClick={() => setSettAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: settAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === av ? C.accent : C.border}` }}>{av}</button>
               ))}
+              {PNG_AVATARS.map(url => (
+                <button key={url} onClick={() => setSettAvatar(url)} style={{ width: 44, height: 44, borderRadius: 10, cursor: "pointer", padding: 2, background: settAvatar === url ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === url ? C.accent : C.border}`, overflow: "hidden" }}>
+                  <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                </button>
+              ))}
             </div>
           </div>
           <div style={{ marginBottom: 14 }}>
@@ -1353,6 +1358,11 @@ export default function App() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {AVATARS.map(av => (
                 <button key={av} onClick={() => setSettAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: settAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === av ? C.accent : C.border}` }}>{av}</button>
+              ))}
+              {PNG_AVATARS.map(url => (
+                <button key={url} onClick={() => setSettAvatar(url)} style={{ width: 44, height: 44, borderRadius: 10, cursor: "pointer", padding: 2, background: settAvatar === url ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === url ? C.accent : C.border}`, overflow: "hidden" }}>
+                  <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                </button>
               ))}
             </div>
           </div>

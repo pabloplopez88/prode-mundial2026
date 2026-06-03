@@ -646,7 +646,7 @@ export default function App() {
                 <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
                 <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
                   Cierre de inscripciones: <strong style={{ color: C.text }}>jueves 11 de junio, 16:00</strong>.<br />
-                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado.
+                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado al wasap.
                 </div>
               </div>
 

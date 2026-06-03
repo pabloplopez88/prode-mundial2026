@@ -75,7 +75,7 @@ export default function App() {
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
-  const [gruposView, setGruposView] = useState("grupo")
+  const [selectedGroup, setSelectedGroup] = useState("A")
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -535,7 +535,7 @@ export default function App() {
 
   const BottomNav = () => (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
-      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🏟️", label: "Grupos" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
         <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
@@ -1150,6 +1150,87 @@ export default function App() {
         }
       </div>
       <BottomNav />
+    </div>
+  )
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SETTINGS
+  // ════════════════════════════════════════════════════════════════════════════
+  if (tab === "settings") return (
+    <div style={appStyle}>
+      <Header title="⚙️ Configuración" />
+      <div style={{ padding: "12px 14px" }}>
+        <div style={crd()}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <Avatar av={settAvatar} size={56} name={settName} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{user.name}</div>
+              <div style={{ fontSize: 12, color: C.textDim }}>Default: {user.default_score}</div>
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+            <input style={inp()} value={settName} onChange={e => setSettName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Avatar</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {AVATARS.map(av => (
+                <button key={av} onClick={() => setSettAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: settAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === av ? C.accent : C.border}` }}>{av}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Si no cargás un pronóstico, este resultado se usa automáticamente para el cálculo de puntos.</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 44 }}>Local</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[0] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault(v + "-" + (settDefault.split("-")[1] ?? "0")) }}
+              />
+              <span style={{ fontSize: 22, color: C.muted, fontWeight: 900 }}>:</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[1] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault((settDefault.split("-")[0] ?? "0") + "-" + v) }}
+              />
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 56 }}>Visitante</span>
+            </div>
+          </div>
+
+          {/* Change password */}
+          <div style={{ marginBottom: 18, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Cambiar contraseña <span style={{ color: C.muted }}>(opcional)</span></div>
+            <input type="password" style={inp({ marginBottom: 8 })} placeholder="Contraseña actual" value={settOldPass} onChange={e => { setSettOldPass(e.target.value); setSettPassError("") }} />
+            <input type="password" style={inp()} placeholder="Nueva contraseña" value={settNewPass} onChange={e => { setSettNewPass(e.target.value); setSettPassError("") }} />
+            {settPassError && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{settPassError}</div>}
+          </div>
+
+          <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
+          <button style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setShowLogoutConfirm(true)}>🚪 Cerrar sesión</button>
+        </div>
+
+        {/* Admin */}
+        <div style={crd()}>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>🔧 Panel admin</div>
+          {!adminMode ? (
+            <>
+              <input type="password" style={inp({ marginBottom: 10 })} placeholder="Contraseña admin" value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta"))} />
+              <button style={btn("secondary", { width: "100%" })} onClick={() => adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta")}>Entrar como admin</button>
+
+            </>
+          ) : (
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} />
+          )}
+        </div>
+      </div>
+      <BottomNav />
+      {flash && <FlashMsg msg={flash} />}
+      {showLogoutConfirm && <LogoutConfirm onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} />}
     </div>
   )
 

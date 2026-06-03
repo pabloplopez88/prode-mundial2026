@@ -75,7 +75,7 @@ export default function App() {
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
-  const [gruposView, setGruposView] = useState("grupo")
+  const [selectedGroup, setSelectedGroup] = useState("A")
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -446,15 +446,43 @@ export default function App() {
         else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
         else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
       })
-      const sorted = Object.values(teams).sort((a,b) =>
-        b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf
-      )
       // Only resolve if ALL matches in this group have results
       const groupComplete = gMatches.every(m => {
         const r = results.find(r => r.match_id === m.id)
         return r && r.home_score !== null
       })
-      if (groupComplete && sorted[pos]) return sorted[pos].name
+      if (!groupComplete) return placeholder
+      // Sort with head-to-head tiebreaker
+      const calcH2H = (tl) => {
+        const h = {}
+        tl.forEach(t => { h[t.name] = { pts:0, gd:0, gf:0 } })
+        gMatches.forEach(m => {
+          if (!tl.find(t=>t.name===m.home) || !tl.find(t=>t.name===m.away)) return
+          const r = results.find(r=>r.match_id===m.id)
+          if (!r||r.home_score===null) return
+          const hs=parseInt(r.home_score),as_=parseInt(r.away_score)
+          h[m.home].gf+=hs; h[m.home].gd+=hs-as_
+          h[m.away].gf+=as_; h[m.away].gd+=as_-hs
+          if(hs>as_) h[m.home].pts+=3
+          else if(hs<as_) h[m.away].pts+=3
+          else { h[m.home].pts+=1; h[m.away].pts+=1 }
+        })
+        return h
+      }
+      const allTeams = Object.values(teams)
+      const sorted = [...allTeams].sort((a,b) => {
+        if(b.pts!==a.pts) return b.pts-a.pts
+        const tied = allTeams.filter(t=>t.pts===a.pts)
+        if(tied.length>1){
+          const h=calcH2H(tied)
+          if(h[b.name].pts!==h[a.name].pts) return h[b.name].pts-h[a.name].pts
+          if(h[b.name].gd!==h[a.name].gd) return h[b.name].gd-h[a.name].gd
+          if(h[b.name].gf!==h[a.name].gf) return h[b.name].gf-h[a.name].gf
+        }
+        if((b.gf-b.gc)!==(a.gf-a.gc)) return (b.gf-b.gc)-(a.gf-a.gc)
+        return b.gf-a.gf
+      })
+      if (sorted[pos]) return sorted[pos].name
       return placeholder
     }
 
@@ -535,7 +563,7 @@ export default function App() {
 
   const BottomNav = () => (
     <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 860, background: "#0d1525", borderBottom: `1px solid ${C.border}`, display: "flex", zIndex: 200 }}>
-      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "grupos", icon: "🏟️", label: "Grupos" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
+      {[{ id: "home", icon: "🏠", label: "Inicio" }, { id: "fixture", icon: "📅", label: "Fixture" }, { id: "table", icon: "🏅", label: "Tabla" }, { id: "settings", icon: "⚙️", label: "Config" }].map(({ id, icon, label }) => (
         <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", color: tab === id ? C.accent : C.muted, borderBottom: `2px solid ${tab === id ? C.accent : "transparent"}` }}>
           <div style={{ fontSize: 20 }}>{icon}</div>
           <div style={{ fontSize: 10, fontWeight: 700 }}>{label}</div>
@@ -633,9 +661,8 @@ export default function App() {
             </div>
             <div style={{ padding: "8px 0" }}>
               {[
-                ["📅", "Fixture", "Todos los partidos. Cargá tus pronósticos acá."],
+                ["📅", "Fixture", "Todos los partidos del Mundial. Cargá tus pronósticos y seguí la tabla de posiciones de cada grupo."],
                 ["🏅", "Tabla", "Posiciones del prode."],
-                ["🌍", "Grupos", "Tabla de posiciones de los equipos durante la fase de grupos."],
                 ["⚙️", "Config", "Perfil, avatar, resultado por defecto y contraseña."],
               ].map(([icon, title, desc], i, arr) => (
                 <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
@@ -977,13 +1004,10 @@ export default function App() {
               {formatDate(match.date)}{match.venue ? ` · ${match.venue}` : ""}
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {match.stage === "Grupos" && gruposView === "grupo" && (
+              {match.stage === "Grupos" && (
                 <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>
                   F{match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}
                 </span>
-              )}
-              {match.group && match.stage === "Grupos" && gruposView === "fecha" && (
-                <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 700 }}>Gr.{match.group}</span>
               )}
               {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
               {matchState === "inplay" && <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
@@ -1051,42 +1075,28 @@ export default function App() {
     <div style={appStyle}>
       <Header title="📅 Fixture" />
       <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
-          {allStages.map(st => (
-            <button key={st} onClick={() => { setStage(st); setGruposSubFilter(null) }} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>{st}</button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "auto auto", gap: 5 }}>
+          <button onClick={() => setStage("Grupos")}
+            style={{ gridRow: "1 / 3", background: stage === "Grupos" ? C.accent : "transparent", color: stage === "Grupos" ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === "Grupos" ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+            Grupos
+          </button>
+          {allStages.filter(st => st !== "Grupos").map(st => (
+            <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>{st}</button>
           ))}
         </div>
       </div>
 
-      {/* Grupos sub-controls */}
+      {/* Group selector pills - sticky */}
       {stage === "Grupos" && (
         <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
-          <div style={{ display: "flex", background: "#0a0e1a", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}`, marginBottom: 8, width: "fit-content" }}>
-            {[["grupo","Por grupo"], ["fecha","Por fecha"]].map(([v, label]) => (
-              <button key={v} onClick={() => { setGruposView(v); setGruposSubFilter(null) }}
-                style={{ padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: gruposView === v ? C.accent : "transparent", color: gruposView === v ? "#0a0e1a" : C.textDim }}>
-                {label}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
+            {grupoLetters.map(g => (
+              <button key={g} onClick={() => setSelectedGroup(g)}
+                style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${selectedGroup === g ? C.accent : C.border}`, background: selectedGroup === g ? C.accent : "transparent", color: selectedGroup === g ? "#0a0e1a" : C.textDim, textAlign: "center" }}>
+                {g}
               </button>
             ))}
           </div>
-          {gruposView === "grupo"
-            ? <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
-                {grupoLetters.map(g => (
-                  <button key={g} onClick={() => scrollToElement("grp-"+g, 270)}
-                    style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
-                    {g}
-                  </button>
-                ))}
-              </div>
-            : <div style={{ display: "flex", gap: 5 }}>
-                {fechaGroups.map((fg, i) => (
-                  <button key={i} onClick={() => scrollToElement("fecha-"+i, 270)}
-                    style={{ flex: 1, padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.textDim, textAlign: "center" }}>
-                    {fg.date}
-                  </button>
-                ))}
-              </div>
-          }
         </div>
       )}
 
@@ -1097,26 +1107,102 @@ export default function App() {
       )}
 
       <div style={{ padding: "12px 14px", paddingBottom: 20 }}>
-        {stage === "Grupos" && gruposView === "grupo" && (
-          grupoLetters.map(g => {
-            const gMatches = allMatches.filter(m => m.stage === "Grupos" && m.group === g)
-            if (!gMatches.length) return null
-            return (
-              <div key={g} id={"grp-"+g}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>GRUPO {g}</div>
-                {gMatches.map(renderMatchCard)}
-              </div>
-            )
+        {stage === "Grupos" && (() => {
+          const g = selectedGroup
+          const gMatches = allMatches.filter(m => m.stage === "Grupos" && m.group === g)
+          const teams = {}
+          gMatches.forEach(m => {
+            if (!teams[m.home]) teams[m.home] = { name: m.home, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+            if (!teams[m.away]) teams[m.away] = { name: m.away, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+            const r = results.find(r => r.match_id === m.id)
+            if (!r || r.home_score === null) return
+            const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+            teams[m.home].pj++; teams[m.away].pj++
+            teams[m.home].gf += hs; teams[m.home].gc += as_
+            teams[m.away].gf += as_; teams[m.away].gc += hs
+            if (hs > as_) { teams[m.home].g++; teams[m.home].pts += 3; teams[m.away].p++ }
+            else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
+            else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
           })
-        )}
-        {stage === "Grupos" && gruposView === "fecha" && (
-          fechaGroups.map((fg, i) => (
-            <div key={i} id={"fecha-"+i}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: C.accent, padding: "10px 4px 6px", letterSpacing: 1 }}>{fg.date.toUpperCase()}</div>
-              {fg.matches.map(renderMatchCard)}
+      // Sort with head-to-head tiebreaker (FIFA rules step 1)
+      const calcHeadToHead = (teamList, allMatches) => {
+        const h2h = {}
+        teamList.forEach(t => { h2h[t.name] = { pts: 0, gd: 0, gf: 0 } })
+        allMatches.forEach(m => {
+          const inGroup = teamList.find(t => t.name === m.home) && teamList.find(t => t.name === m.away)
+          if (!inGroup) return
+          const r = results.find(r => r.match_id === m.id)
+          if (!r || r.home_score === null) return
+          const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+          h2h[m.home].gf += hs; h2h[m.home].gd += hs - as_
+          h2h[m.away].gf += as_; h2h[m.away].gd += as_ - hs
+          if (hs > as_) { h2h[m.home].pts += 3 }
+          else if (hs < as_) { h2h[m.away].pts += 3 }
+          else { h2h[m.home].pts += 1; h2h[m.away].pts += 1 }
+        })
+        return h2h
+      }
+
+      const sortTeams = (teamList) => {
+        return [...teamList].sort((a, b) => {
+          // First: overall points
+          if (b.pts !== a.pts) return b.pts - a.pts
+          // Find all teams tied with same points
+          const tied = teamList.filter(t => t.pts === a.pts)
+          if (tied.length > 1) {
+            // Step 1: head-to-head among tied teams
+            const h2h = calcHeadToHead(tied, gMatches)
+            if (h2h[b.name].pts !== h2h[a.name].pts) return h2h[b.name].pts - h2h[a.name].pts
+            if (h2h[b.name].gd !== h2h[a.name].gd) return h2h[b.name].gd - h2h[a.name].gd
+            if (h2h[b.name].gf !== h2h[a.name].gf) return h2h[b.name].gf - h2h[a.name].gf
+          }
+          // Step 2: overall goal difference and goals
+          if ((b.gf - b.gc) !== (a.gf - a.gc)) return (b.gf - b.gc) - (a.gf - a.gc)
+          return b.gf - a.gf
+        })
+      }
+      const standings = sortTeams(Object.values(teams))
+          return (
+            <div>
+              <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+                <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <th style={{ textAlign: "left", padding: "4px 14px", color: C.muted, fontWeight: 600 }}>Equipo</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>PJ</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>G</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>E</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>P</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>GF</th>
+                      <th style={{ textAlign: "center", padding: "4px 4px", color: C.muted, fontWeight: 600 }}>DG</th>
+                      <th style={{ textAlign: "center", padding: "4px 8px", color: C.accent, fontWeight: 700 }}>Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {standings.map((t, i) => (
+                      <tr key={t.name} style={{ borderBottom: i < standings.length-1 ? `1px solid ${C.border}` : "none", background: i < 2 ? "#0f1a0f" : "transparent" }}>
+                        <td style={{ padding: "7px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: i < 2 ? C.green : C.muted, fontWeight: 700, minWidth: 14 }}>{i+1}</span>
+                          <span style={{ fontSize: 15 }}>{flag(t.name)}</span>
+                          <span style={{ color: C.text, fontWeight: i < 2 ? 700 : 400, fontSize: 12 }}>{t.name}</span>
+                        </td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.pj}</td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.g}</td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.e}</td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.p}</td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.gf}</td>
+                        <td style={{ textAlign: "center", color: C.textDim, fontSize: 12 }}>{t.gf - t.gc}</td>
+                        <td style={{ textAlign: "center", padding: "7px 8px", color: C.accent, fontWeight: 800, fontSize: 13 }}>{t.pts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {gMatches.map(renderMatchCard)}
             </div>
-          ))
-        )}
+          )
+        })()}
         {stage !== "Grupos" && matchesByStage.map(renderMatchCard)}
       </div>
       <BottomNav />
@@ -1150,6 +1236,87 @@ export default function App() {
         }
       </div>
       <BottomNav />
+    </div>
+  )
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SETTINGS
+  // ════════════════════════════════════════════════════════════════════════════
+  if (tab === "settings") return (
+    <div style={appStyle}>
+      <Header title="⚙️ Configuración" />
+      <div style={{ padding: "12px 14px" }}>
+        <div style={crd()}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <Avatar av={settAvatar} size={56} name={settName} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{user.name}</div>
+              <div style={{ fontSize: 12, color: C.textDim }}>Default: {user.default_score}</div>
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 6 }}>Tu nombre</div>
+            <input style={inp()} value={settName} onChange={e => setSettName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Avatar</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {AVATARS.map(av => (
+                <button key={av} onClick={() => setSettAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: settAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${settAvatar === av ? C.accent : C.border}` }}>{av}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 4 }}>Resultado por defecto</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Si no cargás un pronóstico, este resultado se usa automáticamente para el cálculo de puntos.</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 44 }}>Local</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[0] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault(v + "-" + (settDefault.split("-")[1] ?? "0")) }}
+              />
+              <span style={{ fontSize: 22, color: C.muted, fontWeight: 900 }}>:</span>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+                style={{ width: 48, height: 48, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 22, fontWeight: 800, textAlign: "center", outline: "none" }}
+                value={settDefault.split("-")[1] ?? "0"}
+                onChange={e => { const v = e.target.value.replace(/[^0-9]/g,""); setSettDefault((settDefault.split("-")[0] ?? "0") + "-" + v) }}
+              />
+              <span style={{ fontSize: 13, color: C.textDim, minWidth: 56 }}>Visitante</span>
+            </div>
+          </div>
+
+          {/* Change password */}
+          <div style={{ marginBottom: 18, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 8 }}>Cambiar contraseña <span style={{ color: C.muted }}>(opcional)</span></div>
+            <input type="password" style={inp({ marginBottom: 8 })} placeholder="Contraseña actual" value={settOldPass} onChange={e => { setSettOldPass(e.target.value); setSettPassError("") }} />
+            <input type="password" style={inp()} placeholder="Nueva contraseña" value={settNewPass} onChange={e => { setSettNewPass(e.target.value); setSettPassError("") }} />
+            {settPassError && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{settPassError}</div>}
+          </div>
+
+          <button style={btn("primary", { width: "100%", marginBottom: 10 })} onClick={saveSettings} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</button>
+          <button style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setShowLogoutConfirm(true)}>🚪 Cerrar sesión</button>
+        </div>
+
+        {/* Admin */}
+        <div style={crd()}>
+          <div style={{ fontWeight: 700, marginBottom: 12 }}>🔧 Panel admin</div>
+          {!adminMode ? (
+            <>
+              <input type="password" style={inp({ marginBottom: 10 })} placeholder="Contraseña admin" value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta"))} />
+              <button style={btn("secondary", { width: "100%" })} onClick={() => adminPass === ADMIN_PASSWORD ? setAdminMode(true) : showFlash("❌ Contraseña incorrecta")}>Entrar como admin</button>
+
+            </>
+          ) : (
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} />
+          )}
+        </div>
+      </div>
+      <BottomNav />
+      {flash && <FlashMsg msg={flash} />}
+      {showLogoutConfirm && <LogoutConfirm onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} />}
     </div>
   )
 

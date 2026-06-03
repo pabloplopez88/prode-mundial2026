@@ -964,9 +964,6 @@ export default function App() {
               )}
             </div>
           )}
-          <div style={crd({ textAlign: "center" })}>
-            <button style={btn("ghost", { width: "auto", padding: "8px 20px", fontSize: 13 })} onClick={() => { navigator.clipboard?.writeText(window.location.href); showFlash("✓ Link copiado") }}>Copiar link del prode</button>
-          </div>
         </div>
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}

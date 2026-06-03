@@ -33,10 +33,18 @@ const crd = (extra = {}) => ({ background: C.card, border: `1px solid ${C.border
 
 function flag(team) { return FLAGS[team] || "🏳️" }
 
+const PNG_AVATARS = [
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/pato_00.png",
+]
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
+  const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg,#1e2a45,#2a3a60)", border: `2px solid ${C.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, flexShrink: 0 }}>
-      {av || (name ? name[0].toUpperCase() : "⚽")}
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg,#1e2a45,#2a3a60)", border: `2px solid ${C.accentDim}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, flexShrink: 0, overflow: "hidden" }}>
+      {isUrl
+        ? <img src={av} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : (av || (name ? name[0].toUpperCase() : "⚽"))
+      }
     </div>
   )
 }
@@ -646,7 +654,7 @@ export default function App() {
                 <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
                 <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
                   Cierre de inscripciones: <strong style={{ color: C.text }}>jueves 11 de junio, 16:00</strong>.<br />
-                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado.
+                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado al wasap.<br />También podés jugar gratis. Anotate nomás.
                 </div>
               </div>
 
@@ -730,6 +738,11 @@ export default function App() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {AVATARS.map(av => (
                   <button key={av} onClick={() => setRegAvatar(av)} style={{ fontSize: 22, width: 44, height: 44, borderRadius: 10, cursor: "pointer", background: regAvatar === av ? C.accentDim : "#1a2035", border: `2px solid ${regAvatar === av ? C.accent : C.border}` }}>{av}</button>
+                ))}
+                {PNG_AVATARS.map(url => (
+                  <button key={url} onClick={() => setRegAvatar(url)} style={{ width: 44, height: 44, borderRadius: 10, cursor: "pointer", padding: 2, background: regAvatar === url ? C.accentDim : "#1a2035", border: `2px solid ${regAvatar === url ? C.accent : C.border}`, overflow: "hidden" }}>
+                    <img src={url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                  </button>
                 ))}
               </div>
             </div>

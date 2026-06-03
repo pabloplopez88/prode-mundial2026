@@ -446,15 +446,43 @@ export default function App() {
         else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
         else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
       })
-      const sorted = Object.values(teams).sort((a,b) =>
-        b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf
-      )
       // Only resolve if ALL matches in this group have results
       const groupComplete = gMatches.every(m => {
         const r = results.find(r => r.match_id === m.id)
         return r && r.home_score !== null
       })
-      if (groupComplete && sorted[pos]) return sorted[pos].name
+      if (!groupComplete) return placeholder
+      // Sort with head-to-head tiebreaker
+      const calcH2H = (tl) => {
+        const h = {}
+        tl.forEach(t => { h[t.name] = { pts:0, gd:0, gf:0 } })
+        gMatches.forEach(m => {
+          if (!tl.find(t=>t.name===m.home) || !tl.find(t=>t.name===m.away)) return
+          const r = results.find(r=>r.match_id===m.id)
+          if (!r||r.home_score===null) return
+          const hs=parseInt(r.home_score),as_=parseInt(r.away_score)
+          h[m.home].gf+=hs; h[m.home].gd+=hs-as_
+          h[m.away].gf+=as_; h[m.away].gd+=as_-hs
+          if(hs>as_) h[m.home].pts+=3
+          else if(hs<as_) h[m.away].pts+=3
+          else { h[m.home].pts+=1; h[m.away].pts+=1 }
+        })
+        return h
+      }
+      const allTeams = Object.values(teams)
+      const sorted = [...allTeams].sort((a,b) => {
+        if(b.pts!==a.pts) return b.pts-a.pts
+        const tied = allTeams.filter(t=>t.pts===a.pts)
+        if(tied.length>1){
+          const h=calcH2H(tied)
+          if(h[b.name].pts!==h[a.name].pts) return h[b.name].pts-h[a.name].pts
+          if(h[b.name].gd!==h[a.name].gd) return h[b.name].gd-h[a.name].gd
+          if(h[b.name].gf!==h[a.name].gf) return h[b.name].gf-h[a.name].gf
+        }
+        if((b.gf-b.gc)!==(a.gf-a.gc)) return (b.gf-b.gc)-(a.gf-a.gc)
+        return b.gf-a.gf
+      })
+      if (sorted[pos]) return sorted[pos].name
       return placeholder
     }
 
@@ -1093,9 +1121,44 @@ export default function App() {
             else if (hs < as_) { teams[m.away].g++; teams[m.away].pts += 3; teams[m.home].p++ }
             else { teams[m.home].e++; teams[m.home].pts++; teams[m.away].e++; teams[m.away].pts++ }
           })
-          const standings = Object.values(teams).sort((a,b) =>
-            b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf
-          )
+      // Sort with head-to-head tiebreaker (FIFA rules step 1)
+      const calcHeadToHead = (teamList, allMatches) => {
+        const h2h = {}
+        teamList.forEach(t => { h2h[t.name] = { pts: 0, gd: 0, gf: 0 } })
+        allMatches.forEach(m => {
+          const inGroup = teamList.find(t => t.name === m.home) && teamList.find(t => t.name === m.away)
+          if (!inGroup) return
+          const r = results.find(r => r.match_id === m.id)
+          if (!r || r.home_score === null) return
+          const hs = parseInt(r.home_score), as_ = parseInt(r.away_score)
+          h2h[m.home].gf += hs; h2h[m.home].gd += hs - as_
+          h2h[m.away].gf += as_; h2h[m.away].gd += as_ - hs
+          if (hs > as_) { h2h[m.home].pts += 3 }
+          else if (hs < as_) { h2h[m.away].pts += 3 }
+          else { h2h[m.home].pts += 1; h2h[m.away].pts += 1 }
+        })
+        return h2h
+      }
+
+      const sortTeams = (teamList) => {
+        return [...teamList].sort((a, b) => {
+          // First: overall points
+          if (b.pts !== a.pts) return b.pts - a.pts
+          // Find all teams tied with same points
+          const tied = teamList.filter(t => t.pts === a.pts)
+          if (tied.length > 1) {
+            // Step 1: head-to-head among tied teams
+            const h2h = calcHeadToHead(tied, gMatches)
+            if (h2h[b.name].pts !== h2h[a.name].pts) return h2h[b.name].pts - h2h[a.name].pts
+            if (h2h[b.name].gd !== h2h[a.name].gd) return h2h[b.name].gd - h2h[a.name].gd
+            if (h2h[b.name].gf !== h2h[a.name].gf) return h2h[b.name].gf - h2h[a.name].gf
+          }
+          // Step 2: overall goal difference and goals
+          if ((b.gf - b.gc) !== (a.gf - a.gc)) return (b.gf - b.gc) - (a.gf - a.gc)
+          return b.gf - a.gf
+        })
+      }
+      const standings = sortTeams(Object.values(teams))
           return (
             <div>
               <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>

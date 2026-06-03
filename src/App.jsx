@@ -1075,8 +1075,12 @@ export default function App() {
     <div style={appStyle}>
       <Header title="📅 Fixture" />
       <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 56, zIndex: 90 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
-          {allStages.map(st => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridTemplateRows: "auto auto", gap: 5 }}>
+          <button onClick={() => setStage("Grupos")}
+            style={{ gridRow: "1 / 3", background: stage === "Grupos" ? C.accent : "transparent", color: stage === "Grupos" ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === "Grupos" ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+            Grupos
+          </button>
+          {allStages.filter(st => st !== "Grupos").map(st => (
             <button key={st} onClick={() => setStage(st)} style={{ background: stage === st ? C.accent : "transparent", color: stage === st ? "#0a0e1a" : C.textDim, border: `1px solid ${stage === st ? C.accent : C.border}`, borderRadius: 8, padding: "6px 4px", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>{st}</button>
           ))}
         </div>

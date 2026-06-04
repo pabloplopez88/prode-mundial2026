@@ -196,6 +196,57 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [loadData])
 
+  const doSyncDate = async (dateStr) => {
+    const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
+    if (!TOKEN) return "no token"
+    try {
+      const res = await fetch(
+        `https://api.football-data.org/v4/matches?date=${dateStr}`,
+        { headers: { "X-Auth-Token": TOKEN } }
+      )
+      if (!res.ok) return `HTTP ${res.status}`
+      const data = await res.json()
+      const fixtures = data.matches || []
+      const prueba = MATCHES.filter(m => m.stage === "Prueba")
+      const upserts = []
+      prueba.forEach(local => {
+        const homeSearch = local.homeApi || local.home
+        const awaySearch = local.awayApi || local.away
+        const fuzzyMatch = (a, b) => {
+          const na = a.toLowerCase(), nb = b.toLowerCase()
+          return na.includes(nb.slice(0,5)) || nb.includes(na.slice(0,5))
+        }
+        const match = fixtures.find(f =>
+          fuzzyMatch(f.homeTeam?.name || "", homeSearch) &&
+          fuzzyMatch(f.awayTeam?.name || "", awaySearch)
+        )
+        if (!match) return
+        const status = match.status
+        const apiStatus = status === "FINISHED" ? "FINISHED" : ["IN_PLAY","PAUSED"].includes(status) ? "IN_PLAY" : "SCHEDULED"
+        if (apiStatus === "SCHEDULED") return
+        const hs = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? null
+        const as_ = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? null
+        if (hs === null) return
+        upserts.push({ match_id: local.id, home_score: hs, away_score: as_, status: apiStatus, match_time: null, updated_at: new Date().toISOString() })
+      })
+      if (upserts.length > 0) {
+        await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
+        setResults(prev => {
+          const next = [...prev]
+          upserts.forEach(u => {
+            const idx = next.findIndex(r => r.match_id === u.match_id)
+            if (idx >= 0) next[idx] = { ...next[idx], ...u }
+            else next.push(u)
+          })
+          resultsRef.current = next
+          return next
+        })
+        return `✓ ${upserts.length} partido(s) actualizados`
+      }
+      return `Sin resultados — fixtures encontrados: ${fixtures.length}`
+    } catch(e) { return `Error: ${e.message}` }
+  }
+
   const doSync = useCallback(async () => {
     const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
     const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
@@ -1680,9 +1731,20 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         </div>
       </div>
       <button onClick={async () => { await doSync(); showFlash("✓ Sync completado") }}
-        style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>
+        style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
       </button>
+      {MATCHES.some(m => m.stage === "Prueba") && (
+        <button onClick={async () => {
+          const testMatch = MATCHES.find(m => m.stage === "Prueba")
+          const date = testMatch.date.slice(0, 10)
+          const msg = await doSyncDate(date)
+          showFlash(msg)
+        }}
+          style={{ background: "#1a2035", border: "1px solid #3b82f6", borderRadius: 8, padding: "8px 14px", color: "#60a5fa", fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>
+          🧪 Test sync ({MATCHES.find(m => m.stage === "Prueba")?.home} vs {MATCHES.find(m => m.stage === "Prueba")?.away})
+        </button>
+      )}
 
       {/* Stage tabs - sticky */}
       <div style={{ position: "sticky", top: 56, zIndex: 90, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>

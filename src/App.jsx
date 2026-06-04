@@ -199,39 +199,48 @@ export default function App() {
   const doSyncDate = async (dateStr) => {
     const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
     if (!TOKEN) return "no token"
+    const fuzzyMatch = (a, b) => {
+      const na = a.toLowerCase(), nb = b.toLowerCase()
+      return na.includes(nb.slice(0,5)) || nb.includes(na.slice(0,5))
+    }
+    const parseStatus = (status) => {
+      if (status === "FINISHED") return "FINISHED"
+      if (["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(status)) return "IN_PLAY"
+      return "SCHEDULED"
+    }
+    const parseScore = (match) => {
+      const s = match.score
+      if (!s) return { hs: null, as_: null }
+      // Use fullTime if available, else halfTime
+      const hs = s.fullTime?.home ?? s.halfTime?.home ?? null
+      const as_ = s.fullTime?.away ?? s.halfTime?.away ?? null
+      return { hs, as_ }
+    }
     try {
+      // Use competition filter for test matches (CL = Champions League)
+      const prueba = MATCHES.filter(m => m.stage === "Prueba")
       const res = await fetch(
-        `https://api.football-data.org/v4/matches?date=${dateStr}`,
+        `https://api.football-data.org/v4/matches?competitions=CL&date=${dateStr}`,
         { headers: { "X-Auth-Token": TOKEN } }
       )
-      if (!res.ok) return `HTTP ${res.status}`
+      if (!res.ok) return `HTTP ${res.status}: ${await res.text()}`
       const data = await res.json()
       const fixtures = data.matches || []
-      const prueba = MATCHES.filter(m => m.stage === "Prueba")
       const upserts = []
       prueba.forEach(local => {
         const homeSearch = local.homeApi || local.home
         const awaySearch = local.awayApi || local.away
-        const fuzzyMatch = (a, b) => {
-          const na = a.toLowerCase(), nb = b.toLowerCase()
-          return na.includes(nb.slice(0,5)) || nb.includes(na.slice(0,5))
-        }
         const match = fixtures.find(f =>
-          fuzzyMatch(f.homeTeam?.name || "", homeSearch) &&
-          fuzzyMatch(f.awayTeam?.name || "", awaySearch)
+          fuzzyMatch(f.homeTeam?.name || f.homeTeam?.shortName || "", homeSearch) &&
+          fuzzyMatch(f.awayTeam?.name || f.awayTeam?.shortName || "", awaySearch)
         )
         if (!match) return
-        const status = match.status
-        const apiStatus = status === "FINISHED" ? "FINISHED" : ["IN_PLAY","PAUSED"].includes(status) ? "IN_PLAY" : "SCHEDULED"
+        const apiStatus = parseStatus(match.status)
         if (apiStatus === "SCHEDULED") return
-        const hs = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? null
-        const as_ = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? null
+        const { hs, as_ } = parseScore(match)
         if (hs === null) return
         upserts.push({ match_id: local.id, home_score: hs, away_score: as_, status: apiStatus, match_time: null, updated_at: new Date().toISOString() })
       })
-      console.log("Fixtures encontrados:", fixtures.length)
-      fixtures.slice(0,3).forEach(f => console.log(" -", f.homeTeam?.name, "vs", f.awayTeam?.name, f.status))
-      console.log("Buscando:", prueba.map(m => m.homeApi + " vs " + m.awayApi))
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
         setResults(prev => {
@@ -244,9 +253,9 @@ export default function App() {
           resultsRef.current = next
           return next
         })
-        return `✓ ${upserts.length} partido(s) actualizados`
+        return `✓ ${upserts.length} partido(s) actualizado(s) — ${upserts.map(u => `${u.home_score}-${u.away_score}`).join(", ")}`
       }
-      return `Sin resultados — fixtures encontrados: ${fixtures.length}`
+      return `Sin match — ${fixtures.length} fixtures encontrados en CL ese día`
     } catch(e) { return `Error: ${e.message}` }
   }
 

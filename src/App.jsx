@@ -229,6 +229,9 @@ export default function App() {
         if (hs === null) return
         upserts.push({ match_id: local.id, home_score: hs, away_score: as_, status: apiStatus, match_time: null, updated_at: new Date().toISOString() })
       })
+      console.log("Fixtures encontrados:", fixtures.length)
+      fixtures.slice(0,3).forEach(f => console.log(" -", f.homeTeam?.name, "vs", f.awayTeam?.name, f.status))
+      console.log("Buscando:", prueba.map(m => m.homeApi + " vs " + m.awayApi))
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
         setResults(prev => {
@@ -312,8 +315,15 @@ export default function App() {
   useEffect(() => {
     const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
     if (!TOKEN) return
+    // Run normal sync
     doSync()
-    const interval = setInterval(doSync, 10 * 60 * 1000)
+    // Also sync Prueba matches using their actual date
+    const pruebaMatch = MATCHES.find(m => m.stage === "Prueba")
+    if (pruebaMatch) doSyncDate(pruebaMatch.date.slice(0, 10))
+    const interval = setInterval(() => {
+      doSync()
+      if (pruebaMatch) doSyncDate(pruebaMatch.date.slice(0, 10))
+    }, 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [doSync])
 

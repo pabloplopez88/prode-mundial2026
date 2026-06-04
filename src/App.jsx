@@ -1703,8 +1703,8 @@ function WCDebugPanel({ allMatches }) {
                 const homeApi = m.homeTeam?.name
                 const awayApi = m.awayTeam?.name
                 const localMatch = allMatches.find(lm =>
-                  (lm.homeApi === homeApi || lm.awayApi === homeApi) ||
-                  (lm.homeApi === awayApi || lm.awayApi === awayApi)
+                  (lm.homeApi === homeApi && lm.awayApi === awayApi) ||
+                  (lm.homeApi === awayApi && lm.awayApi === homeApi)
                 )
                 const matched = !!localMatch
                 return (

@@ -1660,6 +1660,70 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
   )
 }
 
+function WCDebugPanel({ allMatches }) {
+  const [dateFrom, setDateFrom] = useState("2026-06-11")
+  const [dateTo, setDateTo] = useState("2026-06-11")
+  const [matches, setMatches] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  const fetch_ = async () => {
+    setLoading(true)
+    try {
+      const r = await fetch(`/api/wc-matches?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+      const data = await r.json()
+      setMatches(data.matches || [])
+    } catch(e) { setMatches([{ error: e.message }]) }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ background: "#1a2035", border: "1px solid #6b7280", borderRadius: 8, padding: "8px 14px", color: "#6b7280", fontSize: 13, cursor: "pointer", width: "100%", marginBottom: open ? 8 : 0 }}>
+        🔬 Debug partidos WC
+      </button>
+      {open && (
+        <div style={{ background: "#0f1624", border: "1px solid #1e2940", borderRadius: 8, padding: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
+            <span style={{ color: "#6b7280", fontSize: 12 }}>a</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
+            <button onClick={fetch_} disabled={loading}
+              style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {loading ? "..." : "Buscar"}
+            </button>
+          </div>
+          {matches.length > 0 && (
+            <div style={{ maxHeight: 300, overflowY: "auto" }}>
+              {matches.map((m, i) => {
+                if (m.error) return <div key={i} style={{ color: "#ef4444", fontSize: 12 }}>{m.error}</div>
+                const homeApi = m.homeTeam?.name
+                const awayApi = m.awayTeam?.name
+                const localMatch = allMatches.find(lm =>
+                  (lm.homeApi === homeApi || lm.awayApi === homeApi) ||
+                  (lm.homeApi === awayApi || lm.awayApi === awayApi)
+                )
+                const matched = !!localMatch
+                return (
+                  <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #1e2940", fontSize: 12 }}>
+                    <span style={{ color: matched ? "#22c55e" : "#ef4444", marginRight: 6 }}>{matched ? "✓" : "✗"}</span>
+                    <span style={{ color: "#e2e8f0" }}>{homeApi} vs {awayApi}</span>
+                    <span style={{ color: "#6b7280", fontSize: 11 }}> · {m.utcDate?.slice(0,10)} · {m.status}</span>
+                    {matched && <span style={{ color: "#60a5fa", fontSize: 11 }}> → {localMatch.home} vs {localMatch.away}</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function renderAdminMatch(match, getResult, editResults, setEditResults, saving, saveResults) {
   const saved = getResult(match.id) || {}
   const edited = editResults[match.id] || {}
@@ -1759,10 +1823,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const msg = await doSyncDate(date)
           showFlash(msg)
         }}
-          style={{ background: "#1a2035", border: "1px solid #3b82f6", borderRadius: 8, padding: "8px 14px", color: "#60a5fa", fontSize: 13, cursor: "pointer", marginBottom: 14, width: "100%" }}>
+          style={{ background: "#1a2035", border: "1px solid #3b82f6", borderRadius: 8, padding: "8px 14px", color: "#60a5fa", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
           🧪 Test sync ({MATCHES.find(m => m.stage === "Prueba")?.home} vs {MATCHES.find(m => m.stage === "Prueba")?.away})
         </button>
       )}
+      <WCDebugPanel allMatches={allMatches} />
 
       {/* Stage tabs - sticky */}
       <div style={{ position: "sticky", top: 56, zIndex: 90, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>

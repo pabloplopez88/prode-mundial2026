@@ -219,10 +219,7 @@ export default function App() {
     try {
       // Use competition filter for test matches (CL = Champions League)
       const prueba = MATCHES.filter(m => m.stage === "Prueba")
-      const res = await fetch(
-        `https://api.football-data.org/v4/matches?competitions=CL&date=${dateStr}`,
-        { headers: { "X-Auth-Token": TOKEN } }
-      )
+      const res = await fetch(`/api/sync?date=${dateStr}&competitions=CL`)
       if (!res.ok) return `HTTP ${res.status}: ${await res.text()}`
       const data = await res.json()
       const fixtures = data.matches || []

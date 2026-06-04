@@ -34,7 +34,19 @@ const crd = (extra = {}) => ({ background: C.card, border: `1px solid ${C.border
 function flag(team) { return FLAGS[team] || "🏳️" }
 
 const PNG_AVATARS = [
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/chacha_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/fede_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/gon_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/gonzi_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/joaco_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/lb_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/martin_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/negro_00.png",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/pato_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/pele_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/pini_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/rami_00.png",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/yayu_00.png",
 ]
 
 function Avatar({ av = "⚽", size = 36, name = "" }) {

@@ -1660,20 +1660,28 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
   )
 }
 
-function WCDebugPanel({ allMatches }) {
-  const [dateFrom, setDateFrom] = useState("2026-06-11")
-  const [dateTo, setDateTo] = useState("2026-06-11")
-  const [matches, setMatches] = useState([])
+function WCDebugPanel({ allMatches, knockoutMatches }) {
+  const [matchId, setMatchId] = useState("1")
+  const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
 
-  const fetch_ = async () => {
+  const lookup = async () => {
     setLoading(true)
+    setResult(null)
     try {
-      const r = await fetch(`/api/wc-matches?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+      const id = parseInt(matchId)
+      // Find our match
+      const ourMatch = allMatches.find(m => m.id === id)
+      if (!ourMatch) { setResult({ error: `No existe partido con id ${id}` }); setLoading(false); return }
+      // Get fdId
+      const fdId = ourMatch.fdId || knockoutMatches.find(m => m.id === id)?.fd_id
+      if (!fdId) { setResult({ error: `Partido ${id} no tiene fdId asignado`, our: ourMatch }); setLoading(false); return }
+      // Fetch from football-data
+      const r = await fetch(`/api/match?id=${fdId}`)
       const data = await r.json()
-      setMatches(data.matches || [])
-    } catch(e) { setMatches([{ error: e.message }]) }
+      setResult({ our: ourMatch, fdId, fd: data })
+    } catch(e) { setResult({ error: e.message }) }
     setLoading(false)
   }
 
@@ -1681,41 +1689,36 @@ function WCDebugPanel({ allMatches }) {
     <div style={{ marginBottom: 14 }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ background: "#1a2035", border: "1px solid #6b7280", borderRadius: 8, padding: "8px 14px", color: "#6b7280", fontSize: 13, cursor: "pointer", width: "100%", marginBottom: open ? 8 : 0 }}>
-        🔬 Debug partidos WC
+        🔬 Debug partido por ID
       </button>
       {open && (
         <div style={{ background: "#0f1624", border: "1px solid #1e2940", borderRadius: 8, padding: 12 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
-            <span style={{ color: "#6b7280", fontSize: 12 }}>a</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
-            <button onClick={fetch_} disabled={loading}
+          <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+            <span style={{ color: "#94a3b8", fontSize: 13 }}>ID partido (1-104):</span>
+            <input type="number" min="1" max="104" value={matchId} onChange={e => setMatchId(e.target.value)}
+              style={{ width: 70, background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 13 }} />
+            <button onClick={lookup} disabled={loading}
               style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               {loading ? "..." : "Buscar"}
             </button>
           </div>
-          {matches.length > 0 && (
-            <div style={{ maxHeight: 300, overflowY: "auto" }}>
-              {matches.map((m, i) => {
-                if (m.error) return <div key={i} style={{ color: "#ef4444", fontSize: 12 }}>{m.error}</div>
-                const homeApi = m.homeTeam?.name
-                const awayApi = m.awayTeam?.name
-                const localMatch = allMatches.find(lm =>
-                  (lm.homeApi === homeApi && lm.awayApi === awayApi) ||
-                  (lm.homeApi === awayApi && lm.awayApi === homeApi)
-                )
-                const matched = !!localMatch
-                return (
-                  <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #1e2940", fontSize: 12 }}>
-                    <span style={{ color: matched ? "#22c55e" : "#ef4444", marginRight: 6 }}>{matched ? "✓" : "✗"}</span>
-                    <span style={{ color: "#e2e8f0" }}>{homeApi} vs {awayApi}</span>
-                    <span style={{ color: "#6b7280", fontSize: 11 }}> · {m.utcDate?.slice(0,10)} · {m.status}</span>
-                    {matched && <span style={{ color: "#60a5fa", fontSize: 11 }}> → {localMatch.home} vs {localMatch.away}</span>}
+          {result && (
+            <div style={{ fontSize: 12 }}>
+              {result.error
+                ? <div style={{ color: "#ef4444" }}>⚠️ {result.error}</div>
+                : <>
+                  <div style={{ color: "#94a3b8", marginBottom: 6 }}>
+                    <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {result.our.home} vs {result.our.away} · {result.our.date?.slice(0,10)} · fdId={result.fdId}
                   </div>
-                )
-              })}
+                  <div style={{ color: "#94a3b8" }}>
+                    <span style={{ color: "#22c55e", fontWeight: 700 }}>Football-data:</span>{" "}
+                    {result.fd.homeTeam?.name || "?"} vs {result.fd.awayTeam?.name || "?"}{" "}
+                    · {result.fd.utcDate?.slice(0,10)}{" "}
+                    · {result.fd.status}{" "}
+                    {result.fd.score?.fullTime?.home != null && `· ${result.fd.score.fullTime.home}-${result.fd.score.fullTime.away}`}
+                  </div>
+                </>
+              }
             </div>
           )}
         </div>
@@ -1827,7 +1830,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           🧪 Test sync ({MATCHES.find(m => m.stage === "Prueba")?.home} vs {MATCHES.find(m => m.stage === "Prueba")?.away})
         </button>
       )}
-      <WCDebugPanel allMatches={allMatches} />
+      <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} />
 
       {/* Stage tabs - sticky */}
       <div style={{ position: "sticky", top: 56, zIndex: 90, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>

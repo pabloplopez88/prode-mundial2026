@@ -211,9 +211,9 @@ export default function App() {
     const parseScore = (match) => {
       const s = match.score
       if (!s) return { hs: null, as_: null }
-      // Use fullTime if available, else halfTime
-      const hs = s.fullTime?.home ?? s.halfTime?.home ?? null
-      const as_ = s.fullTime?.away ?? s.halfTime?.away ?? null
+      // Use regularTime if available (90min result), else fullTime, else halfTime
+      const hs = s.regularTime?.home ?? s.fullTime?.home ?? s.halfTime?.home ?? null
+      const as_ = s.regularTime?.away ?? s.fullTime?.away ?? s.halfTime?.away ?? null
       return { hs, as_ }
     }
     try {
@@ -236,7 +236,9 @@ export default function App() {
         if (apiStatus === "SCHEDULED") return
         const { hs, as_ } = parseScore(match)
         if (hs === null) return
-        upserts.push({ match_id: local.id, home_score: hs, away_score: as_, status: apiStatus, match_time: null, updated_at: new Date().toISOString() })
+        const ph = match.score?.penalties?.home ?? null
+        const pa = match.score?.penalties?.away ?? null
+        upserts.push({ match_id: local.id, home_score: hs, away_score: as_, penalty_home: ph, penalty_away: pa, status: apiStatus, match_time: null, updated_at: new Date().toISOString() })
       })
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })

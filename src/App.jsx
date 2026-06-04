@@ -1708,12 +1708,12 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                 ? <div style={{ color: "#ef4444" }}>⚠️ {result.error}</div>
                 : <>
                   <div style={{ color: "#94a3b8", marginBottom: 6 }}>
-                    <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {result.our.home} vs {result.our.away} · {result.our.date?.slice(0,10)} · fdId={result.fdId}
+                    <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {result.our.home} vs {result.our.away} · {result.our.date} · fdId={result.fdId}
                   </div>
                   <div style={{ color: "#94a3b8" }}>
                     <span style={{ color: "#22c55e", fontWeight: 700 }}>Football-data:</span>{" "}
                     {result.fd.homeTeam?.name || "?"} vs {result.fd.awayTeam?.name || "?"}{" "}
-                    · {result.fd.utcDate?.slice(0,10)}{" "}
+                    · {result.fd.utcDate ? new Date(result.fd.utcDate).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "?"}{" "}
                     · {result.fd.status}{" "}
                     {result.fd.score?.fullTime?.home != null && `· ${result.fd.score.fullTime.home}-${result.fd.score.fullTime.away}`}
                   </div>

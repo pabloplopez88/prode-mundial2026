@@ -1,4 +1,6 @@
 export const MATCHES = [
+  // PARTIDO DE PRUEBA - Final Champions League 2026 (30 may 2026)
+  { id: 201, home: "PSG", away: "Arsenal", homeApi: "Paris Saint-Germain", awayApi: "Arsenal FC", group: "", date: "2026-05-30T21:00", venue: "Budapest", stage: "Prueba" },
   { id: 1, home: "México", away: "Sudáfrica", group: "A", date: "2026-06-11T16:00", venue: "Ciudad de México", stage: "Grupos" },
   { id: 2, home: "Corea del Sur", away: "Rep. Checa", group: "A", date: "2026-06-11T23:00", venue: "Guadalajara", stage: "Grupos" },
   { id: 3, home: "Canadá", away: "Bosnia y Herz.", group: "B", date: "2026-06-12T16:00", venue: "Toronto", stage: "Grupos" },

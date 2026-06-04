@@ -257,12 +257,10 @@ export default function App() {
     } catch { setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
   }, [])
 
-  // Auto-sync results from live-score-api on load
+  // Auto-sync on load and every 10 min
   useEffect(() => {
-    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
-    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
-    if (!LS_KEY || !LS_SECRET) return
-    const fuzzyMatch = (a, b) => { return true } // unused - doSync handles this
+    const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
+    if (!TOKEN) return
     doSync()
     const interval = setInterval(doSync, 10 * 60 * 1000)
     return () => clearInterval(interval)
@@ -544,7 +542,7 @@ export default function App() {
       _awayRaw: m.away,
     }))
   ]
-  const allStages = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+  const allStages = ["Prueba", "Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0

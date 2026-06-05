@@ -1692,6 +1692,7 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
   const lookupDate = async () => {
     setLoading(true); setDateResults([])
     try {
+      // Single request - proxy expands to day before/after automatically
       const r = await fetch(`/api/sync?date=${dateStr}`)
       const data = await r.json()
       const fdMatches = data.matches || []
@@ -1699,10 +1700,12 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
       const fdById = {}
       fdMatches.forEach(m => { fdById[m.id] = m })
       // Find our matches for this date
-      const ourToday = allMatches.filter(m => m.date?.slice(0,10) === dateStr || 
-        // Also check UTC offset - our times are ARG so some may be next day UTC
-        (m.date && new Date(m.date + ':00-03:00').toISOString().slice(0,10) === dateStr)
-      )
+      // Our matches for the chosen date (in ARG timezone)
+      const ourToday = allMatches.filter(m => {
+        if (!m.date) return false
+        const matchDayArg = new Date(m.date).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+        return matchDayArg === dateStr
+      })
       // Match by fdId
       const rows = ourToday.map(our => {
         const fdId = our.fdId || knockoutMatches.find(m => m.id === our.id)?.fd_id

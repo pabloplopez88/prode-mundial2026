@@ -1662,26 +1662,56 @@ function TercerosPicker({ match, knockoutMatches, allMatches, results, onSelect 
 
 function WCDebugPanel({ allMatches, knockoutMatches }) {
   const [matchId, setMatchId] = useState("1")
-  const [result, setResult] = useState(null)
+  const [singleResult, setSingleResult] = useState(null)
+  const [dateStr, setDateStr] = useState("2026-06-11")
+  const [dateResults, setDateResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState("date")
 
-  const lookup = async () => {
-    setLoading(true)
-    setResult(null)
+  const toArg = (utc) => new Date(utc).toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+  })
+
+  const lookupSingle = async () => {
+    setLoading(true); setSingleResult(null)
     try {
       const id = parseInt(matchId)
-      // Find our match
       const ourMatch = allMatches.find(m => m.id === id)
-      if (!ourMatch) { setResult({ error: `No existe partido con id ${id}` }); setLoading(false); return }
-      // Get fdId
+      if (!ourMatch) { setSingleResult({ error: `No existe partido con id ${id}` }); setLoading(false); return }
       const fdId = ourMatch.fdId || knockoutMatches.find(m => m.id === id)?.fd_id
-      if (!fdId) { setResult({ error: `Partido ${id} no tiene fdId asignado`, our: ourMatch }); setLoading(false); return }
-      // Fetch from football-data
+      if (!fdId) { setSingleResult({ error: `Partido ${id} no tiene fdId`, our: ourMatch }); setLoading(false); return }
       const r = await fetch(`/api/match?id=${fdId}`)
       const data = await r.json()
-      setResult({ our: ourMatch, fdId, fd: data })
-    } catch(e) { setResult({ error: e.message }) }
+      setSingleResult({ our: ourMatch, fdId, fd: data })
+    } catch(e) { setSingleResult({ error: e.message }) }
+    setLoading(false)
+  }
+
+  const lookupDate = async () => {
+    setLoading(true); setDateResults([])
+    try {
+      const r = await fetch(`/api/sync?date=${dateStr}`)
+      const data = await r.json()
+      const fdMatches = data.matches || []
+      // Build fdId lookup
+      const fdById = {}
+      fdMatches.forEach(m => { fdById[m.id] = m })
+      // Find our matches for this date
+      const ourToday = allMatches.filter(m => m.date?.slice(0,10) === dateStr || 
+        // Also check UTC offset - our times are ARG so some may be next day UTC
+        (m.date && new Date(m.date + ':00-03:00').toISOString().slice(0,10) === dateStr)
+      )
+      // Match by fdId
+      const rows = ourToday.map(our => {
+        const fdId = our.fdId || knockoutMatches.find(m => m.id === our.id)?.fd_id
+        const fd = fdId ? fdById[fdId] : null
+        return { our, fdId, fd, matched: !!fd }
+      })
+      // Also show fd matches that didn't match any of ours
+      setDateResults({ rows, total: fdMatches.length })
+    } catch(e) { setDateResults({ error: e.message }) }
     setLoading(false)
   }
 
@@ -1689,38 +1719,82 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
     <div style={{ marginBottom: 14 }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ background: "#1a2035", border: "1px solid #6b7280", borderRadius: 8, padding: "8px 14px", color: "#6b7280", fontSize: 13, cursor: "pointer", width: "100%", marginBottom: open ? 8 : 0 }}>
-        🔬 Debug partido por ID
+        🔬 Debug football-data
       </button>
       {open && (
         <div style={{ background: "#0f1624", border: "1px solid #1e2940", borderRadius: 8, padding: 12 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-            <span style={{ color: "#94a3b8", fontSize: 13 }}>ID partido (1-104):</span>
-            <input type="number" min="1" max="104" value={matchId} onChange={e => setMatchId(e.target.value)}
-              style={{ width: 70, background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 13 }} />
-            <button onClick={lookup} disabled={loading}
-              style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {loading ? "..." : "Buscar"}
-            </button>
+          <div style={{ display: "flex", marginBottom: 10, background: "#0a0e1a", borderRadius: 6, overflow: "hidden" }}>
+            {[["date","Por fecha"], ["id","Por ID"]].map(([v, label]) => (
+              <button key={v} onClick={() => setTab(v)}
+                style={{ flex: 1, padding: "5px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: tab === v ? "#c8a84b" : "transparent", color: tab === v ? "#0a0e1a" : "#94a3b8" }}>
+                {label}
+              </button>
+            ))}
           </div>
-          {result && (
-            <div style={{ fontSize: 12 }}>
-              {result.error
-                ? <div style={{ color: "#ef4444" }}>⚠️ {result.error}</div>
-                : <>
-                  <div style={{ color: "#94a3b8", marginBottom: 6 }}>
-                    <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {result.our.home} vs {result.our.away} · {result.our.date} · fdId={result.fdId}
-                  </div>
-                  <div style={{ color: "#94a3b8" }}>
-                    <span style={{ color: "#22c55e", fontWeight: 700 }}>Football-data:</span>{" "}
-                    {result.fd.homeTeam?.name || "?"} vs {result.fd.awayTeam?.name || "?"}{" "}
-                    · {result.fd.utcDate ? new Date(result.fd.utcDate).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "?"}{" "}
-                    · {result.fd.status}{" "}
-                    {result.fd.score?.fullTime?.home != null && `· ${result.fd.score.fullTime.home}-${result.fd.score.fullTime.away}`}
-                  </div>
-                </>
-              }
+
+          {tab === "date" && <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+              <input type="date" value={dateStr} onChange={e => setDateStr(e.target.value)}
+                style={{ flex: 1, background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
+              <button onClick={lookupDate} disabled={loading}
+                style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {loading ? "..." : "Buscar"}
+              </button>
             </div>
-          )}
+            {dateResults.error && <div style={{ color: "#ef4444", fontSize: 12 }}>{dateResults.error}</div>}
+            {dateResults.rows?.length > 0 && (
+              <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+                  {dateResults.rows.length} partidos nuestros · {dateResults.total} en football-data ese día
+                </div>
+                {dateResults.rows.map((row, i) => (
+                  <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #1e2940", fontSize: 11 }}>
+                    <span style={{ color: row.matched ? "#22c55e" : "#ef4444", marginRight: 5 }}>{row.matched ? "✓" : "✗"}</span>
+                    <span style={{ color: "#e2e8f0", fontWeight: 600 }}>P{row.our.id}</span>
+                    <span style={{ color: "#94a3b8" }}> {row.our.home} vs {row.our.away} · {row.our.date?.slice(11,16)} ARG</span>
+                    {row.fd && <>
+                      <span style={{ color: "#6b7280" }}> → </span>
+                      <span style={{ color: "#60a5fa" }}>{row.fd.homeTeam?.name || "?"} vs {row.fd.awayTeam?.name || "?"}</span>
+                      <span style={{ color: "#6b7280" }}> · {toArg(row.fd.utcDate)} · {row.fd.status}</span>
+                      {row.fd.venue?.name && <span style={{ color: "#6b7280" }}> · {row.fd.venue.name}</span>}
+                      {row.fd.score?.regularTime?.home != null && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.fd.score.regularTime.home}-{row.fd.score.regularTime.away}</span>}
+                    </>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>}
+
+          {tab === "id" && <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+              <span style={{ color: "#94a3b8", fontSize: 12 }}>ID (1-104):</span>
+              <input type="number" min="1" max="104" value={matchId} onChange={e => setMatchId(e.target.value)}
+                style={{ width: 70, background: "#1a2035", border: "1px solid #1e2940", borderRadius: 6, padding: "4px 8px", color: "#e2e8f0", fontSize: 12 }} />
+              <button onClick={lookupSingle} disabled={loading}
+                style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {loading ? "..." : "Buscar"}
+              </button>
+            </div>
+            {singleResult && (
+              <div style={{ fontSize: 12 }}>
+                {singleResult.error
+                  ? <div style={{ color: "#ef4444" }}>⚠️ {singleResult.error}</div>
+                  : <>
+                    <div style={{ color: "#94a3b8", marginBottom: 6 }}>
+                      <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {singleResult.our.home} vs {singleResult.our.away} · {singleResult.our.date} · fdId={singleResult.fdId}
+                    </div>
+                    <div style={{ color: "#94a3b8" }}>
+                      <span style={{ color: "#22c55e", fontWeight: 700 }}>Football-data:</span>{" "}
+                      {singleResult.fd.homeTeam?.name || "?"} vs {singleResult.fd.awayTeam?.name || "?"}{" "}
+                      · {singleResult.fd.utcDate ? toArg(singleResult.fd.utcDate) : "?"}{" "}
+                      · {singleResult.fd.status}{" "}
+                      {singleResult.fd.venue?.name && `· ${singleResult.fd.venue.name}`}
+                    </div>
+                  </>
+                }
+              </div>
+            )}
+          </>}
         </div>
       )}
     </div>

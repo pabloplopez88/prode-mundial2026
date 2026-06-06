@@ -271,26 +271,20 @@ export default function App() {
 
     setAutoSyncStatus("searching")
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const [inPlayRes, finishedRes] = await Promise.all([
-        fetch(`/api/sync?status=IN_PLAY`),
-        fetch(`/api/sync?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`)
-      ])
-      const inPlayMatches = inPlayRes.ok ? (await inPlayRes.json()).matches || [] : []
-      const finishedMatches = finishedRes.ok ? (await finishedRes.json()).matches || [] : []
-      const allFdMatches = [...inPlayMatches, ...finishedMatches]
+      // Fetch all 104 WC matches in one request
+      const res = await fetch(`/api/sync`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const allFdMatches = (await res.json()).matches || []
 
       const upserts = []
       allFdMatches.forEach(fdMatch => {
         const local = byFdId[fdMatch.id]
         if (!local) return
-        const existing = resultsRef.current.find(r => r.match_id === local.id)
-        if (existing?.status === "FINISHED") return
         const status = fdMatch.status
         const apiStatus = status === "FINISHED" ? "FINISHED"
           : ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(status) ? "IN_PLAY"
           : "SCHEDULED"
+        if (apiStatus === "SCHEDULED") return
         const hs = fdMatch.score?.regularTime?.home ?? fdMatch.score?.fullTime?.home ?? null
         const as_ = fdMatch.score?.regularTime?.away ?? fdMatch.score?.fullTime?.away ?? null
         if (hs === null) return

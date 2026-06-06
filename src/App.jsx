@@ -259,49 +259,47 @@ export default function App() {
   }
 
   const doSync = useCallback(async () => {
-    const LS_KEY = import.meta.env.VITE_LIVESCORE_KEY || ""
-    const LS_SECRET = import.meta.env.VITE_LIVESCORE_SECRET || ""
-    if (!LS_KEY || !LS_SECRET) return
-    const fuzzyMatch = (a, b) => {
-      const na = a.toLowerCase(), nb = b.toLowerCase()
-      return na.includes(nb.slice(0, 5)) || nb.includes(na.slice(0, 5))
-    }
-    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
-    if (!todayMatches.length) return
-    const now = new Date()
-    const activeMatches = todayMatches.filter(m => {
-      const start = new Date(m.date)
-      if (now < new Date(start.getTime() - 5 * 60 * 1000)) return false
-      const result = resultsRef.current.find(r => r.match_id === m.id)
-      if (result?.status === "FINISHED") return false
-      return true
+    const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
+    if (!TOKEN) return
+
+    const allLocalMatches = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+    const byFdId = {}
+    allLocalMatches.forEach(m => {
+      const fdId = m.fdId || knockoutMatches.find(km => km.id === m.id)?.fd_id
+      if (fdId) byFdId[fdId] = m
     })
-    if (!activeMatches.length) { setAutoSyncStatus("idle · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })); return }
+
     setAutoSyncStatus("searching")
     try {
       const today = new Date().toISOString().slice(0, 10)
-      const [liveRes, histRes] = await Promise.all([
-        fetch(`https://livescore-api.com/api-client/scores/live.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371`),
-        fetch(`https://livescore-api.com/api-client/scores/history.json?key=${LS_KEY}&secret=${LS_SECRET}&competition_id=371&date=${today}`)
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      const [inPlayRes, finishedRes] = await Promise.all([
+        fetch(`/api/sync?status=IN_PLAY`),
+        fetch(`/api/sync?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`)
       ])
-      const liveFixtures = liveRes.ok ? ((await liveRes.json())?.data?.match || []) : []
-      const histFixtures = histRes.ok ? ((await histRes.json())?.data?.match || []).map(m => ({ ...m, status: "FINISHED" })) : []
-      const allFixtures = [...liveFixtures, ...histFixtures]
+      const inPlayMatches = inPlayRes.ok ? (await inPlayRes.json()).matches || [] : []
+      const finishedMatches = finishedRes.ok ? (await finishedRes.json()).matches || [] : []
+      const allFdMatches = [...inPlayMatches, ...finishedMatches]
+
       const upserts = []
-      activeMatches.forEach(local => {
-        const homeSearch = local.homeApi || local.home
-        const awaySearch = local.awayApi || local.away
-        const match = allFixtures.find(f =>
-          fuzzyMatch(f.home_name || "", homeSearch) && fuzzyMatch(f.away_name || "", awaySearch)
-        )
-        if (!match) return
-        const apiStatus = ["IN PLAY", "HALF TIME"].includes(match.status) ? "IN_PLAY" : match.status === "FINISHED" ? "FINISHED" : "SCHEDULED"
-        if (apiStatus === "SCHEDULED") return
-        const parts = (match.score || "0 - 0").split(" - ")
-        const hs = parseInt(parts[0]), as_ = parseInt(parts[1])
-        const matchTime = match.status === "HALF TIME" ? "ET" : (match.time || null)
-        upserts.push({ match_id: local.id, home_score: isNaN(hs) ? 0 : hs, away_score: isNaN(as_) ? 0 : as_, status: apiStatus, match_time: matchTime, updated_at: new Date().toISOString() })
+      allFdMatches.forEach(fdMatch => {
+        const local = byFdId[fdMatch.id]
+        if (!local) return
+        const existing = resultsRef.current.find(r => r.match_id === local.id)
+        if (existing?.status === "FINISHED") return
+        const status = fdMatch.status
+        const apiStatus = status === "FINISHED" ? "FINISHED"
+          : ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(status) ? "IN_PLAY"
+          : "SCHEDULED"
+        const hs = fdMatch.score?.regularTime?.home ?? fdMatch.score?.fullTime?.home ?? null
+        const as_ = fdMatch.score?.regularTime?.away ?? fdMatch.score?.fullTime?.away ?? null
+        if (hs === null) return
+        const ph = fdMatch.score?.penalties?.home ?? null
+        const pa = fdMatch.score?.penalties?.away ?? null
+        const matchTime = status === "PAUSED" ? "ET" : (fdMatch.minute ? String(fdMatch.minute) : null)
+        upserts.push({ match_id: local.id, home_score: hs, away_score: as_, penalty_home: ph, penalty_away: pa, status: apiStatus, match_time: matchTime, updated_at: new Date().toISOString() })
       })
+
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
         setResults(prev => {
@@ -315,23 +313,20 @@ export default function App() {
           return next
         })
         setAutoSyncStatus("found · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
-      } else { setAutoSyncStatus("nothing · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
-    } catch { setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })) }
-  }, [])
+      } else {
+        setAutoSyncStatus("nothing · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
+      }
+    } catch(e) {
+      setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
+    }
+  }, [knockoutMatches])
 
   // Auto-sync on load and every 10 min
   useEffect(() => {
     const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
     if (!TOKEN) return
-    // Run normal sync
     doSync()
-    // Also sync Prueba matches using their actual date
-    const pruebaMatch = MATCHES.find(m => m.stage === "Prueba")
-    if (pruebaMatch) doSyncDate(pruebaMatch.date.slice(0, 10))
-    const interval = setInterval(() => {
-      doSync()
-      if (pruebaMatch) doSyncDate(pruebaMatch.date.slice(0, 10))
-    }, 10 * 60 * 1000)
+    const interval = setInterval(doSync, 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [doSync])
 
@@ -611,7 +606,7 @@ export default function App() {
       _awayRaw: m.away,
     }))
   ]
-  const allStages = ["Prueba", "Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+  const allStages = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
@@ -1700,12 +1695,8 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
       const fdById = {}
       fdMatches.forEach(m => { fdById[m.id] = m })
       // Find our matches for this date
-      // Our matches for the chosen date (in ARG timezone)
-      const ourToday = allMatches.filter(m => {
-        if (!m.date) return false
-        const matchDayArg = new Date(m.date).toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
-        return matchDayArg === dateStr
-      })
+      // Our matches for the chosen date - dates in data.js are already in ARG
+      const ourToday = allMatches.filter(m => m.date?.slice(0, 10) === dateStr)
       // Match by fdId
       const rows = ourToday.map(our => {
         const fdId = our.fdId || knockoutMatches.find(m => m.id === our.id)?.fd_id
@@ -1896,17 +1887,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
       </button>
-      {MATCHES.some(m => m.stage === "Prueba") && (
-        <button onClick={async () => {
-          const testMatch = MATCHES.find(m => m.stage === "Prueba")
-          const date = testMatch.date.slice(0, 10)
-          const msg = await doSyncDate(date)
-          showFlash(msg)
-        }}
-          style={{ background: "#1a2035", border: "1px solid #3b82f6", borderRadius: 8, padding: "8px 14px", color: "#60a5fa", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
-          🧪 Test sync ({MATCHES.find(m => m.stage === "Prueba")?.home} vs {MATCHES.find(m => m.stage === "Prueba")?.away})
-        </button>
-      )}
       <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} />
 
       {/* Stage tabs - sticky */}

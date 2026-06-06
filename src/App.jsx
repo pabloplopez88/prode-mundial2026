@@ -294,6 +294,12 @@ export default function App() {
         upserts.push({ match_id: local.id, home_score: hs, away_score: as_, penalty_home: ph, penalty_away: pa, status: apiStatus, match_time: matchTime, updated_at: new Date().toISOString() })
       })
 
+      // Classify what we found
+      const allStatuses = allFdMatches.map(m => m.status)
+      const allTimed = allFdMatches.length > 0 && allFdMatches.every(m => ["TIMED","SCHEDULED"].includes(m.status))
+      const inPlayCount = upserts.filter(u => u.status === "IN_PLAY").length
+      const time = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
         setResults(prev => {
@@ -306,12 +312,24 @@ export default function App() {
           resultsRef.current = next
           return next
         })
-        setAutoSyncStatus("found · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
-      } else {
-        setAutoSyncStatus("nothing · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
       }
+
+      let msg
+      if (allFdMatches.length === 0) {
+        msg = "no se encontraron partidos"
+      } else if (allTimed) {
+        msg = "el mundial aún no comenzó"
+      } else if (inPlayCount > 0) {
+        msg = `${inPlayCount} partido(s) en juego`
+      } else {
+        msg = "sin partidos en juego"
+      }
+      setAutoSyncStatus(msg + " · " + time)
+      return msg
     } catch(e) {
-      setAutoSyncStatus("error · " + new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }))
+      const t = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+      setAutoSyncStatus("error · " + t)
+      return "error al conectar"
     }
   }, [knockoutMatches])
 
@@ -1877,7 +1895,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             : "en espera"}
         </div>
       </div>
-      <button onClick={async () => { await doSync(); showFlash("✓ Sync completado") }}
+      <button onClick={async () => { const msg = await doSync(); showFlash("✓ " + (msg || "Sync completado")) }}
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
       </button>

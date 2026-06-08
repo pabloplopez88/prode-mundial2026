@@ -1202,16 +1202,38 @@ export default function App() {
       )}
 
       <div style={{ padding: "12px 14px", paddingBottom: 20 }}
-        onTouchStart={e => { if (stage === "Grupos") window._swipeStartX = e.touches[0].clientX }}
+        onTouchStart={e => { window._swipeStartX = e.touches[0].clientX }}
         onTouchEnd={e => {
-          if (stage !== "Grupos" || window._swipeStartX === undefined) return
+          if (window._swipeStartX === undefined) return
           const diff = window._swipeStartX - e.changedTouches[0].clientX
-          if (Math.abs(diff) < 50) return
-          const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-          const idx = letters.indexOf(selectedGroup)
-          if (diff > 0 && idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
-          else if (diff < 0 && idx > 0) setSelectedGroup(letters[idx - 1])
           window._swipeStartX = undefined
+          if (Math.abs(diff) < 50) return
+          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+          const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+          if (diff > 0) {
+            // swipe left = forward
+            if (stage === "Grupos") {
+              const idx = letters.indexOf(selectedGroup)
+              if (idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
+              else { setStage("16avos") }
+            } else {
+              const idx = allStagesNav.indexOf(stage)
+              if (idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
+            }
+          } else {
+            // swipe right = backward
+            if (stage === "Grupos") {
+              const idx = letters.indexOf(selectedGroup)
+              if (idx > 0) setSelectedGroup(letters[idx - 1])
+            } else {
+              const idx = allStagesNav.indexOf(stage)
+              if (idx > 0) {
+                const prevStage = allStagesNav[idx - 1]
+                setStage(prevStage)
+                if (prevStage === "Grupos") setSelectedGroup("L")
+              }
+            }
+          }
         }}
       >
         {stage === "Grupos" && (() => {

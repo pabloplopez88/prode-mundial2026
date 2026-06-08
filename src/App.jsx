@@ -96,6 +96,7 @@ export default function App() {
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [selectedGroup, setSelectedGroup] = useState("A")
+  const [slideDir, setSlideDir] = useState("")
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -1186,7 +1187,17 @@ export default function App() {
         <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
-              <button key={g} onClick={() => setSelectedGroup(g)}
+              <button key={g} onClick={() => {
+                const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+                const oldIdx = letters.indexOf(selectedGroup)
+                const newIdx = letters.indexOf(g)
+                if (oldIdx === newIdx) return
+                const dir = newIdx > oldIdx ? "out-left" : "out-right"
+                const inDir = newIdx > oldIdx ? "in-right" : "in-left"
+                setSlideDir(dir)
+                setTimeout(() => { setSelectedGroup(g); setSlideDir(inDir) }, 150)
+                setTimeout(() => setSlideDir(""), 300)
+              }}
                 style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${selectedGroup === g ? C.accent : C.border}`, background: selectedGroup === g ? C.accent : "transparent", color: selectedGroup === g ? "#0a0e1a" : C.textDim, textAlign: "center" }}>
                 {g}
               </button>
@@ -1209,8 +1220,16 @@ export default function App() {
           if (Math.abs(diff) < 50) return
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const idx = letters.indexOf(selectedGroup)
-          if (diff > 0 && idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
-          else if (diff < 0 && idx > 0) setSelectedGroup(letters[idx - 1])
+          const dir = diff > 0 ? "left" : "right"
+          if (diff > 0 && idx < letters.length - 1) {
+            setSlideDir("out-left")
+            setTimeout(() => { setSelectedGroup(letters[idx + 1]); setSlideDir("in-right") }, 150)
+            setTimeout(() => setSlideDir(""), 300)
+          } else if (diff < 0 && idx > 0) {
+            setSlideDir("out-right")
+            setTimeout(() => { setSelectedGroup(letters[idx - 1]); setSlideDir("in-left") }, 150)
+            setTimeout(() => setSlideDir(""), 300)
+          }
           window._swipeStartX = undefined
         }}
       >
@@ -1269,8 +1288,13 @@ export default function App() {
         })
       }
       const standings = sortTeams(Object.values(teams))
+          const slideStyle = {
+            transition: "transform 0.15s ease, opacity 0.15s ease",
+            transform: slideDir === "out-left" ? "translateX(-30px)" : slideDir === "out-right" ? "translateX(30px)" : slideDir === "in-right" ? "translateX(30px)" : slideDir === "in-left" ? "translateX(-30px)" : "translateX(0)",
+            opacity: slideDir.startsWith("out") ? 0 : 1,
+          }
           return (
-            <div>
+            <div style={slideStyle}>
               <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
                 <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>

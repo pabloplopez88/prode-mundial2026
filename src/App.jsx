@@ -1201,7 +1201,19 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ padding: "12px 14px", paddingBottom: 20 }}>
+      <div style={{ padding: "12px 14px", paddingBottom: 20 }}
+        onTouchStart={e => { if (stage === "Grupos") window._swipeStartX = e.touches[0].clientX }}
+        onTouchEnd={e => {
+          if (stage !== "Grupos" || window._swipeStartX === undefined) return
+          const diff = window._swipeStartX - e.changedTouches[0].clientX
+          if (Math.abs(diff) < 50) return
+          const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+          const idx = letters.indexOf(selectedGroup)
+          if (diff > 0 && idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
+          else if (diff < 0 && idx > 0) setSelectedGroup(letters[idx - 1])
+          window._swipeStartX = undefined
+        }}
+      >
         {stage === "Grupos" && (() => {
           const g = selectedGroup
           const gMatches = allMatches.filter(m => m.stage === "Grupos" && m.group === g)

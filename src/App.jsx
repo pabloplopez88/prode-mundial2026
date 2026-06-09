@@ -1223,19 +1223,22 @@ export default function App() {
           setTransitioning(false)
         }}
         onTouchMove={e => {
-          if (window._swipeStartX === undefined || stage !== "Grupos") return
+          if (window._swipeStartX === undefined) return
           const diff = -(e.touches[0].clientX - window._swipeStartX)
+          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-          const idx = letters.indexOf(selectedGroup)
-          // Limit: can't swipe past first or last group
-          if ((diff > 0 && idx >= letters.length - 1) || (diff < 0 && idx <= 0)) return
-          // Show adjacent group during swipe
-          const nextGroup = diff > 0 ? letters[idx + 1] : letters[idx - 1]
-          if (nextGroup !== prevGroup) {
-            setPrevGroup(nextGroup)
-            setTransitionDir(diff > 0 ? -1 : 1)
+          if (stage === "Grupos") {
+            const idx = letters.indexOf(selectedGroup)
+            if ((diff > 0 && idx >= letters.length - 1 && allStagesNav.indexOf("Grupos") >= allStagesNav.length - 1) || (diff < 0 && idx <= 0 && allStagesNav.indexOf("Grupos") <= 0)) return
+            const nextGroup = diff > 0 ? (idx < letters.length - 1 ? letters[idx + 1] : null) : (idx > 0 ? letters[idx - 1] : null)
+            if (nextGroup && nextGroup !== prevGroup) { setPrevGroup(nextGroup); setTransitionDir(diff > 0 ? -1 : 1) }
+            setSwipeOffset(-diff)
+          } else {
+            const stageIdx = allStagesNav.indexOf(stage)
+            if ((diff > 0 && stageIdx >= allStagesNav.length - 1) || (diff < 0 && stageIdx <= 0)) return
+            setTransitioning(false)
+            setSwipeOffset(-diff)
           }
-          setSwipeOffset(-diff)
         }}
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
@@ -1465,7 +1468,37 @@ export default function App() {
             </div>
           )
         })()}
-        {stage !== "Grupos" && matchesByStage.map(renderMatchCard)}
+        {stage !== "Grupos" && (() => {
+          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+          const stageIdx = allStagesNav.indexOf(stage)
+          const prevStageMatches = transitioning && swipeOffset !== 0
+            ? (swipeOffset > 0
+                ? (stageIdx > 0 ? allMatches.filter(m => m.stage === allStagesNav[stageIdx - 1]) : null)
+                : (stageIdx < allStagesNav.length - 1 ? allMatches.filter(m => m.stage === allStagesNav[stageIdx + 1]) : null))
+            : null
+          const w = typeof window !== "undefined" ? window.innerWidth : 400
+          return (
+            <div style={{ position: "relative", overflow: "hidden" }}>
+              {/* Adjacent stage during swipe */}
+              {prevStageMatches && (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0,
+                  transform: `translateX(${swipeOffset > 0 ? swipeOffset - w : swipeOffset + w}px)`,
+                  transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
+                }}>
+                  {prevStageMatches.map(renderMatchCard)}
+                </div>
+              )}
+              {/* Current stage */}
+              <div style={{
+                transform: `translateX(${swipeOffset}px)`,
+                transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
+              }}>
+                {matchesByStage.map(renderMatchCard)}
+              </div>
+            </div>
+          )
+        })()}
       </div>
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}

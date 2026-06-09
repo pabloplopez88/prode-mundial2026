@@ -47,8 +47,6 @@ const PNG_AVATARS = [
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pini_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/rami_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/yayu_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/flaca_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/munra_00.png?width=64&height=64&resize=cover",
 ]
 
 function Avatar({ av = "⚽", size = 36, name = "" }) {
@@ -98,6 +96,8 @@ export default function App() {
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [selectedGroup, setSelectedGroup] = useState("A")
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const groupContentRef = useRef(null)
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -1204,26 +1204,31 @@ export default function App() {
       )}
 
       <div style={{ padding: "12px 14px", paddingBottom: 20 }}
-        onTouchStart={e => { window._swipeStartX = e.touches[0].clientX }}
+        onTouchStart={e => { window._swipeStartX = e.touches[0].clientX; setSwipeOffset(0) }}
+        onTouchMove={e => {
+          if (window._swipeStartX === undefined || stage !== "Grupos") return
+          const diff = window._swipeStartX - e.touches[0].clientX
+          // Only track horizontal movement, limit to ±80px
+          setSwipeOffset(Math.max(-80, Math.min(80, -diff)))
+        }}
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
           const diff = window._swipeStartX - e.changedTouches[0].clientX
           window._swipeStartX = undefined
+          setSwipeOffset(0)
           if (Math.abs(diff) < 50) return
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           if (diff > 0) {
-            // swipe left = forward
             if (stage === "Grupos") {
               const idx = letters.indexOf(selectedGroup)
               if (idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
-              else { setStage("16avos") }
+              else setStage("16avos")
             } else {
               const idx = allStagesNav.indexOf(stage)
               if (idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
             }
           } else {
-            // swipe right = backward
             if (stage === "Grupos") {
               const idx = letters.indexOf(selectedGroup)
               if (idx > 0) setSelectedGroup(letters[idx - 1])
@@ -1294,7 +1299,11 @@ export default function App() {
       }
       const standings = sortTeams(Object.values(teams))
           return (
-            <div>
+            <div ref={groupContentRef} style={{
+              transform: stage === "Grupos" ? `translateX(${swipeOffset}px)` : "none",
+              transition: swipeOffset === 0 ? "transform 0.2s ease" : "none",
+              willChange: "transform"
+            }}>
               <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
                 <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>

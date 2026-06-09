@@ -1186,9 +1186,14 @@ export default function App() {
         </div>
       </div>
 
-      {/* Group selector pills - sticky */}
-      {stage === "Grupos" && (
-        <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
+      {/* Group selector pills - sticky, slides with content when leaving to knockout */}
+      {(stage === "Grupos" || (transitioning && swipeOffset < -60)) && (
+        <div style={{
+          padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`,
+          position: "sticky", top: 136, zIndex: 89,
+          transform: stage !== "Grupos" ? `translateX(${swipeOffset}px)` : "none",
+          transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
+        }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
               <button key={g} onClick={() => {
@@ -1479,17 +1484,17 @@ export default function App() {
           const w = typeof window !== "undefined" ? window.innerWidth : 400
           return (
             <div style={{ position: "relative", overflow: "hidden" }}>
-              {/* Adjacent stage during swipe */}
+              {/* Adjacent stage - positioned off-screen, moves with swipe */}
               {prevStageMatches && (
                 <div style={{
                   position: "absolute", top: 0, left: 0, right: 0,
-                  transform: `translateX(${swipeOffset > 0 ? swipeOffset - w : swipeOffset + w}px)`,
+                  transform: `translateX(${swipeOffset + (swipeOffset < 0 ? w : -w)}px)`,
                   transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
                 }}>
                   {prevStageMatches.map(renderMatchCard)}
                 </div>
               )}
-              {/* Current stage */}
+              {/* Current stage - follows swipe */}
               <div style={{
                 transform: `translateX(${swipeOffset}px)`,
                 transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",

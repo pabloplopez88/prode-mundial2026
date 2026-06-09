@@ -142,7 +142,7 @@ export default function App() {
 
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
-      supabase.from("players").select("id,name,avatar,default_score,joined"),
+      supabase.from("players").select("id,name,avatar,default_score,joined,password_reset"),
       supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
       Promise.resolve({ data: [] }),
@@ -692,6 +692,29 @@ export default function App() {
     )
 
     // CHOOSE: register or login
+    if (authScreen === "set_new_password") return (
+      <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
+        <AuthHeader />
+        <div style={{ padding: 20 }}>
+          <div style={crd({ padding: 20 })}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.accent, marginBottom: 8 }}>🔑 Elegí una nueva contraseña</div>
+            <div style={{ fontSize: 13, color: C.textDim, marginBottom: 16 }}>Tu contraseña fue reseteada. Por favor elegí una nueva para continuar.</div>
+            <SetNewPasswordForm onSave={async (newPass) => {
+              const hash = await hashPassword(newPass)
+              await supabase.from("players").update({ password: hash, password_reset: false }).eq("id", window._pendingPlayerId)
+              const me = window._pendingUser
+              localStorage.setItem("prode_user", JSON.stringify(me))
+              setUser(me)
+              setSettName(me.name); setSettAvatar(me.avatar || "⚽"); setSettDefault(me.default_score || "0-0")
+              setAuthScreen("choose")
+              window._pendingUser = null
+              window._pendingPlayerId = null
+            }} />
+          </div>
+        </div>
+      </div>
+    )
+
     if (authScreen === "choose") return (
       <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Segoe UI',sans-serif", maxWidth: 860, margin: "0 auto", boxSizing: "border-box" }}>
         <AuthHeader />
@@ -1575,7 +1598,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} />
           )}
         </div>
       </div>
@@ -1661,7 +1684,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} />
           )}
         </div>
       </div>
@@ -2016,7 +2039,64 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches }) {
+function SetNewPasswordForm({ onSave }) {
+  const [pass, setPass] = useState("")
+  const [pass2, setPass2] = useState("")
+  const [err, setErr] = useState("")
+  return (
+    <div>
+      <input type="password" placeholder="Nueva contraseña" value={pass} onChange={e => setPass(e.target.value)}
+        style={{ width: "100%", background: "#1a2035", border: "2px solid #1e2940", borderRadius: 10, padding: "12px 14px", fontSize: 15, color: "#e2e8f0", outline: "none", boxSizing: "border-box", marginBottom: 10 }} />
+      <input type="password" placeholder="Repetir contraseña" value={pass2} onChange={e => setPass2(e.target.value)}
+        style={{ width: "100%", background: "#1a2035", border: "2px solid #1e2940", borderRadius: 10, padding: "12px 14px", fontSize: 15, color: "#e2e8f0", outline: "none", boxSizing: "border-box", marginBottom: 10 }} />
+      {err && <div style={{ color: "#ef4444", fontSize: 13, marginBottom: 8 }}>{err}</div>}
+      <button onClick={() => {
+        if (pass.length < 4) { setErr("La contraseña debe tener al menos 4 caracteres"); return }
+        if (pass !== pass2) { setErr("Las contraseñas no coinciden"); return }
+        onSave(pass)
+      }} style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 700, cursor: "pointer", width: "100%" }}>
+        Guardar contraseña
+      </button>
+    </div>
+  )
+}
+
+function ResetPasswordPanel({ players, showFlash }) {
+  const [selectedPlayer, setSelectedPlayer] = useState("")
+  const [newPass, setNewPass] = useState("")
+  const [open, setOpen] = useState(false)
+
+  const reset = async () => {
+    if (!selectedPlayer) return
+    const { error } = await supabase.from("players").update({ password_reset: true }).eq("id", selectedPlayer)
+    if (error) showFlash("❌ Error al resetear")
+    else { showFlash("✓ " + (players.find(p => p.id == selectedPlayer)?.name) + " deberá elegir nueva contraseña"); setSelectedPlayer("") }
+  }
+
+  return (
+    <div style={{ marginBottom: 14, background: "#0f1624", borderRadius: 10, border: "1px solid #1e2940", overflow: "hidden" }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", padding: "10px 12px", background: "none", border: "none", color: "#94a3b8", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
+        🔑 Resetear contraseña {open ? "▲" : "▼"}
+      </button>
+      {open && (
+        <div style={{ padding: "0 12px 12px" }}>
+          <select value={selectedPlayer} onChange={e => setSelectedPlayer(e.target.value)}
+            style={{ width: "100%", background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 10px", color: "#e2e8f0", fontSize: 13, marginBottom: 8, outline: "none" }}>
+            <option value="">— Elegir usuario —</option>
+            {players.map(p => <option key={p.id} value={p.id}>{p.name}{p.password_reset ? " ⚠️" : ""}</option>)}
+          </select>
+          <button onClick={reset} disabled={!selectedPlayer}
+            style={{ background: "#c8a84b", color: "#0a0e1a", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", width: "100%", opacity: !selectedPlayer ? 0.5 : 1 }}>
+            Resetear
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
@@ -2064,7 +2144,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
       </button>
-      <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} />
+      <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} />
+
+      {/* Reset password */}
+      <ResetPasswordPanel players={players} showFlash={showFlash} />
 
       {/* Stage tabs - sticky */}
       <div style={{ position: "sticky", top: 56, zIndex: 90, background: "#0a0e1a", paddingBottom: 8, marginBottom: 4 }}>

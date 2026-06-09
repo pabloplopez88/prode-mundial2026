@@ -1245,7 +1245,7 @@ export default function App() {
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const w = window.innerWidth || 400
 
-          if (stage === "Grupos" && Math.abs(diff) >= 100) {
+          if (stage === "Grupos" && Math.abs(diff) >= 75) {
             const idx = letters.indexOf(selectedGroup)
             if (diff > 0 && idx < letters.length - 1) {
               // Complete swipe forward
@@ -1275,7 +1275,7 @@ export default function App() {
               setPrevGroup(null)
               setSwipeOffset(0)
             }
-          } else if (stage !== "Grupos" && Math.abs(diff) >= 100) {
+          } else if (stage !== "Grupos" && Math.abs(diff) >= 75) {
             const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
             const idx = allStagesNav.indexOf(stage)
             if (diff > 0 && idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])

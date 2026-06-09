@@ -1245,7 +1245,7 @@ export default function App() {
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const w = window.innerWidth || 400
 
-          if (stage === "Grupos" && Math.abs(diff) >= 75) {
+          if (stage === "Grupos" && Math.abs(diff) >= 60) {
             const idx = letters.indexOf(selectedGroup)
             if (diff > 0 && idx < letters.length - 1) {
               // Complete swipe forward
@@ -1258,10 +1258,15 @@ export default function App() {
                 setTransitioning(false)
               }, 250)
             } else if (diff > 0 && idx >= letters.length - 1) {
-              // Past group L → go to 16avos
-              setPrevGroup(null)
-              setSwipeOffset(0)
-              setStage("16avos")
+              // Past group L → go to 16avos with slide animation
+              setTransitioning(true)
+              setSwipeOffset(-w)
+              setTimeout(() => {
+                setStage("16avos")
+                setPrevGroup(null)
+                setSwipeOffset(0)
+                setTransitioning(false)
+              }, 250)
             } else if (diff < 0 && idx > 0) {
               setTransitioning(true)
               setSwipeOffset(w)
@@ -1275,14 +1280,27 @@ export default function App() {
               setPrevGroup(null)
               setSwipeOffset(0)
             }
-          } else if (stage !== "Grupos" && Math.abs(diff) >= 75) {
+          } else if (stage !== "Grupos" && Math.abs(diff) >= 60) {
             const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
             const idx = allStagesNav.indexOf(stage)
-            if (diff > 0 && idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
-            else if (diff < 0 && idx > 0) {
-              const prevStage = allStagesNav[idx - 1]
-              setStage(prevStage)
-              if (prevStage === "Grupos") setSelectedGroup("L")
+            if (diff > 0 && idx < allStagesNav.length - 1) {
+              setTransitioning(true)
+              setSwipeOffset(-w)
+              setTimeout(() => {
+                setStage(allStagesNav[idx + 1])
+                setSwipeOffset(0)
+                setTransitioning(false)
+              }, 250)
+            } else if (diff < 0 && idx > 0) {
+              setTransitioning(true)
+              setSwipeOffset(w)
+              setTimeout(() => {
+                const prevStage = allStagesNav[idx - 1]
+                setStage(prevStage)
+                if (prevStage === "Grupos") setSelectedGroup("L")
+                setSwipeOffset(0)
+                setTransitioning(false)
+              }, 250)
             }
           } else {
             // Snap back - animate back to 0, then hide adjacent group

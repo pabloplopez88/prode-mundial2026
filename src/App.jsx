@@ -1245,10 +1245,10 @@ export default function App() {
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const w = window.innerWidth || 400
 
-          if (stage === "Grupos" && Math.abs(diff) >= 50) {
+          if (stage === "Grupos" && Math.abs(diff) >= 200) {
             const idx = letters.indexOf(selectedGroup)
             if (diff > 0 && idx < letters.length - 1) {
-              // Complete swipe forward: animate current out to left, next in from right
+              // Complete swipe forward
               setTransitioning(true)
               setSwipeOffset(-w)
               setTimeout(() => {
@@ -1257,6 +1257,11 @@ export default function App() {
                 setSwipeOffset(0)
                 setTransitioning(false)
               }, 250)
+            } else if (diff > 0 && idx >= letters.length - 1) {
+              // Past group L → go to 16avos
+              setPrevGroup(null)
+              setSwipeOffset(0)
+              setStage("16avos")
             } else if (diff < 0 && idx > 0) {
               setTransitioning(true)
               setSwipeOffset(w)
@@ -1270,7 +1275,8 @@ export default function App() {
               setPrevGroup(null)
               setSwipeOffset(0)
             }
-          } else if (stage !== "Grupos" && Math.abs(diff) >= 50) {
+          } else if (stage !== "Grupos" && Math.abs(diff) >= 200) {
+            const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
             const idx = allStagesNav.indexOf(stage)
             if (diff > 0 && idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
             else if (diff < 0 && idx > 0) {
@@ -1280,9 +1286,10 @@ export default function App() {
             }
           } else {
             // Snap back
+            setPrevGroup(null)
             setTransitioning(true)
             setSwipeOffset(0)
-            setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 250)
+            setTimeout(() => setTransitioning(false), 250)
           }
         }}
       >

@@ -48,6 +48,7 @@ const PNG_AVATARS = [
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/rami_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/yayu_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/flaca_00.png?width=64&height=64&resize=cover",
+  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/munra_00.png?width=64&height=64&resize=cover",
 ]
 
 function Avatar({ av = "⚽", size = 36, name = "" }) {

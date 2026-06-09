@@ -1428,16 +1428,6 @@ export default function App() {
                 transform: `translateX(${swipeOffset}px)`,
                 transition: transitioning ? "transform 0.25s ease" : "none",
               })}
-              {/* 16avos entering from right when swiping left from group L */}
-              {isLastGroup && swipeOffset < 0 && !prevGroup && (
-                <div style={{
-                  position: "absolute", top: 0, left: 0, right: 0,
-                  transform: `translateX(${w + swipeOffset}px)`,
-                  transition: "none",
-                }}>
-                  {allMatches.filter(m => m.stage === "16avos").map(renderMatchCard)}
-                </div>
-              )}
               {/* Invisible placeholder to maintain height */}
               <div style={{ visibility: "hidden", pointerEvents: "none" }}>
                 <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>

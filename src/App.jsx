@@ -819,7 +819,16 @@ export default function App() {
             <div style={crd({ marginTop: 16 })}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados — tocá tu nombre para entrar</div>
               {players.map(p => (
-                <div key={p.id} onClick={() => { setQuickLoginPlayer(p); setLoginName(p.name); setLoginPassword(""); setLoginError(""); setAuthScreen("login") }}
+                <div key={p.id} onClick={() => { (() => {
+                    if (p.password_reset) {
+                      const me = { id: p.id, name: p.name, avatar: p.avatar, default_score: p.default_score }
+                      window._pendingUser = me
+                      window._pendingPlayerId = p.id
+                      setAuthScreen("set_new_password")
+                    } else {
+                      setQuickLoginPlayer(p); setLoginName(p.name); setLoginPassword(""); setLoginError(""); setAuthScreen("login")
+                    }
+                  })() }}
                   style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, cursor: "pointer", marginBottom: 2, transition: "background 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.background = "#1a2035"}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>

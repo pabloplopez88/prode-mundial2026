@@ -1234,6 +1234,7 @@ export default function App() {
             window._swipeLocked = diffY > Math.abs(diffX) ? "vertical" : "horizontal"
           }
           if (window._swipeLocked === "vertical") return
+          if (window._swipeLocked === "horizontal") e.preventDefault()
           const diff = diffX
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const idx = letters.indexOf(selectedGroup)

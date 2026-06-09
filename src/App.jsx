@@ -820,14 +820,17 @@ export default function App() {
             <div style={crd({ marginTop: 16 })}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, marginBottom: 10 }}>Ya anotados — tocá tu nombre para entrar</div>
               {players.map(p => (
-                <div key={p.id} onClick={() => { (() => {
-                    if (p.password_reset) {
-                      const me = { id: p.id, name: p.name, avatar: p.avatar, default_score: p.default_score }
+                <div key={p.id} onClick={() => { (async () => {
+                    // Fetch fresh data to get latest password_reset status
+                    const { data: fresh } = await supabase.from("players").select("*").eq("id", p.id).single()
+                    const player = fresh || p
+                    if (player.password_reset) {
+                      const me = { id: player.id, name: player.name, avatar: player.avatar, default_score: player.default_score }
                       window._pendingUser = me
-                      window._pendingPlayerId = p.id
+                      window._pendingPlayerId = player.id
                       setAuthScreen("set_new_password")
                     } else {
-                      setQuickLoginPlayer(p); setLoginName(p.name); setLoginPassword(""); setLoginError(""); setAuthScreen("login")
+                      setQuickLoginPlayer(player); setLoginName(player.name); setLoginPassword(""); setLoginError(""); setAuthScreen("login")
                     }
                   })() }}
                   style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, cursor: "pointer", marginBottom: 2, transition: "background 0.15s" }}

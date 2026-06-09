@@ -1186,22 +1186,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Group selector pills */}
-      {(() => {
-        const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-        const isLastGroup = selectedGroup === "L"
-        const slidingToKnockout = isLastGroup && swipeOffset < 0
-        const visible = stage === "Grupos" || (transitioning && slidingToKnockout)
-        if (!visible) return null
-        return (
-        <div style={{
-          padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`,
-          position: slidingToKnockout ? "relative" : "sticky",
-          top: slidingToKnockout ? undefined : 136,
-          zIndex: 89,
-          transform: slidingToKnockout ? `translateX(${swipeOffset}px)` : "none",
-          transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
-        }}>
+      {/* Group selector pills - always sticky */}
+      {stage === "Grupos" && (
+        <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
               <button key={g} onClick={() => {
@@ -1221,8 +1208,7 @@ export default function App() {
             ))}
           </div>
         </div>
-        )
-      })()}
+      )}
 
       {todayUnbet.length > 0 && (
         <div style={{ background: "#1a1200", borderBottom: `1px solid ${C.accentDim}`, padding: "8px 16px", fontSize: 12, color: C.accent }}>
@@ -1230,7 +1216,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ padding: "12px 14px", paddingBottom: 20 }}
+      <div style={{ padding: "12px 14px", paddingBottom: 20, overflow: "hidden" }}
         onTouchStart={e => {
           window._swipeStartX = e.touches[0].clientX
           setSwipeOffset(0)
@@ -1428,6 +1414,8 @@ export default function App() {
           }
 
           const w = typeof window !== "undefined" ? window.innerWidth : 400
+          const isLastGroup = g === "L"
+          const isFirstGroup = g === "A"
           return (
             <div ref={groupContentRef} style={{ position: "relative", overflow: "hidden", minHeight: 200 }}>
               {/* Adjacent group (visible during swipe) */}

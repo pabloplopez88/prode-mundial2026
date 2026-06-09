@@ -1217,55 +1217,72 @@ export default function App() {
       )}
 
       <div style={{ padding: "12px 14px", paddingBottom: 20 }}
-        onTouchStart={e => { window._swipeStartX = e.touches[0].clientX; setSwipeOffset(0) }}
+        onTouchStart={e => {
+          window._swipeStartX = e.touches[0].clientX
+          setSwipeOffset(0)
+          setTransitioning(false)
+        }}
         onTouchMove={e => {
           if (window._swipeStartX === undefined || stage !== "Grupos") return
-          const diff = window._swipeStartX - e.touches[0].clientX
-          // Only track horizontal movement, limit to ±80px
-          setSwipeOffset(Math.max(-80, Math.min(80, -diff)))
+          const diff = -(e.touches[0].clientX - window._swipeStartX)
+          const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+          const idx = letters.indexOf(selectedGroup)
+          // Limit: can't swipe past first or last group
+          if ((diff > 0 && idx >= letters.length - 1) || (diff < 0 && idx <= 0)) return
+          // Show adjacent group during swipe
+          const nextGroup = diff > 0 ? letters[idx + 1] : letters[idx - 1]
+          if (nextGroup !== prevGroup) {
+            setPrevGroup(nextGroup)
+            setTransitionDir(diff > 0 ? -1 : 1)
+          }
+          setSwipeOffset(-diff)
         }}
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
-          const diff = window._swipeStartX - e.changedTouches[0].clientX
+          const diff = -(e.changedTouches[0].clientX - window._swipeStartX)
           window._swipeStartX = undefined
-          setSwipeOffset(0)
-          if (Math.abs(diff) < 50) return
-          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-          const changeGroup = (newGroup) => {
-            // dir: -1 = going forward (A->B), 1 = going backward (B->A)
-            const dir = letters.indexOf(newGroup) > letters.indexOf(selectedGroup) ? -1 : 1
-            setPrevGroup(selectedGroup)
-            setTransitionDir(dir)
-            setSwipeOffset(0)
-            setSelectedGroup(newGroup)
-            // Small delay to let new group render at start position, then animate
-            requestAnimationFrame(() => {
+          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+          const w = window.innerWidth || 400
+
+          if (stage === "Grupos" && Math.abs(diff) >= 50) {
+            const idx = letters.indexOf(selectedGroup)
+            if (diff > 0 && idx < letters.length - 1) {
+              // Complete swipe forward: animate current out to left, next in from right
               setTransitioning(true)
-              setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
-            })
-          }
-          if (diff > 0) {
-            if (stage === "Grupos") {
-              const idx = letters.indexOf(selectedGroup)
-              if (idx < letters.length - 1) changeGroup(letters[idx + 1])
-              else setStage("16avos")
+              setSwipeOffset(-w)
+              setTimeout(() => {
+                setSelectedGroup(letters[idx + 1])
+                setPrevGroup(null)
+                setSwipeOffset(0)
+                setTransitioning(false)
+              }, 250)
+            } else if (diff < 0 && idx > 0) {
+              setTransitioning(true)
+              setSwipeOffset(w)
+              setTimeout(() => {
+                setSelectedGroup(letters[idx - 1])
+                setPrevGroup(null)
+                setSwipeOffset(0)
+                setTransitioning(false)
+              }, 250)
             } else {
-              const idx = allStagesNav.indexOf(stage)
-              if (idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
+              setPrevGroup(null)
+              setSwipeOffset(0)
+            }
+          } else if (stage !== "Grupos" && Math.abs(diff) >= 50) {
+            const idx = allStagesNav.indexOf(stage)
+            if (diff > 0 && idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
+            else if (diff < 0 && idx > 0) {
+              const prevStage = allStagesNav[idx - 1]
+              setStage(prevStage)
+              if (prevStage === "Grupos") setSelectedGroup("L")
             }
           } else {
-            if (stage === "Grupos") {
-              const idx = letters.indexOf(selectedGroup)
-              if (idx > 0) changeGroup(letters[idx - 1])
-            } else {
-              const idx = allStagesNav.indexOf(stage)
-              if (idx > 0) {
-                const prevStage = allStagesNav[idx - 1]
-                setStage(prevStage)
-                if (prevStage === "Grupos") setSelectedGroup("L")
-              }
-            }
+            // Snap back
+            setTransitioning(true)
+            setSwipeOffset(0)
+            setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 250)
           }
         }}
       >
@@ -1372,17 +1389,15 @@ export default function App() {
           const w = typeof window !== "undefined" ? window.innerWidth : 400
           return (
             <div ref={groupContentRef} style={{ position: "relative", overflow: "hidden", minHeight: 200 }}>
-              {/* Previous group sliding out - exits opposite to new group entry */}
-              {transitioning && prevGroup && renderGroupContent(prevGroup, {
-                transform: `translateX(${transitionDir * -100}%)`,
-                transition: "transform 0.3s ease",
+              {/* Adjacent group (visible during swipe) */}
+              {prevGroup && renderGroupContent(prevGroup, {
+                transform: `translateX(${swipeOffset + (transitionDir < 0 ? window.innerWidth : -window.innerWidth)}px)`,
+                transition: transitioning ? "transform 0.25s ease" : "none",
               })}
-              {/* Current group: when transitioning, starts off-screen and slides to 0 */}
+              {/* Current group */}
               {renderGroupContent(g, {
-                transform: prevGroup
-                  ? (transitioning ? "translateX(0)" : `translateX(${transitionDir * -100}%)`)
-                  : `translateX(${swipeOffset}px)`,
-                transition: transitioning ? "transform 0.3s ease" : (swipeOffset === 0 && !prevGroup) ? "transform 0.2s ease" : "none",
+                transform: `translateX(${swipeOffset}px)`,
+                transition: transitioning ? "transform 0.25s ease" : "none",
               })}
               {/* Invisible placeholder to maintain height */}
               <div style={{ visibility: "hidden", pointerEvents: "none" }}>

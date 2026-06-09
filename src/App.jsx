@@ -437,10 +437,17 @@ export default function App() {
     if (!name || !loginPassword) { setLoginError("Completá todos los campos"); return }
     const { data: player } = await supabase.from("players").select("*").ilike("name", name).single()
     if (!player) { setLoginError("No existe un jugador con ese nombre"); return }
+    const me = { id: player.id, name: player.name, avatar: player.avatar, default_score: player.default_score }
+    // Check if password reset is pending
+    if (player.password_reset) {
+      setAuthScreen("set_new_password")
+      window._pendingUser = me
+      window._pendingPlayerId = player.id
+      return
+    }
     const hashed = await hashPassword(loginPassword)
     if (player.password && player.password !== hashed) { setLoginError("Contraseña incorrecta"); return }
     // allow login if no password set yet (legacy players)
-    const me = { id: player.id, name: player.name, avatar: player.avatar, default_score: player.default_score }
     localStorage.setItem("prode_user", JSON.stringify(me))
     setUser(me)
     setSettName(me.name); setSettAvatar(me.avatar || "⚽"); setSettDefault(me.default_score || "0-0")

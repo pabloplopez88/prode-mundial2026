@@ -1233,13 +1233,17 @@ export default function App() {
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const changeGroup = (newGroup) => {
+            // dir: -1 = going forward (A->B), 1 = going backward (B->A)
             const dir = letters.indexOf(newGroup) > letters.indexOf(selectedGroup) ? -1 : 1
             setPrevGroup(selectedGroup)
             setTransitionDir(dir)
-            setTransitioning(true)
             setSwipeOffset(0)
             setSelectedGroup(newGroup)
-            setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
+            // Small delay to let new group render at start position, then animate
+            requestAnimationFrame(() => {
+              setTransitioning(true)
+              setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
+            })
           }
           if (diff > 0) {
             if (stage === "Grupos") {
@@ -1368,17 +1372,17 @@ export default function App() {
           const w = typeof window !== "undefined" ? window.innerWidth : 400
           return (
             <div ref={groupContentRef} style={{ position: "relative", overflow: "hidden", minHeight: 200 }}>
-              {/* Current group */}
-              {renderGroupContent(g, {
-                transform: transitioning
-                  ? `translateX(${transitionDir * 100}%)`
-                  : `translateX(${swipeOffset}px)`,
-                transition: transitioning ? "transform 0.3s ease" : swipeOffset === 0 ? "transform 0.2s ease" : "none",
-              })}
-              {/* Previous group sliding out */}
+              {/* Previous group sliding out - exits opposite to new group entry */}
               {transitioning && prevGroup && renderGroupContent(prevGroup, {
-                transform: `translateX(${-transitionDir * 100}%)`,
+                transform: `translateX(${transitionDir * -100}%)`,
                 transition: "transform 0.3s ease",
+              })}
+              {/* Current group: when transitioning, starts off-screen and slides to 0 */}
+              {renderGroupContent(g, {
+                transform: prevGroup
+                  ? (transitioning ? "translateX(0)" : `translateX(${transitionDir * -100}%)`)
+                  : `translateX(${swipeOffset}px)`,
+                transition: transitioning ? "transform 0.3s ease" : (swipeOffset === 0 && !prevGroup) ? "transform 0.2s ease" : "none",
               })}
               {/* Invisible placeholder to maintain height */}
               <div style={{ visibility: "hidden", pointerEvents: "none" }}>

@@ -47,8 +47,6 @@ const PNG_AVATARS = [
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pini_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/rami_00.png?width=64&height=64&resize=cover",
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/yayu_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/flaca_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/munra_00.png?width=64&height=64&resize=cover",
 ]
 
 function Avatar({ av = "⚽", size = 36, name = "" }) {
@@ -98,6 +96,11 @@ export default function App() {
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [selectedGroup, setSelectedGroup] = useState("A")
+  const [prevGroup, setPrevGroup] = useState(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [transitioning, setTransitioning] = useState(false)
+  const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
+  const groupContentRef = useRef(null)
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -1183,12 +1186,22 @@ export default function App() {
         </div>
       </div>
 
-      {/* Group selector pills - sticky */}
+      {/* Group selector pills - always sticky */}
       {stage === "Grupos" && (
         <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
-              <button key={g} onClick={() => setSelectedGroup(g)}
+              <button key={g} onClick={() => {
+                if (g === selectedGroup) return
+                const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+                const dir = letters.indexOf(g) > letters.indexOf(selectedGroup) ? -1 : 1
+                setPrevGroup(selectedGroup)
+                setTransitionDir(dir)
+                setTransitioning(true)
+                setSwipeOffset(0)
+                setSelectedGroup(g)
+                setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
+              }}
                 style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${selectedGroup === g ? C.accent : C.border}`, background: selectedGroup === g ? C.accent : "transparent", color: selectedGroup === g ? "#0a0e1a" : C.textDim, textAlign: "center" }}>
                 {g}
               </button>
@@ -1203,38 +1216,53 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ padding: "12px 14px", paddingBottom: 20 }}
-        onTouchStart={e => { window._swipeStartX = e.touches[0].clientX }}
+      <div style={{ padding: "12px 14px", paddingBottom: 20, overflow: "hidden" }}
+        onTouchStart={e => {
+          if (stage !== "Grupos") return
+          window._swipeStartX = e.touches[0].clientX
+          setSwipeOffset(0)
+          setTransitioning(false)
+        }}
+        onTouchMove={e => {
+          if (window._swipeStartX === undefined || stage !== "Grupos") return
+          const diff = -(e.touches[0].clientX - window._swipeStartX)
+          const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+          const idx = letters.indexOf(selectedGroup)
+          const atStart = idx === 0 && diff < 0
+          const atEnd = idx === letters.length - 1 && diff > 0
+          if (atStart || atEnd) {
+            // Rubber band - resist at boundary
+            setSwipeOffset(-diff * 0.2)
+            setPrevGroup(null)
+          } else {
+            const nextGroup = diff > 0 ? letters[idx + 1] : letters[idx - 1]
+            if (nextGroup !== prevGroup) { setPrevGroup(nextGroup); setTransitionDir(diff > 0 ? -1 : 1) }
+            setSwipeOffset(-diff)
+          }
+        }}
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
-          const diff = window._swipeStartX - e.changedTouches[0].clientX
+          const diff = -(e.changedTouches[0].clientX - window._swipeStartX)
           window._swipeStartX = undefined
-          if (Math.abs(diff) < 50) return
-          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-          if (diff > 0) {
-            // swipe left = forward
-            if (stage === "Grupos") {
-              const idx = letters.indexOf(selectedGroup)
-              if (idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
-              else { setStage("16avos") }
-            } else {
-              const idx = allStagesNav.indexOf(stage)
-              if (idx < allStagesNav.length - 1) setStage(allStagesNav[idx + 1])
-            }
+          const w = window.innerWidth || 400
+          const idx = letters.indexOf(selectedGroup)
+          const atStart = idx === 0 && diff < 0
+          const atEnd = idx === letters.length - 1 && diff > 0
+
+          if (!atStart && !atEnd && Math.abs(diff) >= 60) {
+            setTransitioning(true)
+            setSwipeOffset(diff > 0 ? -w : w)
+            setTimeout(() => {
+              setSelectedGroup(diff > 0 ? letters[idx + 1] : letters[idx - 1])
+              setPrevGroup(null)
+              setSwipeOffset(0)
+              setTransitioning(false)
+            }, 250)
           } else {
-            // swipe right = backward
-            if (stage === "Grupos") {
-              const idx = letters.indexOf(selectedGroup)
-              if (idx > 0) setSelectedGroup(letters[idx - 1])
-            } else {
-              const idx = allStagesNav.indexOf(stage)
-              if (idx > 0) {
-                const prevStage = allStagesNav[idx - 1]
-                setStage(prevStage)
-                if (prevStage === "Grupos") setSelectedGroup("L")
-              }
-            }
+            setTransitioning(true)
+            setSwipeOffset(0)
+            setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 250)
           }
         }}
       >
@@ -1293,9 +1321,69 @@ export default function App() {
         })
       }
       const standings = sortTeams(Object.values(teams))
+          const renderGroupContent = (grp, style) => {
+            const gM = allMatches.filter(m => m.stage === "Grupos" && m.group === grp)
+            const t2 = {}
+            gM.forEach(m => {
+              if (!t2[m.home]) t2[m.home] = { name: m.home, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+              if (!t2[m.away]) t2[m.away] = { name: m.away, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+              const r2 = results.find(r => r.match_id === m.id)
+              if (!r2 || r2.home_score === null) return
+              const hs2 = parseInt(r2.home_score), as2 = parseInt(r2.away_score)
+              t2[m.home].pj++; t2[m.away].pj++
+              t2[m.home].gf += hs2; t2[m.home].gc += as2
+              t2[m.away].gf += as2; t2[m.away].gc += hs2
+              if (hs2 > as2) { t2[m.home].g++; t2[m.home].pts += 3; t2[m.away].p++ }
+              else if (hs2 < as2) { t2[m.away].g++; t2[m.away].pts += 3; t2[m.home].p++ }
+              else { t2[m.home].e++; t2[m.home].pts++; t2[m.away].e++; t2[m.away].pts++ }
+            })
+            const st2 = Object.values(t2).sort((a,b) => b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf)
+            return (
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, ...style }}>
+                <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+                  <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {grp}</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <th style={{ textAlign: "left", padding: "4px 14px", color: C.muted, fontWeight: 600 }}>Equipo</th>
+                      {["PJ","G","E","P","GF","DG","Pts"].map(h => <th key={h} style={{ textAlign: "center", padding: "4px 4px", color: h==="Pts"?C.accent:C.muted, fontWeight: h==="Pts"?700:600 }}>{h}</th>)}
+                    </tr></thead>
+                    <tbody>{st2.map((t, i) => (
+                      <tr key={t.name} style={{ borderBottom: i < st2.length-1 ? `1px solid ${C.border}` : "none", background: i < 2 ? "#0f1a0f" : "transparent" }}>
+                        <td style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: i < 2 ? C.green : C.muted, fontWeight: 700, minWidth: 14 }}>{i+1}</span>
+                          <span style={{ fontSize: 15 }}>{flag(t.name)}</span>
+                          <span style={{ color: C.text, fontWeight: i < 2 ? 700 : 400, fontSize: 12 }}>{t.name}</span>
+                        </td>
+                        {[t.pj, t.g, t.e, t.p, t.gf, t.gf-t.gc, t.pts].map((v,i2) => (
+                          <td key={i2} style={{ textAlign: "center", color: i2===6?C.accent:C.textDim, fontWeight: i2===6?800:400, fontSize: i2===6?13:12, padding: i2===6?"8px 8px":"8px 4px" }}>{v}</td>
+                        ))}
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {gM.map(renderMatchCard)}
+              </div>
+            )
+          }
+
+          const w = typeof window !== "undefined" ? window.innerWidth : 400
+          const isLastGroup = g === "L"
+          const isFirstGroup = g === "A"
           return (
-            <div>
-              <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+            <div ref={groupContentRef} style={{ position: "relative", overflow: "hidden", minHeight: 200 }}>
+              {/* Adjacent group (visible during swipe) */}
+              {prevGroup && renderGroupContent(prevGroup, {
+                transform: `translateX(${swipeOffset + (transitionDir < 0 ? window.innerWidth : -window.innerWidth)}px)`,
+                transition: transitioning ? "transform 0.25s ease" : "none",
+              })}
+              {/* Current group */}
+              {renderGroupContent(g, {
+                transform: `translateX(${swipeOffset}px)`,
+                transition: transitioning ? "transform 0.25s ease" : "none",
+              })}
+              {/* Invisible placeholder to maintain height */}
+              <div style={{ visibility: "hidden", pointerEvents: "none" }}>
+                <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
                 <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
@@ -1331,10 +1419,41 @@ export default function App() {
                 </table>
               </div>
               {gMatches.map(renderMatchCard)}
+              </div>
             </div>
           )
         })()}
-        {stage !== "Grupos" && matchesByStage.map(renderMatchCard)}
+        {stage !== "Grupos" && (() => {
+          const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
+          const stageIdx = allStagesNav.indexOf(stage)
+          const prevStageMatches = transitioning && swipeOffset !== 0
+            ? (swipeOffset > 0
+                ? (stageIdx > 0 ? allMatches.filter(m => m.stage === allStagesNav[stageIdx - 1]) : null)
+                : (stageIdx < allStagesNav.length - 1 ? allMatches.filter(m => m.stage === allStagesNav[stageIdx + 1]) : null))
+            : null
+          const w = typeof window !== "undefined" ? window.innerWidth : 400
+          return (
+            <div style={{ position: "relative", overflow: "hidden" }}>
+              {/* Adjacent stage - positioned off-screen, moves with swipe */}
+              {prevStageMatches && (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0,
+                  transform: `translateX(${swipeOffset + (swipeOffset < 0 ? w : -w)}px)`,
+                  transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
+                }}>
+                  {prevStageMatches.map(renderMatchCard)}
+                </div>
+              )}
+              {/* Current stage - follows swipe */}
+              <div style={{
+                transform: `translateX(${swipeOffset}px)`,
+                transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
+              }}>
+                {matchesByStage.map(renderMatchCard)}
+              </div>
+            </div>
+          )
+        })()}
       </div>
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}

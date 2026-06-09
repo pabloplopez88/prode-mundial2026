@@ -96,7 +96,10 @@ export default function App() {
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
   const [stage, setStage] = useState("Grupos")
   const [selectedGroup, setSelectedGroup] = useState("A")
+  const [prevGroup, setPrevGroup] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
+  const [transitioning, setTransitioning] = useState(false)
+  const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
   const groupContentRef = useRef(null)
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
@@ -1188,7 +1191,17 @@ export default function App() {
         <div style={{ padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 136, zIndex: 89 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
             {grupoLetters.map(g => (
-              <button key={g} onClick={() => setSelectedGroup(g)}
+              <button key={g} onClick={() => {
+                if (g === selectedGroup) return
+                const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+                const dir = letters.indexOf(g) > letters.indexOf(selectedGroup) ? -1 : 1
+                setPrevGroup(selectedGroup)
+                setTransitionDir(dir)
+                setTransitioning(true)
+                setSwipeOffset(0)
+                setSelectedGroup(g)
+                setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
+              }}
                 style={{ padding: "5px 4px", fontSize: 12, fontWeight: 700, cursor: "pointer", borderRadius: 6, border: `1px solid ${selectedGroup === g ? C.accent : C.border}`, background: selectedGroup === g ? C.accent : "transparent", color: selectedGroup === g ? "#0a0e1a" : C.textDim, textAlign: "center" }}>
                 {g}
               </button>
@@ -1219,10 +1232,19 @@ export default function App() {
           if (Math.abs(diff) < 50) return
           const allStagesNav = ["Grupos", "16avos", "8vos", "4tos", "Semi", "3º y 4º", "Final"]
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+          const changeGroup = (newGroup) => {
+            const dir = letters.indexOf(newGroup) > letters.indexOf(selectedGroup) ? -1 : 1
+            setPrevGroup(selectedGroup)
+            setTransitionDir(dir)
+            setTransitioning(true)
+            setSwipeOffset(0)
+            setSelectedGroup(newGroup)
+            setTimeout(() => { setTransitioning(false); setPrevGroup(null) }, 300)
+          }
           if (diff > 0) {
             if (stage === "Grupos") {
               const idx = letters.indexOf(selectedGroup)
-              if (idx < letters.length - 1) setSelectedGroup(letters[idx + 1])
+              if (idx < letters.length - 1) changeGroup(letters[idx + 1])
               else setStage("16avos")
             } else {
               const idx = allStagesNav.indexOf(stage)
@@ -1231,7 +1253,7 @@ export default function App() {
           } else {
             if (stage === "Grupos") {
               const idx = letters.indexOf(selectedGroup)
-              if (idx > 0) setSelectedGroup(letters[idx - 1])
+              if (idx > 0) changeGroup(letters[idx - 1])
             } else {
               const idx = allStagesNav.indexOf(stage)
               if (idx > 0) {
@@ -1298,13 +1320,69 @@ export default function App() {
         })
       }
       const standings = sortTeams(Object.values(teams))
+          const renderGroupContent = (grp, style) => {
+            const gM = allMatches.filter(m => m.stage === "Grupos" && m.group === grp)
+            const t2 = {}
+            gM.forEach(m => {
+              if (!t2[m.home]) t2[m.home] = { name: m.home, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+              if (!t2[m.away]) t2[m.away] = { name: m.away, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0 }
+              const r2 = results.find(r => r.match_id === m.id)
+              if (!r2 || r2.home_score === null) return
+              const hs2 = parseInt(r2.home_score), as2 = parseInt(r2.away_score)
+              t2[m.home].pj++; t2[m.away].pj++
+              t2[m.home].gf += hs2; t2[m.home].gc += as2
+              t2[m.away].gf += as2; t2[m.away].gc += hs2
+              if (hs2 > as2) { t2[m.home].g++; t2[m.home].pts += 3; t2[m.away].p++ }
+              else if (hs2 < as2) { t2[m.away].g++; t2[m.away].pts += 3; t2[m.home].p++ }
+              else { t2[m.home].e++; t2[m.home].pts++; t2[m.away].e++; t2[m.away].pts++ }
+            })
+            const st2 = Object.values(t2).sort((a,b) => b.pts !== a.pts ? b.pts-a.pts : (b.gf-b.gc)-(a.gf-a.gc) || b.gf-a.gf)
+            return (
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, ...style }}>
+                <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+                  <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {grp}</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <th style={{ textAlign: "left", padding: "4px 14px", color: C.muted, fontWeight: 600 }}>Equipo</th>
+                      {["PJ","G","E","P","GF","DG","Pts"].map(h => <th key={h} style={{ textAlign: "center", padding: "4px 4px", color: h==="Pts"?C.accent:C.muted, fontWeight: h==="Pts"?700:600 }}>{h}</th>)}
+                    </tr></thead>
+                    <tbody>{st2.map((t, i) => (
+                      <tr key={t.name} style={{ borderBottom: i < st2.length-1 ? `1px solid ${C.border}` : "none", background: i < 2 ? "#0f1a0f" : "transparent" }}>
+                        <td style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 11, color: i < 2 ? C.green : C.muted, fontWeight: 700, minWidth: 14 }}>{i+1}</span>
+                          <span style={{ fontSize: 15 }}>{flag(t.name)}</span>
+                          <span style={{ color: C.text, fontWeight: i < 2 ? 700 : 400, fontSize: 12 }}>{t.name}</span>
+                        </td>
+                        {[t.pj, t.g, t.e, t.p, t.gf, t.gf-t.gc, t.pts].map((v,i2) => (
+                          <td key={i2} style={{ textAlign: "center", color: i2===6?C.accent:C.textDim, fontWeight: i2===6?800:400, fontSize: i2===6?13:12, padding: i2===6?"8px 8px":"8px 4px" }}>{v}</td>
+                        ))}
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {gM.map(renderMatchCard)}
+              </div>
+            )
+          }
+
+          const w = typeof window !== "undefined" ? window.innerWidth : 400
           return (
-            <div ref={groupContentRef} style={{
-              transform: stage === "Grupos" ? `translateX(${swipeOffset}px)` : "none",
-              transition: swipeOffset === 0 ? "transform 0.2s ease" : "none",
-              willChange: "transform"
-            }}>
-              <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
+            <div ref={groupContentRef} style={{ position: "relative", overflow: "hidden", minHeight: 200 }}>
+              {/* Current group */}
+              {renderGroupContent(g, {
+                transform: transitioning
+                  ? `translateX(${transitionDir * 100}%)`
+                  : `translateX(${swipeOffset}px)`,
+                transition: transitioning ? "transform 0.3s ease" : swipeOffset === 0 ? "transform 0.2s ease" : "none",
+              })}
+              {/* Previous group sliding out */}
+              {transitioning && prevGroup && renderGroupContent(prevGroup, {
+                transform: `translateX(${-transitionDir * 100}%)`,
+                transition: "transform 0.3s ease",
+              })}
+              {/* Invisible placeholder to maintain height */}
+              <div style={{ visibility: "hidden", pointerEvents: "none" }}>
+                <div style={crd({ padding: 0, overflow: "hidden", marginBottom: 16 })}>
                 <div style={{ padding: "10px 14px 8px", fontSize: 12, fontWeight: 800, color: C.accent, letterSpacing: 1 }}>GRUPO {g}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
@@ -1340,6 +1418,7 @@ export default function App() {
                 </table>
               </div>
               {gMatches.map(renderMatchCard)}
+              </div>
             </div>
           )
         })()}

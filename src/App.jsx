@@ -1220,12 +1220,21 @@ export default function App() {
         onTouchStart={e => {
           if (stage !== "Grupos") return
           window._swipeStartX = e.touches[0].clientX
+          window._swipeStartY = e.touches[0].clientY
+          window._swipeLocked = null
           setSwipeOffset(0)
           setTransitioning(false)
         }}
         onTouchMove={e => {
           if (window._swipeStartX === undefined || stage !== "Grupos") return
-          const diff = -(e.touches[0].clientX - window._swipeStartX)
+          const diffX = -(e.touches[0].clientX - window._swipeStartX)
+          const diffY = Math.abs(e.touches[0].clientY - window._swipeStartY)
+          // Determine scroll direction on first significant move
+          if (window._swipeLocked === null && (Math.abs(diffX) > 5 || diffY > 5)) {
+            window._swipeLocked = diffY > Math.abs(diffX) ? "vertical" : "horizontal"
+          }
+          if (window._swipeLocked === "vertical") return
+          const diff = diffX
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const idx = letters.indexOf(selectedGroup)
           const atStart = idx === 0 && diff < 0

@@ -1186,12 +1186,14 @@ export default function App() {
         </div>
       </div>
 
-      {/* Group selector pills - sticky, slides with content when leaving to knockout */}
-      {(stage === "Grupos" || (transitioning && swipeOffset < -60)) && (
+      {/* Group selector pills */}
+      {(stage === "Grupos" || (swipeOffset < 0 && transitioning)) && (
         <div style={{
           padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`,
-          position: "sticky", top: 136, zIndex: 89,
-          transform: stage !== "Grupos" ? `translateX(${swipeOffset}px)` : "none",
+          position: swipeOffset !== 0 ? "relative" : "sticky",
+          top: swipeOffset !== 0 ? undefined : 136,
+          zIndex: 89,
+          transform: swipeOffset !== 0 ? `translateX(${swipeOffset}px)` : "none",
           transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
         }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>

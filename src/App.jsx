@@ -716,6 +716,7 @@ export default function App() {
               setAuthScreen("choose")
               window._pendingUser = null
               window._pendingPlayerId = null
+              loadData()
             }} />
           </div>
         </div>

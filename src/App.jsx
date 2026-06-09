@@ -1187,13 +1187,19 @@ export default function App() {
       </div>
 
       {/* Group selector pills */}
-      {(stage === "Grupos" || (swipeOffset < 0 && transitioning)) && (
+      {(() => {
+        const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
+        const isLastGroup = selectedGroup === "L"
+        const slidingToKnockout = isLastGroup && swipeOffset < 0
+        const visible = stage === "Grupos" || (transitioning && slidingToKnockout)
+        if (!visible) return null
+        return (
         <div style={{
           padding: "8px 14px", background: C.card2, borderBottom: `1px solid ${C.border}`,
-          position: swipeOffset !== 0 ? "relative" : "sticky",
-          top: swipeOffset !== 0 ? undefined : 136,
+          position: slidingToKnockout ? "relative" : "sticky",
+          top: slidingToKnockout ? undefined : 136,
           zIndex: 89,
-          transform: swipeOffset !== 0 ? `translateX(${swipeOffset}px)` : "none",
+          transform: slidingToKnockout ? `translateX(${swipeOffset}px)` : "none",
           transition: transitioning && swipeOffset === 0 ? "transform 0.25s ease" : "none",
         }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
@@ -1215,7 +1221,8 @@ export default function App() {
             ))}
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {todayUnbet.length > 0 && (
         <div style={{ background: "#1a1200", borderBottom: `1px solid ${C.accentDim}`, padding: "8px 16px", fontSize: 12, color: C.accent }}>

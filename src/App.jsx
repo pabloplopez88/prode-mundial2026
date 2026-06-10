@@ -115,40 +115,55 @@ function LandingInfoPanel() {
 }
 
 function InfoContent() {
+  const C2 = { accent: "#c8a84b", accentDim: "#8a6e28", text: "#e2e8f0", textDim: "#94a3b8", border: "#1e2940", green: "#4ade80" }
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>📋 Reglamento</div>
-        <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 8 }}>Cargá tu pronóstico antes de que arranque cada partido. Si te olvidás, se usa tu resultado por defecto.</div>
-        {[
-          ["+3 pts", "Ganador o empate"],
-          ["+1 pt", "Goles del local"],
-          ["+1 pt", "Goles del visitante"],
-        ].map(([pts, desc]) => (
-          <div key={pts} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2940" }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#c8a84b" }}>{pts}</span>
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>{desc}</span>
-          </div>
-        ))}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "#22c55e" }}>5 pts</span>
-          <span style={{ fontSize: 13, color: "#94a3b8" }}>Máximo por partido 😱</span>
+      {/* Pronósticos */}
+      <div style={{ paddingBottom: 16, paddingTop: 8 }}>
+        <div style={{ fontSize: 11, color: C2.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>⏱ Pronósticos</div>
+        <div style={{ fontSize: 13, color: C2.textDim, lineHeight: 1.7 }}>
+          Tenés hasta el comienzo de cada partido para cargar tus pronósticos, amigo del campin. Si te olvidás, se usa tu <strong style={{ color: C2.text }}>resultado por defecto</strong>.
         </div>
       </div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🏆 Premios</div>
-        {[["🥇","1° puesto","70% del pozo"],["🥈","2° puesto","20% del pozo"],["🥉","3° puesto","10% del pozo"],["🍊","Penúltimo","Intereses de Naranja X"]].map(([icon,pos,prize]) => (
-          <div key={pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1e2940" }}>
-            <span style={{ fontSize: 13 }}>{icon} {pos}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#c8a84b" }}>{prize}</span>
+      {/* Puntos */}
+      <div style={{ borderTop: `1px solid ${C2.border}`, paddingTop: 16, paddingBottom: 16 }}>
+        <div style={{ fontSize: 11, color: C2.accentDim, fontWeight: 700, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>📊 Puntos por partido</div>
+        <div style={{ background: "#0a0e1a", borderRadius: 10, overflow: "hidden", border: `1px solid ${C2.border}` }}>
+          {[["+3","pts","Acertás ganador o empate"],["+1","pt","Acertás goles del local"],["+1","pt","Acertás goles del visitante"]].map(([n,unit,desc],i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${C2.border}` }}>
+              <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
+                <span style={{ fontSize: 18, fontWeight: 900, color: C2.accent }}>{n}</span>
+                <span style={{ fontSize: 11, color: C2.accentDim, fontWeight: 600 }}>{unit}</span>
+              </div>
+              <span style={{ fontSize: 13, color: C2.textDim }}>{desc}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", background: "#14532d22" }}>
+            <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
+              <span style={{ fontSize: 18, fontWeight: 900, color: C2.green }}>5</span>
+              <span style={{ fontSize: 11, color: C2.green + "aa", fontWeight: 600 }}>pts</span>
+            </div>
+            <span style={{ fontSize: 13, color: C2.textDim }}>Máximo por partido 😱</span>
+          </div>
+        </div>
+      </div>
+      {/* Premios */}
+      <div style={{ borderTop: `1px solid ${C2.border}`, paddingTop: 16, paddingBottom: 16 }}>
+        <div style={{ fontSize: 11, color: C2.accentDim, fontWeight: 700, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>🏆 Premios</div>
+        {[["🥇","1° puesto","70% del pozo"],["🥈","2° puesto","20% del pozo"],["🥉","3° puesto","10% del pozo"],["🍊","Penúltimo","Intereses de Naranja X"]].map(([icon,pos,prize],i,arr) => (
+          <div key={pos} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < arr.length-1 ? `1px solid ${C2.border}` : "none" }}>
+            <span style={{ fontSize: 18 }}>{icon}</span>
+            <span style={{ fontSize: 13, color: C2.text, flex: 1 }}>{pos}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C2.accent }}>{prize}</span>
           </div>
         ))}
       </div>
-      <div>
-        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
-        <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
-          Cierre: <strong style={{ color: "#e2e8f0" }}>jueves 11 de junio, 16:00</strong>.<br/>
-          Costo: <strong style={{ color: "#e2e8f0" }}>$25.000</strong>. Transferir a <strong style={{ color: "#c8a84b" }}>topati.lopez</strong> y mandar el comprobante por privado al wasap. También podés jugar gratis.
+      {/* Inscripción */}
+      <div style={{ borderTop: `1px solid ${C2.border}`, paddingTop: 16 }}>
+        <div style={{ fontSize: 11, color: C2.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
+        <div style={{ fontSize: 13, color: C2.textDim, lineHeight: 1.7 }}>
+          Cierre de inscripciones: <strong style={{ color: C2.text }}>jueves 11 de junio, 16:00</strong>.<br/>
+          Costo: <strong style={{ color: C2.text }}>$25.000</strong>. Transferir a <strong style={{ color: C2.accent }}>topati.lopez</strong> y mandar el comprobante por privado al wasap.<br/>También podés jugar gratis. Anotate nomás.
         </div>
       </div>
     </div>
@@ -947,7 +962,19 @@ export default function App() {
             <div style={{ fontSize: 18, fontWeight: 800 }}>¡Hola, {user.name}!</div>
             <div style={{ fontSize: 13, color: C.textDim }}>Mundial 2026 · {players.length} participantes</div>
           </div>
+          <button onClick={() => setShowInfo(true)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 22, padding: "4px 8px", lineHeight: 1 }}>ℹ️</button>
         </div>
+        {showInfo && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowInfo(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px", borderRadius: 16, padding: 20 }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>PRODE Amigos del Campin</div>
+                <button onClick={() => setShowInfo(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+              <InfoContent />
+            </div>
+          </div>
+        )}
         <div style={{ padding: "14px 16px" }}>
           {todayUnbet.length > 0 && (
             <div style={{ background: "#2a1a00", border: `1px solid ${C.accent}`, borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>

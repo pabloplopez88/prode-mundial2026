@@ -85,6 +85,35 @@ async function hashPassword(password) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("")
 }
 
+function LandingInfoPanel() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: "100%", background: "linear-gradient(135deg,#0f1624,#0a1020)",
+        border: "1px solid #1e2940", borderRadius: open ? "16px 16px 0 0" : 16,
+        padding: "16px 20px", display: "flex", alignItems: "center",
+        justifyContent: "space-between", cursor: "pointer"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 18 }}>📋</span>
+          <span style={{ color: "#c8a84b", fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>REGLAMENTO Y PREMIOS</span>
+        </div>
+        <span style={{ color: "#6b7280", fontSize: 14 }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div style={{
+          background: "linear-gradient(135deg,#0f1624,#0a1020)",
+          border: "1px solid #1e2940", borderTop: "none",
+          borderRadius: "0 0 16px 16px", padding: "0 20px 20px"
+        }}>
+          <InfoContent />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InfoContent() {
   return (
     <div>
@@ -770,106 +799,7 @@ export default function App() {
         <AuthHeader />
         <div style={{ padding: "20px 16px" }}>
 
-          {/* Reglamento */}
-          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
-            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>📋</span>
-              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>REGLAMENTO</span>
-            </div>
-            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 0 }}>
-
-              {/* Pronósticos */}
-              <div style={{ paddingBottom: 16 }}>
-                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>⏱ Pronósticos</div>
-                <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
-                  Tenés hasta el comienzo de cada partido para cargar tus pronósticos, amigo del campin. Si te olvidás, se usa tu <strong style={{ color: C.text }}>resultado por defecto</strong>
-                </div>
-              </div>
-
-              {/* Puntos */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, paddingBottom: 16 }}>
-                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>📊 Puntos por partido</div>
-                <div style={{ background: "#0a0e1a", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                  {[
-                    ["+3", "pts", "Acertás ganador o empate"],
-                    ["+1", "pt", "Acertás goles del local"],
-                    ["+1", "pt", "Acertás goles del visitante"],
-                  ].map(([n, unit, desc], i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
-                      <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
-                        <span style={{ fontSize: 18, fontWeight: 900, color: C.accent }}>{n}</span>
-                        <span style={{ fontSize: 11, color: C.accentDim, fontWeight: 600 }}>{unit}</span>
-                      </div>
-                      <span style={{ fontSize: 13, color: C.textDim }}>{desc}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", background: "#14532d22" }}>
-                    <div style={{ width: 52, display: "flex", alignItems: "baseline", gap: 2 }}>
-                      <span style={{ fontSize: 18, fontWeight: 900, color: "#4ade80" }}>5</span>
-                      <span style={{ fontSize: 11, color: "#4ade80aa", fontWeight: 600 }}>pts</span>
-                    </div>
-                    <span style={{ fontSize: 13, color: C.textDim }}>Máximo por partido 😱</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Inscripción */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-                <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
-                <div style={{ fontSize: 13, color: C.textDim, lineHeight: 1.7 }}>
-                  Cierre de inscripciones: <strong style={{ color: C.text }}>jueves 11 de junio, 16:00</strong>.<br />
-                  Costo: <strong style={{ color: C.text }}>$25.000</strong>. Transferir a <strong style={{ color: C.accent }}>topati.lopez</strong> y mandar el comprobante por privado al wasap.<br />También podés jugar gratis. Anotate nomás.
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Secciones */}
-          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
-            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>🗺</span>
-              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>LAS SECCIONES</span>
-            </div>
-            <div style={{ padding: "8px 0" }}>
-              {[
-                ["📅", "Fixture", "Todos los partidos del Mundial. Cargá tus pronósticos y seguí la tabla de posiciones de cada grupo."],
-                ["🏅", "Tabla", "Posiciones del prode."],
-                ["⚙️", "Config", "Perfil, avatar, resultado por defecto, contraseña y ya vamos a ver qué más."],
-              ].map(([icon, title, desc], i, arr) => (
-                <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                  <div style={{ width: 38, height: 38, background: "#1a2035", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{title}</div>
-                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Premios */}
-          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
-            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>🏆</span>
-              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>PREMIOS</span>
-            </div>
-            <div style={{ padding: "8px 0" }}>
-              {[
-                ["🥇", "1° puesto", "70% del pozo"],
-                ["🥈", "2° puesto", "20% del pozo"],
-                ["🥉", "3° puesto", "10% del pozo"],
-                ["🍊", "Penúltimo", "Intereses de Naranja X"],
-              ].map(([icon, pos, prize], i, arr) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                  <div style={{ width: 38, height: 38, background: "#1a2035", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pos}</div>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{prize}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <LandingInfoPanel />
 
           {registrationOpen
             ? <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>

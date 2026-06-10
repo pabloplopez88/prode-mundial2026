@@ -85,6 +85,47 @@ async function hashPassword(password) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("")
 }
 
+function InfoContent() {
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>📋 Reglamento</div>
+        <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 8 }}>Cargá tu pronóstico antes de que arranque cada partido. Si te olvidás, se usa tu resultado por defecto.</div>
+        {[
+          ["+3 pts", "Ganador o empate"],
+          ["+1 pt", "Goles del local"],
+          ["+1 pt", "Goles del visitante"],
+        ].map(([pts, desc]) => (
+          <div key={pts} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2940" }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#c8a84b" }}>{pts}</span>
+            <span style={{ fontSize: 13, color: "#94a3b8" }}>{desc}</span>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "#22c55e" }}>5 pts</span>
+          <span style={{ fontSize: 13, color: "#94a3b8" }}>Máximo por partido 😱</span>
+        </div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🏆 Premios</div>
+        {[["🥇","1° puesto","70% del pozo"],["🥈","2° puesto","20% del pozo"],["🥉","3° puesto","10% del pozo"],["🍊","Penúltimo","Intereses de Naranja X"]].map(([icon,pos,prize]) => (
+          <div key={pos} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1e2940" }}>
+            <span style={{ fontSize: 13 }}>{icon} {pos}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#c8a84b" }}>{prize}</span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontSize: 12, color: "#c8a84b88", fontWeight: 700, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>💸 Inscripción</div>
+        <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
+          Cierre: <strong style={{ color: "#e2e8f0" }}>jueves 11 de junio, 16:00</strong>.<br/>
+          Costo: <strong style={{ color: "#e2e8f0" }}>$25.000</strong>. Transferir a <strong style={{ color: "#c8a84b" }}>topati.lopez</strong> y mandar el comprobante por privado al wasap. También podés jugar gratis.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState("home")
   const [user, setUser] = useState(null)
@@ -111,6 +152,7 @@ export default function App() {
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -805,6 +847,30 @@ export default function App() {
               ))}
             </div>
           </div>
+          {/* Premios */}
+          <div style={{ background: "linear-gradient(135deg,#0f1624,#0a1020)", border: `1px solid ${C.border}`, borderRadius: 16, marginBottom: 14, overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(90deg,#c8a84b22,transparent)", borderBottom: `1px solid ${C.border}`, padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🏆</span>
+              <span style={{ color: C.accent, fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>PREMIOS</span>
+            </div>
+            <div style={{ padding: "8px 0" }}>
+              {[
+                ["🥇", "1° puesto", "70% del pozo"],
+                ["🥈", "2° puesto", "20% del pozo"],
+                ["🥉", "3° puesto", "10% del pozo"],
+                ["🍊", "Penúltimo", "Intereses de Naranja X"],
+              ].map(([icon, pos, prize], i, arr) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  <div style={{ width: 38, height: 38, background: "#1a2035", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{pos}</div>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{prize}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {registrationOpen
             ? <button style={btn("primary", { width: "100%", marginBottom: 10, padding: "14px" })} onClick={() => setAuthScreen("register")}>
                 Anotarme al prode ⚡

@@ -364,7 +364,7 @@ export default function App() {
   const doSync = useCallback(async () => {
     setAutoSyncStatus("searching")
     try {
-      const res = await fetch("https://worldcup26.ir/get/games")
+      const res = await fetch("/api/wc26")
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const wc26Games = data.games || []
@@ -1919,7 +1919,7 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
 
   const fetchWc26 = async () => {
     if (wc26Cache) return wc26Cache
-    const r = await fetch("https://worldcup26.ir/get/games")
+    const r = await fetch("/api/wc26")
     const data = await r.json()
     const games = data.games || []
     setWc26Cache(games)

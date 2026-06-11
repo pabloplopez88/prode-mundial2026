@@ -120,7 +120,8 @@ export function formatTime(dateStr) {
 }
 
 export function isLocked(dateStr) {
-  return new Date() >= new Date(dateStr)
+  // Dates in data.js are Argentina time (UTC-3). Add explicit offset so all devices use the same moment.
+  return new Date() >= new Date(dateStr + ":00-03:00")
 }
 
 export function isSameDay(dateStr) {

@@ -1917,6 +1917,13 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
   const [tab, setTab] = useState("date")
   const [wc26Cache, setWc26Cache] = useState(null)
 
+  const stadiums = {
+    "1":"Mexico City","2":"Guadalajara","3":"Monterrey","4":"Dallas","5":"Houston",
+    "6":"Kansas City","7":"Atlanta","8":"Miami","9":"Boston","10":"Philadelphia",
+    "11":"Nueva Jersey","12":"Toronto","13":"Vancouver","14":"Seattle",
+    "15":"San Francisco","16":"Los Ángeles"
+  }
+
   const fetchWc26 = async () => {
     if (wc26Cache) return wc26Cache
     const r = await fetch("/api/wc26")
@@ -2002,8 +2009,8 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                     {row.g && <>
                       <span style={{ color: "#6b7280" }}> → </span>
                       <span style={{ color: "#60a5fa" }}>{row.g.home_team_name_en} vs {row.g.away_team_name_en}</span>
-                      <span style={{ color: "#6b7280" }}> · {row.g.local_date} · {row.g.time_elapsed}</span>
-                      {row.g.finished === "TRUE" && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.g.home_score}-{row.g.away_score}</span>}
+                      <span style={{ color: "#6b7280" }}> · {stadiums[row.g.stadium_id] || row.g.stadium_id} · {row.g.time_elapsed}</span>
+                      {row.g.finished === "TRUE" && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.g.home_score}-{row.g.away_score} ✓fin</span>}
                     </>}
                   </div>
                 ))}
@@ -2032,9 +2039,12 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                     <div style={{ color: "#94a3b8" }}>
                       <span style={{ color: "#22c55e", fontWeight: 700 }}>worldcup26:</span>{" "}
                       {singleResult.g.home_team_name_en} vs {singleResult.g.away_team_name_en}{" "}
-                      · {singleResult.g.local_date}{" "}
-                      · {singleResult.g.time_elapsed}{" "}
-                      {singleResult.g.finished === "TRUE" && `· ${singleResult.g.home_score}-${singleResult.g.away_score}`}
+                      · estado: {singleResult.g.time_elapsed}{" "}
+                      {singleResult.g.finished === "TRUE" && `· resultado: ${singleResult.g.home_score}-${singleResult.g.away_score}`}
+                    </div>
+                    <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4 }}>
+                      Nuestro horario ARG: {singleResult.our.date} · venue: {singleResult.our.venue || "?"}<br/>
+                      WC26 venue: {stadiums[singleResult.g.stadium_id] || singleResult.g.stadium_id}
                     </div>
                   </>
                 }

@@ -365,10 +365,17 @@ export default function App() {
 
     setAutoSyncStatus("searching")
     try {
-      // Fetch all 104 WC matches in one request
-      const res = await fetch(`/api/sync`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const allFdMatches = (await res.json()).matches || []
+      // Fetch IN_PLAY and today's FINISHED matches (general endpoint doesn't update status in real time)
+      const today = new Date().toISOString().slice(0, 10)
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      const [r1, r2] = await Promise.all([
+        fetch(`/api/sync?status=IN_PLAY`),
+        fetch(`/api/sync?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`)
+      ])
+      const allFdMatches = [
+        ...(r1.ok ? (await r1.json()).matches || [] : []),
+        ...(r2.ok ? (await r2.json()).matches || [] : []),
+      ]
 
       const upserts = []
       allFdMatches.forEach(fdMatch => {
@@ -390,7 +397,7 @@ export default function App() {
 
       // Classify what we found
       const allStatuses = allFdMatches.map(m => m.status)
-      const allTimed = allFdMatches.length > 0 && allFdMatches.every(m => ["TIMED","SCHEDULED"].includes(m.status))
+      const allTimed = allFdMatches.length === 0 && new Date() < new Date("2026-06-11T16:00:00-03:00")
       const inPlayCount = upserts.filter(u => u.status === "IN_PLAY").length
       const time = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
 
@@ -1033,7 +1040,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay && result?.match_time ? `Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}` : formatTime(m.date)}</div>
+                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay ? `Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}` : formatTime(m.date)}</div>
                       {result && result.home_score !== null
                         ? <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
@@ -1196,8 +1203,8 @@ export default function App() {
                   <div style={{ fontSize: 12, color: matchState === "inplay" ? C.green : C.text, fontWeight: 800 }}>
                     {matchState === "inplay" && <span style={{ marginRight: 3 }}>●</span>}{result.home_score} – {result.away_score}
                   </div>
-                  {matchState === "inplay" && result.match_time && (
-                    <div style={{ fontSize: 9, color: C.green }}>{`Última act. ${result.match_time === 'ET' ? 'ET' : result.match_time + "'"}`}</div>
+                  {matchState === "inplay" && (
+                    <div style={{ fontSize: 9, color: C.green }}>{`Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}`}</div>
                   )}
                   {result.penalty_home != null && result.penalty_away != null && (
                     <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home} - {result.penalty_away}) pen</div>

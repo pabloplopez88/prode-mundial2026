@@ -52,6 +52,15 @@ const PNG_AVATARS = [
   "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/juancho_00.png?width=64&height=64&resize=cover",
 ]
 
+const WC26_ID_MAP = {
+  1:1,2:2,3:3,4:4,5:8,6:7,7:5,8:6,9:10,10:11,11:9,12:12,
+  13:14,14:15,15:16,16:13,17:17,18:18,19:19,20:20,21:21,22:22,23:24,24:23,
+  25:28,26:26,27:27,28:25,29:31,30:30,31:29,32:32,33:35,34:33,35:34,36:36,
+  37:39,38:37,39:40,40:38,41:43,42:41,43:42,44:44,45:45,46:48,47:46,48:47,
+  49:54,50:53,51:49,52:50,53:52,54:51,55:55,56:56,57:59,58:60,59:58,60:57,
+  61:62,62:61,63:65,64:66,65:63,66:64,67:67,68:68,69:71,70:72,71:69,72:70,
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -353,51 +362,47 @@ export default function App() {
   }
 
   const doSync = useCallback(async () => {
-    const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
-    if (!TOKEN) return
-
-    const allLocalMatches = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
-    const byFdId = {}
-    allLocalMatches.forEach(m => {
-      const fdId = m.fdId || knockoutMatches.find(km => km.id === m.id)?.fd_id
-      if (fdId) byFdId[fdId] = m
-    })
-
     setAutoSyncStatus("searching")
     try {
-      // Fetch IN_PLAY and today's FINISHED matches (general endpoint doesn't update status in real time)
-      const today = new Date().toISOString().slice(0, 10)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const [r1, r2] = await Promise.all([
-        fetch(`/api/sync?status=IN_PLAY`),
-        fetch(`/api/sync?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`)
-      ])
-      const allFdMatches = [
-        ...(r1.ok ? (await r1.json()).matches || [] : []),
-        ...(r2.ok ? (await r2.json()).matches || [] : []),
-      ]
+      const res = await fetch("https://worldcup26.ir/get/games")
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      const wc26Games = data.games || []
+
+      // Build wc26 lookup by their id
+      const wc26ById = {}
+      wc26Games.forEach(g => { wc26ById[parseInt(g.id)] = g })
 
       const upserts = []
-      allFdMatches.forEach(fdMatch => {
-        const local = byFdId[fdMatch.id]
-        if (!local) return
-        const status = fdMatch.status
-        const apiStatus = status === "FINISHED" ? "FINISHED"
-          : ["IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"].includes(status) ? "IN_PLAY"
-          : "SCHEDULED"
-        if (apiStatus === "SCHEDULED") return
-        const hs = fdMatch.score?.regularTime?.home ?? fdMatch.score?.fullTime?.home ?? null
-        const as_ = fdMatch.score?.regularTime?.away ?? fdMatch.score?.fullTime?.away ?? null
-        if (hs === null) return
-        const ph = fdMatch.score?.penalties?.home ?? null
-        const pa = fdMatch.score?.penalties?.away ?? null
-        const matchTime = status === "PAUSED" ? "ET" : (fdMatch.minute ? String(fdMatch.minute) : null)
-        upserts.push({ match_id: local.id, home_score: hs, away_score: as_, penalty_home: ph, penalty_away: pa, status: apiStatus, match_time: matchTime, updated_at: new Date().toISOString() })
+      const allLocalMatches = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+
+      allLocalMatches.forEach(local => {
+        // Get wc26 id: groups use WC26_ID_MAP, knockout use same id
+        const wc26Id = local.id <= 72 ? WC26_ID_MAP[local.id] : local.id
+        if (!wc26Id) return
+        const g = wc26ById[wc26Id]
+        if (!g) return
+
+        const finished = g.finished === "TRUE"
+        const inPlay = g.time_elapsed && g.time_elapsed !== "notstarted" && g.time_elapsed !== "finished" && !finished
+        if (!finished && !inPlay) return
+
+        const hs = parseInt(g.home_score)
+        const as_ = parseInt(g.away_score)
+        if (isNaN(hs) || isNaN(as_)) return
+
+        const apiStatus = finished ? "FINISHED" : "IN_PLAY"
+        upserts.push({
+          match_id: local.id,
+          home_score: hs, away_score: as_,
+          penalty_home: null, penalty_away: null,
+          status: apiStatus, match_time: inPlay ? g.time_elapsed : null,
+          updated_at: new Date().toISOString()
+        })
       })
 
-      // Classify what we found
-      const allStatuses = allFdMatches.map(m => m.status)
-      const allTimed = allFdMatches.length === 0 && new Date() < new Date("2026-06-11T16:00:00-03:00")
+      // Classify
+      const allNotStarted = wc26Games.every(g => g.time_elapsed === "notstarted")
       const inPlayCount = upserts.filter(u => u.status === "IN_PLAY").length
       const time = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
 
@@ -416,15 +421,11 @@ export default function App() {
       }
 
       let msg
-      if (allFdMatches.length === 0) {
-        msg = "no se encontraron partidos"
-      } else if (allTimed) {
-        msg = "el mundial aún no comenzó"
-      } else if (inPlayCount > 0) {
-        msg = `${inPlayCount} partido(s) en juego`
-      } else {
-        msg = "sin partidos en juego"
-      }
+      if (wc26Games.length === 0) msg = "no se encontraron partidos"
+      else if (allNotStarted) msg = "el mundial aún no comenzó"
+      else if (inPlayCount > 0) msg = `${inPlayCount} partido(s) en juego`
+      else msg = "sin partidos en juego"
+
       setAutoSyncStatus(msg + " · " + time)
       return msg
     } catch(e) {
@@ -436,8 +437,6 @@ export default function App() {
 
   // Auto-sync on load and every 10 min
   useEffect(() => {
-    const TOKEN = import.meta.env.VITE_FOOTBALLDATA_TOKEN || ""
-    if (!TOKEN) return
     doSync()
     const interval = setInterval(doSync, 10 * 60 * 1000)
     return () => clearInterval(interval)
@@ -1916,11 +1915,16 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState("date")
+  const [wc26Cache, setWc26Cache] = useState(null)
 
-  const toArg = (utc) => new Date(utc).toLocaleString("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
-  })
+  const fetchWc26 = async () => {
+    if (wc26Cache) return wc26Cache
+    const r = await fetch("https://worldcup26.ir/get/games")
+    const data = await r.json()
+    const games = data.games || []
+    setWc26Cache(games)
+    return games
+  }
 
   const lookupSingle = async () => {
     setLoading(true); setSingleResult(null)
@@ -1928,11 +1932,11 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
       const id = parseInt(matchId)
       const ourMatch = allMatches.find(m => m.id === id)
       if (!ourMatch) { setSingleResult({ error: `No existe partido con id ${id}` }); setLoading(false); return }
-      const fdId = ourMatch.fdId || knockoutMatches.find(m => m.id === id)?.fd_id
-      if (!fdId) { setSingleResult({ error: `Partido ${id} no tiene fdId`, our: ourMatch }); setLoading(false); return }
-      const r = await fetch(`/api/match?id=${fdId}`)
-      const data = await r.json()
-      setSingleResult({ our: ourMatch, fdId, fd: data })
+      const games = await fetchWc26()
+      const wc26Id = id <= 72 ? WC26_ID_MAP[id] : id
+      const g = games.find(g => parseInt(g.id) === wc26Id)
+      if (!g) { setSingleResult({ error: `No encontrado en worldcup26 (wc26Id=${wc26Id})`, our: ourMatch }); setLoading(false); return }
+      setSingleResult({ our: ourMatch, wc26Id, g })
     } catch(e) { setSingleResult({ error: e.message }) }
     setLoading(false)
   }
@@ -1940,24 +1944,20 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
   const lookupDate = async () => {
     setLoading(true); setDateResults([])
     try {
-      // Single request - proxy expands to day before/after automatically
-      const r = await fetch(`/api/sync?date=${dateStr}`)
-      const data = await r.json()
-      const fdMatches = data.matches || []
-      // Build fdId lookup
-      const fdById = {}
-      fdMatches.forEach(m => { fdById[m.id] = m })
-      // Find our matches for this date
-      // Our matches for the chosen date - dates in data.js are already in ARG
+      const games = await fetchWc26()
+      const wc26ById = {}
+      games.forEach(g => { wc26ById[parseInt(g.id)] = g })
       const ourToday = allMatches.filter(m => m.date?.slice(0, 10) === dateStr)
-      // Match by fdId
       const rows = ourToday.map(our => {
-        const fdId = our.fdId || knockoutMatches.find(m => m.id === our.id)?.fd_id
-        const fd = fdId ? fdById[fdId] : null
-        return { our, fdId, fd, matched: !!fd }
+        const wc26Id = our.id <= 72 ? WC26_ID_MAP[our.id] : our.id
+        const g = wc26ById[wc26Id]
+        return { our, wc26Id, g, matched: !!g }
       })
-      // Also show fd matches that didn't match any of ours
-      setDateResults({ rows, total: fdMatches.length })
+      setDateResults({ rows, total: games.filter(g => {
+        const d = g.local_date?.slice(0,10).split("/")
+        if (!d) return false
+        return `${d[2]}-${d[0]}-${d[1]}` === dateStr
+      }).length })
     } catch(e) { setDateResults({ error: e.message }) }
     setLoading(false)
   }
@@ -1966,7 +1966,7 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
     <div style={{ marginBottom: 14 }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ background: "#1a2035", border: "1px solid #6b7280", borderRadius: 8, padding: "8px 14px", color: "#6b7280", fontSize: 13, cursor: "pointer", width: "100%", marginBottom: open ? 8 : 0 }}>
-        🔬 Debug football-data
+        🔬 Debug worldcup26.ir
       </button>
       {open && (
         <div style={{ background: "#0f1624", border: "1px solid #1e2940", borderRadius: 8, padding: 12 }}>
@@ -1992,19 +1992,18 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
             {dateResults.rows?.length > 0 && (
               <div style={{ maxHeight: 300, overflowY: "auto" }}>
                 <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
-                  {dateResults.rows.length} partidos nuestros · {dateResults.total} en football-data ese día
+                  {dateResults.rows.length} partidos nuestros · {dateResults.total} en worldcup26 ese día
                 </div>
                 {dateResults.rows.map((row, i) => (
                   <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #1e2940", fontSize: 11 }}>
                     <span style={{ color: row.matched ? "#22c55e" : "#ef4444", marginRight: 5 }}>{row.matched ? "✓" : "✗"}</span>
                     <span style={{ color: "#e2e8f0", fontWeight: 600 }}>P{row.our.id}</span>
                     <span style={{ color: "#94a3b8" }}> {row.our.home} vs {row.our.away} · {row.our.date?.slice(11,16)} ARG</span>
-                    {row.fd && <>
+                    {row.g && <>
                       <span style={{ color: "#6b7280" }}> → </span>
-                      <span style={{ color: "#60a5fa" }}>{row.fd.homeTeam?.name || "?"} vs {row.fd.awayTeam?.name || "?"}</span>
-                      <span style={{ color: "#6b7280" }}> · {toArg(row.fd.utcDate)} · {row.fd.status}</span>
-                      {row.fd.venue?.name && <span style={{ color: "#6b7280" }}> · {row.fd.venue.name}</span>}
-                      {row.fd.score?.regularTime?.home != null && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.fd.score.regularTime.home}-{row.fd.score.regularTime.away}</span>}
+                      <span style={{ color: "#60a5fa" }}>{row.g.home_team_name_en} vs {row.g.away_team_name_en}</span>
+                      <span style={{ color: "#6b7280" }}> · {row.g.local_date} · {row.g.time_elapsed}</span>
+                      {row.g.finished === "TRUE" && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.g.home_score}-{row.g.away_score}</span>}
                     </>}
                   </div>
                 ))}
@@ -2028,14 +2027,14 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                   ? <div style={{ color: "#ef4444" }}>⚠️ {singleResult.error}</div>
                   : <>
                     <div style={{ color: "#94a3b8", marginBottom: 6 }}>
-                      <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {singleResult.our.home} vs {singleResult.our.away} · {singleResult.our.date} · fdId={singleResult.fdId}
+                      <span style={{ color: "#c8a84b", fontWeight: 700 }}>Nuestro:</span> {singleResult.our.home} vs {singleResult.our.away} · {singleResult.our.date} · wc26Id={singleResult.wc26Id}
                     </div>
                     <div style={{ color: "#94a3b8" }}>
-                      <span style={{ color: "#22c55e", fontWeight: 700 }}>Football-data:</span>{" "}
-                      {singleResult.fd.homeTeam?.name || "?"} vs {singleResult.fd.awayTeam?.name || "?"}{" "}
-                      · {singleResult.fd.utcDate ? toArg(singleResult.fd.utcDate) : "?"}{" "}
-                      · {singleResult.fd.status}{" "}
-                      {singleResult.fd.venue?.name && `· ${singleResult.fd.venue.name}`}
+                      <span style={{ color: "#22c55e", fontWeight: 700 }}>worldcup26:</span>{" "}
+                      {singleResult.g.home_team_name_en} vs {singleResult.g.away_team_name_en}{" "}
+                      · {singleResult.g.local_date}{" "}
+                      · {singleResult.g.time_elapsed}{" "}
+                      {singleResult.g.finished === "TRUE" && `· ${singleResult.g.home_score}-${singleResult.g.away_score}`}
                     </div>
                   </>
                 }

@@ -125,7 +125,9 @@ export function isLocked(dateStr) {
 }
 
 export function isSameDay(dateStr) {
-  const d = new Date(dateStr)
-  const now = new Date()
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  // Dates are Argentina time (UTC-3). Compare dates in ARG timezone for all users.
+  const d = new Date(dateStr + ":00-03:00")
+  const nowArg = new Date(new Date().toLocaleString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }))
+  const dArg = new Date(d.toLocaleString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }))
+  return dArg.getFullYear() === nowArg.getFullYear() && dArg.getMonth() === nowArg.getMonth() && dArg.getDate() === nowArg.getDate()
 }

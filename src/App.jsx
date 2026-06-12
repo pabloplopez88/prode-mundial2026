@@ -445,7 +445,7 @@ export default function App() {
   // Auto-sync on load and every 10 min
   useEffect(() => {
     doSync()
-    const interval = setInterval(doSync, 10 * 60 * 1000)
+    const interval = setInterval(doSync, 60 * 1000)
     return () => clearInterval(interval)
   }, [doSync])
 

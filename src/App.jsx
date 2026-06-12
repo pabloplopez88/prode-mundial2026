@@ -739,9 +739,9 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count finished matches (2hs since kickoff)
-      const matchStart = new Date(m.date)
-      const finished = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
+      // Only count finished matches (2hs since kickoff) - use server time
+      const matchStart = new Date(m.date + ":00-03:00")
+      const finished = serverNow() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
       if (!finished) return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
@@ -966,7 +966,7 @@ export default function App() {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
     // Partidos de hoy (fecha real)
-    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+    const todayMatches = MATCHES.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
     const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > serverNow()).slice(0, 6)
     const nextMatch = null

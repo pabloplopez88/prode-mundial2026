@@ -961,7 +961,7 @@ export default function App() {
     // Partidos de hoy (fecha real)
     const todayMatches = MATCHES.filter(m => isSameDay(m.date))
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date) > new Date()).slice(0, 6)
+    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > new Date()).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -1168,7 +1168,7 @@ export default function App() {
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
       const dbResult = getResult(match.id)
-      const matchStart = new Date(match.date)
+      const matchStart = new Date(match.date + ":00-03:00")
       const twoHoursPast = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
       const matchState = !locked ? "upcoming" : twoHoursPast ? "finished" : "inplay"
       return (
@@ -2009,7 +2009,7 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                     {row.g && <>
                       <span style={{ color: "#6b7280" }}> → </span>
                       <span style={{ color: "#60a5fa" }}>{row.g.home_team_name_en} vs {row.g.away_team_name_en}</span>
-                      <span style={{ color: "#6b7280" }}> · {stadiums[row.g.stadium_id] || row.g.stadium_id} · {row.g.time_elapsed}</span>
+                      <span style={{ color: "#6b7280" }}> · {stadiums[row.g.stadium_id] || row.g.stadium_id} · wc26: {row.g.local_date} · {row.g.time_elapsed}</span>
                       {row.g.finished === "TRUE" && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.g.home_score}-{row.g.away_score} ✓fin</span>}
                     </>}
                   </div>

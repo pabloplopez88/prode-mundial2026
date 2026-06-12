@@ -213,6 +213,7 @@ export default function App() {
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
   const [loading, setLoading] = useState(true)
+  const serverTimeOffsetRef = useRef(0) // ms difference: serverTime - clientTime
 
   // register form
   const [regName, setRegName] = useState("")
@@ -237,6 +238,8 @@ export default function App() {
   const [settPassError, setSettPassError] = useState("")
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
+  // Returns current time adjusted by server offset - immune to client clock manipulation
+  const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
 
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
@@ -268,6 +271,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    // Fetch server time to calculate offset - prevents client clock manipulation
+    fetch("/api/time").then(r => r.json()).then(({ now }) => {
+      serverTimeOffsetRef.current = new Date(now).getTime() - Date.now()
+    }).catch(() => { serverTimeOffsetRef.current = 0 })
     loadData()
     const saved = localStorage.getItem("prode_user")
     if (saved) {
@@ -451,7 +458,7 @@ export default function App() {
       const { data: existing } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
       const existingIds = new Set((existing || []).map(p => p.match_id))
       const toSave = MATCHES.filter(m => {
-        if (!isLocked(m.date)) return false
+        if (!(serverNow() >= new Date(m.date + ":00-03:00"))) return false
         return !existingIds.has(m.id) // only if not in DB at all
       })
       if (toSave.length === 0) return
@@ -503,7 +510,7 @@ export default function App() {
     return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
   }
   const todayUnbet = user ? MATCHES.filter(m => {
-    if (!isSameDay(m.date) || isLocked(m.date)) return false
+    if (!isSameDay(m.date) || (serverNow() >= new Date(m.date + ":00-03:00"))) return false
     return !hasPrediction(m.id)
   }) : []
 
@@ -961,7 +968,7 @@ export default function App() {
     // Partidos de hoy (fecha real)
     const todayMatches = MATCHES.filter(m => isSameDay(m.date))
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > new Date()).slice(0, 6)
+    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > serverNow()).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -1015,7 +1022,7 @@ export default function App() {
             {todayMatches.length === 0
               ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, amigo del campin </div>
               : todayMatches.map((m, i) => {
-                const locked = isLocked(m.date)
+                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
@@ -1087,7 +1094,7 @@ export default function App() {
             <div style={crd({ padding: 0, overflow: "hidden" })}>
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
               {upcomingMatches.map((m, i) => {
-                const locked = isLocked(m.date)
+                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
@@ -1163,13 +1170,13 @@ export default function App() {
     ]
 
     const renderMatchCard = (match) => {
-      const locked = isLocked(match.date)
+      const locked = (serverNow() >= new Date(match.date + ":00-03:00"))
       const result = getResult(match.id)
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
       const dbResult = getResult(match.id)
       const matchStart = new Date(match.date + ":00-03:00")
-      const twoHoursPast = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
+      const twoHoursPast = serverNow() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
       const matchState = !locked ? "upcoming" : twoHoursPast ? "finished" : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
@@ -2087,8 +2094,8 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-            {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+          <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "#6b7280" : "" }}>
+            {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "🔒 bloqueado" : ""}
           </div>
           {isInPlay && cur.match_time && (
             <div style={{ fontSize: 9, color: "#22c55e" }}>{`Última act. ${cur.match_time === "ET" ? "ET" : cur.match_time + "'"}`}</div>
@@ -2310,8 +2317,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: "#6b7280" }}><><span style={{ color: "#c8a84b", fontWeight: 700, marginRight: 6 }}>P{match.id}</span>{formatDate(match.date)}</></div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-                  {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "#6b7280" : "" }}>
+                  {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "🔒 bloqueado" : ""}
                 </div>
                 {isInPlay && cur.match_time && <div style={{ fontSize: 9, color: "#22c55e" }}>{cur.match_time === "ET" ? "Última act. ET" : `Última act. ${cur.match_time}'`}</div>}
               </div>

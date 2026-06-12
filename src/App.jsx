@@ -1923,6 +1923,25 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
     "11":"Nueva Jersey","12":"Toronto","13":"Vancouver","14":"Seattle",
     "15":"San Francisco","16":"Los Ángeles"
   }
+  // Local UTC offsets per stadium (June-July 2026, DST applies to USA/Canada)
+  const stadiumUTC = {
+    "1":-6,"2":-6,"3":-6,            // Mexico (no DST, fixed UTC-6)
+    "4":-5,"5":-5,"6":-5,            // USA Central (CDT = UTC-5)
+    "7":-4,"8":-4,"9":-4,"10":-4,"11":-4,"12":-4, // USA/Canada Eastern (EDT = UTC-4)
+    "13":-7,"14":-7,"15":-7,"16":-7  // USA/Canada Pacific (PDT = UTC-7)
+  }
+  const localToArg = (localDate, stadiumId) => {
+    if (!localDate) return "?"
+    const [datePart, timePart] = localDate.split(" ")
+    const [month, day, year] = datePart.split("/")
+    const [h, m] = timePart.split(":")
+    const offset = stadiumUTC[stadiumId] || -6
+    const argOffset = -3
+    const diffH = argOffset - offset
+    const dt = new Date(`${year}-${month}-${day}T${timePart}:00`)
+    dt.setHours(dt.getHours() + diffH)
+    return dt.toLocaleString("es-AR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })
+  }
 
   const fetchWc26 = async () => {
     if (wc26Cache) return wc26Cache
@@ -2009,7 +2028,7 @@ function WCDebugPanel({ allMatches, knockoutMatches }) {
                     {row.g && <>
                       <span style={{ color: "#6b7280" }}> → </span>
                       <span style={{ color: "#60a5fa" }}>{row.g.home_team_name_en} vs {row.g.away_team_name_en}</span>
-                      <span style={{ color: "#6b7280" }}> · {stadiums[row.g.stadium_id] || row.g.stadium_id} · wc26: {row.g.local_date} · {row.g.time_elapsed}</span>
+                      <span style={{ color: "#6b7280" }}> · {stadiums[row.g.stadium_id] || row.g.stadium_id} · wc26 local: {row.g.local_date} → ARG: {localToArg(row.g.local_date, row.g.stadium_id)} · {row.g.time_elapsed}</span>
                       {row.g.finished === "TRUE" && <span style={{ color: "#22c55e", fontWeight: 700 }}> {row.g.home_score}-{row.g.away_score} ✓fin</span>}
                     </>}
                   </div>

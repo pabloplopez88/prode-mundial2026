@@ -1618,24 +1618,26 @@ export default function App() {
                     const pred = playerPreds.find(p => p.match_id === m.id)
                     const pts = pred && result ? calcPoints(pred.home_score, pred.away_score, result.home_score, result.away_score) : null
                     return (
-                      <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0" }}>
-                        {/* Match */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: 13, color: C.textDim }}>{flag(m.home)} {m.home}</span>
-                          <span style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{result?.home_score} - {result?.away_score}</span>
-                          <span style={{ fontSize: 13, color: C.textDim }}>{m.away} {flag(m.away)}</span>
+                      <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0", display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* Left: match info + prediction */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: C.textDim }}>{flag(m.home)} {m.home}</span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{result?.home_score}-{result?.away_score}</span>
+                            <span style={{ fontSize: 12, color: C.textDim }}>{m.away} {flag(m.away)}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: C.textDim }}>
+                            {pred
+                              ? <>Pronóstico: <strong style={{ color: C.text }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (default)</span>}</>
+                              : <span style={{ color: C.muted }}>Sin pronóstico</span>
+                            }
+                          </div>
                         </div>
-                        {/* Prediction and points */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                          {pred
-                            ? <>
-                              <span style={{ fontSize: 12, color: C.textDim }}>
-                                Pronóstico: <strong style={{ color: C.text }}>{pred.home_score} - {pred.away_score}</strong>
-                                {pred.is_default && <span style={{ color: C.muted }}> (default)</span>}
-                              </span>
-                              {pts !== null && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>+{pts}pts</span>}
-                            </>
-                            : <span style={{ fontSize: 12, color: C.muted }}>Sin pronóstico</span>
+                        {/* Right: points */}
+                        <div style={{ minWidth: 44, textAlign: "right" }}>
+                          {pts !== null
+                            ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 800 }}>+{pts}</span>
+                            : <span style={{ color: C.muted, fontSize: 13 }}>—</span>
                           }
                         </div>
                       </div>

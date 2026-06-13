@@ -1616,7 +1616,7 @@ export default function App() {
                   : finishedMatches.map(m => {
                     const result = results.find(r => r.match_id === m.id)
                     const pred = playerPreds.find(p => p.match_id === m.id)
-                    const pts = pred && result ? calcPoints(pred.home_score, pred.away_score, result.home_score, result.away_score) : null
+                    const pts = pred && result ? calcPoints(parseInt(pred.home_score), parseInt(pred.away_score), parseInt(result.home_score), parseInt(result.away_score)) : null
                     return (
                       <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0", display: "flex", alignItems: "center", gap: 10 }}>
                         {/* Left: match info + prediction */}
@@ -1628,7 +1628,7 @@ export default function App() {
                           </div>
                           <div style={{ fontSize: 11, color: C.textDim }}>
                             {pred
-                              ? <>Pronóstico: <strong style={{ color: C.text }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (default)</span>}</>
+                              ? <>Pronóstico: <strong style={{ color: C.accent }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (default)</span>}</>
                               : <span style={{ color: C.muted }}>Sin pronóstico</span>
                             }
                           </div>
@@ -1637,7 +1637,9 @@ export default function App() {
                         <div style={{ minWidth: 44, textAlign: "right" }}>
                           {pts !== null
                             ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 800 }}>+{pts}</span>
-                            : <span style={{ color: C.muted, fontSize: 13 }}>—</span>
+                            : pred
+                              ? <span style={{ background: "#1e2940", color: C.muted, borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 800 }}>+0</span>
+                              : <span style={{ color: C.muted, fontSize: 13 }}>—</span>
                           }
                         </div>
                       </div>

@@ -198,6 +198,7 @@ export default function App() {
   const [transitioning, setTransitioning] = useState(false)
   const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
   const groupContentRef = useRef(null)
+  const doSyncRef = useRef(null)
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -442,12 +443,15 @@ export default function App() {
     }
   }, [knockoutMatches])
 
-  // Auto-sync on load and every 10 min
+  // Keep ref updated so interval always calls latest doSync
+  useEffect(() => { doSyncRef.current = doSync }, [doSync])
+
+  // Auto-sync on load and every 1 min - use ref to avoid resetting interval
   useEffect(() => {
-    doSync()
-    const interval = setInterval(doSync, 60 * 1000)
+    if (doSyncRef.current) doSyncRef.current()
+    const interval = setInterval(() => { if (doSyncRef.current) doSyncRef.current() }, 60 * 1000)
     return () => clearInterval(interval)
-  }, [doSync])
+  }, []) // empty deps - interval never resets
 
   // Auto-save default prediction when a match locks and user has no prediction
   useEffect(() => {
@@ -968,7 +972,12 @@ export default function App() {
     // Partidos de hoy (fecha real)
     const todayMatches = MATCHES.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > serverNow()).slice(0, 6)
+    const upcomingMatches = MATCHES.filter(m => {
+      const d = new Date(m.date + ':00-03:00')
+      const n = serverNow()
+      const sameDay = d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()
+      return !sameDay && d > n
+    }).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>

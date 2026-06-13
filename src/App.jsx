@@ -210,6 +210,7 @@ export default function App() {
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1568,7 +1569,7 @@ export default function App() {
         {board.length === 0
           ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>
           : board.map((p, i) => (
-            <div key={p.id} style={crd({ display: "flex", alignItems: "center", gap: 12, background: p.id === user.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#5a7a0a" : p.id === user.id ? C.accent : C.border}`, padding: "12px 16px" })}>
+            <div key={p.id} onClick={() => setSelectedPlayer(p)} style={crd({ display: "flex", alignItems: "center", gap: 12, background: p.id === user.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#5a7a0a" : p.id === user.id ? C.accent : C.border}`, padding: "12px 16px", cursor: "pointer" })}>
               <div style={{ fontSize: i < 3 ? 26 : 16, minWidth: 32, textAlign: "center", color: C.muted, fontWeight: 700 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}</div>
               <Avatar av={p.avatar} size={38} name={p.name} />
               <div style={{ flex: 1 }}>
@@ -1583,6 +1584,70 @@ export default function App() {
           ))
         }
       </div>
+
+      {/* Player history modal */}
+      {selectedPlayer && (() => {
+        const finishedMatches = allMatches.filter(m => {
+          const r = results.find(r => r.match_id === m.id)
+          return r?.status === "FINISHED"
+        })
+        const playerPreds = predictions.filter(p => p.player_id === selectedPlayer.id)
+        const playerBoard = board.find(b => b.id === selectedPlayer.id)
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedPlayer(null)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+                <Avatar av={selectedPlayer.avatar} size={48} name={selectedPlayer.name} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>{selectedPlayer.name}</div>
+                  <div style={{ fontSize: 13, color: C.textDim }}>{playerBoard?.played || 0} jugados · {playerBoard?.perfect || 0} plenos 🔥</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 30, fontWeight: 800, color: C.accent }}>{playerBoard?.total || 0}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>pts totales</div>
+                </div>
+                <button onClick={() => setSelectedPlayer(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer", marginLeft: 4 }}>✕</button>
+              </div>
+              {/* Match list */}
+              <div style={{ padding: "8px 16px 16px" }}>
+                {finishedMatches.length === 0
+                  ? <div style={{ color: C.textDim, textAlign: "center", padding: 20 }}>No hay partidos terminados</div>
+                  : finishedMatches.map(m => {
+                    const result = results.find(r => r.match_id === m.id)
+                    const pred = playerPreds.find(p => p.match_id === m.id)
+                    const pts = pred && result ? calcPoints(pred.home_score, pred.away_score, result.home_score, result.away_score) : null
+                    return (
+                      <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0" }}>
+                        {/* Match */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 13, color: C.textDim }}>{flag(m.home)} {m.home}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{result?.home_score} - {result?.away_score}</span>
+                          <span style={{ fontSize: 13, color: C.textDim }}>{m.away} {flag(m.away)}</span>
+                        </div>
+                        {/* Prediction and points */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                          {pred
+                            ? <>
+                              <span style={{ fontSize: 12, color: C.textDim }}>
+                                Pronóstico: <strong style={{ color: C.text }}>{pred.home_score} - {pred.away_score}</strong>
+                                {pred.is_default && <span style={{ color: C.muted }}> (default)</span>}
+                              </span>
+                              {pts !== null && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>+{pts}pts</span>}
+                            </>
+                            : <span style={{ fontSize: 12, color: C.muted }}>Sin pronóstico</span>
+                          }
+                        </div>
+                      </div>
+                    )
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <BottomNav />
     </div>
   )

@@ -743,10 +743,9 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count finished matches (2hs since kickoff) - use server time
-      const matchStart = new Date(m.date + ":00-03:00")
-      const finished = serverNow() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
-      if (!finished) return
+      // Only count matches confirmed finished by worldcup26
+      const result = results.find(r => r.match_id === m.id)
+      if (!result || result.status !== "FINISHED") return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
       const pts = calcPoints(pred, r)
@@ -1184,9 +1183,7 @@ export default function App() {
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
       const dbResult = getResult(match.id)
-      const matchStart = new Date(match.date + ":00-03:00")
-      const twoHoursPast = serverNow() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
-      const matchState = !locked ? "upcoming" : twoHoursPast ? "finished" : "inplay"
+      const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>

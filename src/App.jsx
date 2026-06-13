@@ -211,6 +211,7 @@ export default function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [selectedMatch, setSelectedMatch] = useState(null)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1160,6 +1161,60 @@ export default function App() {
             </div>
           )}
         </div>
+        {/* Match predictions modal (home tab) */}
+        {selectedMatch && (() => {
+          const result = results.find(r => r.match_id === selectedMatch.id)
+          const isFinished = result?.status === "FINISHED"
+          const isInPlay = result?.status === "IN_PLAY"
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
+              <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+                <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                        {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
+                        {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                        <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                        {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+                      </div>
+                    </div>
+                    <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+                  </div>
+                </div>
+                <div style={{ padding: "8px 16px 16px" }}>
+                  {players.map(p => {
+                    const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
+                    const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+                    return (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <Avatar av={p.avatar} size={32} name={p.name} />
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                        <div style={{ textAlign: "right" }}>
+                          {pred
+                            ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                            : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                          }
+                        </div>
+                        <div style={{ minWidth: 40, textAlign: "right" }}>
+                          {pts !== null
+                            ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                            : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                          }
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}
       </div>
@@ -1186,7 +1241,7 @@ export default function App() {
       const dbResult = getResult(match.id)
       const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
-        <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
+        <div key={match.id} id={"match-" + match.id} onClick={matchState !== "upcoming" ? () => setSelectedMatch(match) : undefined} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}
@@ -1625,7 +1680,7 @@ export default function App() {
                             {m.group
                               ? `Gr. ${m.group} · F.${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`
                               : m.stage
-                            } · {formatDate(m.date)} {formatTime(m.date)}
+                            } · {formatDate(m.date)}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                             <span style={{ fontSize: 12, color: C.textDim }}>{flag(m.home)} {m.home}</span>
@@ -1652,6 +1707,63 @@ export default function App() {
                     )
                   })
                 }
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Match predictions modal */}
+      {selectedMatch && (() => {
+        const result = results.find(r => r.match_id === selectedMatch.id)
+        const isFinished = result?.status === "FINISHED"
+        const isInPlay = result?.status === "IN_PLAY"
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                      {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
+                      {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                      {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+                </div>
+              </div>
+              {/* Players predictions */}
+              <div style={{ padding: "8px 16px 16px" }}>
+                {players.map(p => {
+                  const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
+                  const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+                  return (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                      <Avatar av={p.avatar} size={32} name={p.name} />
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                      <div style={{ textAlign: "right" }}>
+                        {pred
+                          ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                          : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                        }
+                      </div>
+                      <div style={{ minWidth: 40, textAlign: "right" }}>
+                        {pts !== null
+                          ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                          : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                        }
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

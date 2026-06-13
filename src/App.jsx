@@ -1590,7 +1590,7 @@ export default function App() {
         const finishedMatches = allMatches.filter(m => {
           const r = results.find(r => r.match_id === m.id)
           return r?.status === "FINISHED"
-        })
+        }).slice().reverse()
         const playerPreds = predictions.filter(p => p.player_id === selectedPlayer.id)
         const playerBoard = board.find(b => b.id === selectedPlayer.id)
         return (
@@ -1621,6 +1621,12 @@ export default function App() {
                       <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0", display: "flex", alignItems: "center", gap: 10 }}>
                         {/* Left: match info + prediction */}
                         <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 3 }}>
+                            {m.group
+                              ? `Gr. ${m.group} · F.${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`
+                              : m.stage
+                            } · {formatDate(m.date)} {formatTime(m.date)}
+                          </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                             <span style={{ fontSize: 12, color: C.textDim }}>{flag(m.home)} {m.home}</span>
                             <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{result?.home_score}-{result?.away_score}</span>

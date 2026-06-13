@@ -1616,7 +1616,7 @@ export default function App() {
                   : finishedMatches.map(m => {
                     const result = results.find(r => r.match_id === m.id)
                     const pred = playerPreds.find(p => p.match_id === m.id)
-                    const pts = pred && result ? calcPoints(parseInt(pred.home_score), parseInt(pred.away_score), parseInt(result.home_score), parseInt(result.away_score)) : null
+                    const pts = pred && result && result.home_score !== null ? calcPoints(pred, result) : null
                     return (
                       <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0", display: "flex", alignItems: "center", gap: 10 }}>
                         {/* Left: match info + prediction */}

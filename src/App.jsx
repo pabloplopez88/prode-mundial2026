@@ -1045,7 +1045,7 @@ export default function App() {
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
-                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
+                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: locked ? "pointer" : "default" }}>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}

@@ -504,8 +504,12 @@ export default function App() {
         resultsRef.current = updatedResults
         setResults(updatedResults)
 
-        // Save leaderboard snapshot if any match just became FINISHED
-        const newlyFinished = upserts.filter(u => u.status === "FINISHED")
+        // Save leaderboard snapshot only for matches that JUST became FINISHED (not already were)
+        const newlyFinished = upserts.filter(u => {
+          if (u.status !== "FINISHED") return false
+          const prev = resultsRef.current.find(r => r.match_id === u.match_id)
+          return !prev || prev.status !== "FINISHED" // only if it wasn't FINISHED before
+        })
         if (newlyFinished.length > 0) {
           const snapshotTime = new Date().toISOString()
           const { data: allPlayers } = await supabase.from("players").select("id,default_score")

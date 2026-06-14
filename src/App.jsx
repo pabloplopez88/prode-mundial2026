@@ -97,17 +97,14 @@ function PredBar({ matchId, predictions, players, homeTeam, awayTeam }) {
   ].filter(s => s.count > 0)
   return (
     <div style={{ marginTop: 10, padding: "0 4px" }}>
-      {/* Bar */}
-      <div style={{ display: "flex", borderRadius: 4, overflow: "hidden", height: 6 }}>
+      {/* Bar + labels aligned */}
+      <div style={{ display: "flex" }}>
         {sections.map((s, i) => (
-          <div key={i} style={{ flex: s.pct, background: s.color, borderLeft: i > 0 ? "1px solid #0a0e1a" : "none" }} />
-        ))}
-      </div>
-      {/* Labels with percentages and counts */}
-      <div style={{ display: "flex", marginTop: 5, gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
-        {sections.map((s, i) => (
-          <div key={i} style={{ fontSize: 10, color: s.labelColor, fontWeight: 700 }}>
-            {s.label} {s.pct}% <span style={{ color: "#4b5563", fontWeight: 400 }}>({s.count})</span>
+          <div key={i} style={{ flex: s.pct, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: "100%", height: 6, background: s.color, borderLeft: i > 0 ? "1px solid #0a0e1a" : "none" }} />
+            <div style={{ fontSize: 10, color: s.labelColor, fontWeight: 700, marginTop: 4, textAlign: "center", whiteSpace: "nowrap" }}>
+              {s.label} {s.pct}% <span style={{ color: "#4b5563", fontWeight: 400 }}>({s.count})</span>
+            </div>
           </div>
         ))}
       </div>

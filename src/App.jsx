@@ -1370,7 +1370,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ padding: "12px 14px", paddingBottom: 20, overflow: "hidden" }}
+      <div style={{ padding: "12px 14px", paddingBottom: 20 }}
         onTouchStart={e => {
           if (stage !== "Grupos") return
           window._swipeStartX = e.touches[0].clientX

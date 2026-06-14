@@ -1383,7 +1383,7 @@ export default function App() {
             window._swipeLocked = diffY > Math.abs(diffX) ? "vertical" : "horizontal"
           }
           if (window._swipeLocked === "vertical") return
-          if (window._swipeLocked === "horizontal") e.preventDefault()
+          if (window._swipeLocked === "horizontal" && Math.abs(diffX) > 10) e.preventDefault()
           const diff = diffX
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const idx = letters.indexOf(selectedGroup)
@@ -1402,7 +1402,10 @@ export default function App() {
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
           const diff = -(e.changedTouches[0].clientX - window._swipeStartX)
+          const diffY = Math.abs(e.changedTouches[0].clientY - window._swipeStartY)
           window._swipeStartX = undefined
+          // If it was a tap (small movement), let click fire naturally
+          if (Math.abs(diff) < 10 && diffY < 10) { setSwipeOffset(0); return }
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const w = window.innerWidth || 400
           const idx = letters.indexOf(selectedGroup)

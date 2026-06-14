@@ -504,39 +504,7 @@ export default function App() {
         resultsRef.current = updatedResults
         setResults(updatedResults)
 
-        // Save leaderboard snapshot only for matches that JUST became FINISHED (not already were)
-        const newlyFinished = upserts.filter(u => {
-          if (u.status !== "FINISHED") return false
-          const prev = resultsRef.current.find(r => r.match_id === u.match_id)
-          return !prev || prev.status !== "FINISHED" // only if it wasn't FINISHED before
-        })
-        if (newlyFinished.length > 0) {
-          const snapshotTime = new Date().toISOString()
-          const { data: allPlayers } = await supabase.from("players").select("id,default_score")
-          const { data: allPreds } = await supabase.from("predictions").select("*")
-          const { data: allResults } = await supabase.from("results").select("*")
-          if (allPlayers && allPreds && allResults) {
-            const snapBoard = allPlayers.map(p => {
-              let total = 0
-              MATCHES.forEach(m => {
-                const r = allResults.find(r => r.match_id === m.id)
-                if (!r || r.status !== "FINISHED" || r.home_score === null) return
-                const pred = allPreds.find(pr => pr.player_id === p.id && pr.match_id === m.id)
-                if (!pred) return
-                const pts = calcPoints(pred, r)
-                if (pts !== null) total += pts
-              })
-              return { player_id: p.id, total }
-            }).sort((a, b) => b.total - a.total)
-            const snapRows = snapBoard.map((p, i) => ({
-              snapshot_date: snapshotTime,
-              player_id: p.player_id,
-              total_pts: p.total,
-              rank: i + 1
-            }))
-            await supabase.from("leaderboard_snapshots").insert(snapRows)
-          }
-        }
+
       }
 
       let msg

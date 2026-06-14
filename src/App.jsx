@@ -1334,13 +1334,16 @@ export default function App() {
       const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id}
-          onTouchStart={matchState !== "upcoming" ? (e) => { window._matchTapX = e.touches[0].clientX; window._matchTapY = e.touches[0].clientY } : undefined}
-          onTouchEnd={matchState !== "upcoming" ? (e) => {
+          onTouchStart={(e) => { window._matchTapX = e.touches[0].clientX; window._matchTapY = e.touches[0].clientY }}
+          onTouchEnd={(e) => {
             const dx = Math.abs(e.changedTouches[0].clientX - (window._matchTapX || 0))
             const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
-            if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
-          } : undefined}
-          onClick={matchState === "upcoming" ? () => setSelectedUpcomingMatch(match) : undefined}
+            if (dx < 15 && dy < 15) {
+              e.stopPropagation()
+              if (matchState === "upcoming") setSelectedUpcomingMatch(match)
+              else setSelectedMatch(match)
+            }
+          }}
           style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: "pointer" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
@@ -1713,6 +1716,7 @@ export default function App() {
         })()}
       </div>
       <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
+      <UpcomingMatchModal match={selectedUpcomingMatch} predictions={predictions} players={players} onClose={() => setSelectedUpcomingMatch(null)} />
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>

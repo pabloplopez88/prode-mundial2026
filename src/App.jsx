@@ -1244,7 +1244,14 @@ export default function App() {
       const dbResult = getResult(match.id)
       const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
-        <div key={match.id} id={"match-" + match.id} onClick={matchState !== "upcoming" ? (e) => { if (Math.abs(-(e.clientX - (window._swipeStartX || e.clientX))) > 10) return; e.stopPropagation(); setSelectedMatch(match) } : undefined} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
+        <div key={match.id} id={"match-" + match.id}
+          onPointerDown={matchState !== "upcoming" ? (e) => { window._tapStartX = e.clientX; window._tapStartY = e.clientY } : undefined}
+          onPointerUp={matchState !== "upcoming" ? (e) => {
+            const dx = Math.abs(e.clientX - (window._tapStartX || e.clientX))
+            const dy = Math.abs(e.clientY - (window._tapStartY || e.clientY))
+            if (dx < 10 && dy < 10) setSelectedMatch(match)
+          } : undefined}
+          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}

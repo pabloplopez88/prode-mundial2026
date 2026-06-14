@@ -495,16 +495,44 @@ export default function App() {
 
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-        setResults(prev => {
-          const next = [...prev]
-          upserts.forEach(u => {
-            const idx = next.findIndex(r => r.match_id === u.match_id)
-            if (idx >= 0) next[idx] = { ...next[idx], ...u }
-            else next.push(u)
-          })
-          resultsRef.current = next
-          return next
+        const updatedResults = [...resultsRef.current]
+        upserts.forEach(u => {
+          const idx = updatedResults.findIndex(r => r.match_id === u.match_id)
+          if (idx >= 0) updatedResults[idx] = { ...updatedResults[idx], ...u }
+          else updatedResults.push(u)
         })
+        resultsRef.current = updatedResults
+        setResults(updatedResults)
+
+        // Save leaderboard snapshot if any match just became FINISHED
+        const newlyFinished = upserts.filter(u => u.status === "FINISHED")
+        if (newlyFinished.length > 0) {
+          const snapshotTime = new Date().toISOString()
+          const { data: allPlayers } = await supabase.from("players").select("id,default_score")
+          const { data: allPreds } = await supabase.from("predictions").select("*")
+          const { data: allResults } = await supabase.from("results").select("*")
+          if (allPlayers && allPreds && allResults) {
+            const snapBoard = allPlayers.map(p => {
+              let total = 0
+              MATCHES.forEach(m => {
+                const r = allResults.find(r => r.match_id === m.id)
+                if (!r || r.status !== "FINISHED" || r.home_score === null) return
+                const pred = allPreds.find(pr => pr.player_id === p.id && pr.match_id === m.id)
+                if (!pred) return
+                const pts = calcPoints(pred, r)
+                if (pts !== null) total += pts
+              })
+              return { player_id: p.id, total }
+            }).sort((a, b) => b.total - a.total)
+            const snapRows = snapBoard.map((p, i) => ({
+              snapshot_date: snapshotTime,
+              player_id: p.player_id,
+              total_pts: p.total,
+              rank: i + 1
+            }))
+            await supabase.from("leaderboard_snapshots").insert(snapRows)
+          }
+        }
       }
 
       let msg
@@ -1825,7 +1853,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} board={board} />
           )}
         </div>
       </div>
@@ -1911,7 +1939,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} board={board} />
           )}
         </div>
       </div>
@@ -2407,7 +2435,7 @@ function ResetPasswordPanel({ players, showFlash }) {
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players, serverNow }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players, serverNow, board }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
@@ -2454,6 +2482,18 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       <button onClick={async () => { const msg = await doSync(); showFlash("✓ " + (msg || "Sync completado")) }}
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
+      </button>
+      <button onClick={async () => {
+        const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+        const rows = players.map((p, i) => {
+          const pb = board.find(b => b.id === p.id)
+          return { snapshot_date: today, player_id: p.id, total_pts: pb?.total ?? 0, rank: i + 1 }
+        })
+        const { error } = await supabase.from("leaderboard_snapshots").upsert(rows, { onConflict: "snapshot_date,player_id" })
+        if (error) showFlash("❌ Error al guardar snapshot")
+        else showFlash(`✓ Snapshot guardado (${today})`)
+      }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
+        📸 Guardar snapshot de hoy
       </button>
       <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
 

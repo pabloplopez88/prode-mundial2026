@@ -1245,7 +1245,13 @@ export default function App() {
       const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
         <div key={match.id} id={"match-" + match.id}
-          onClick={matchState !== "upcoming" ? () => setSelectedMatch(match) : undefined}
+          onTouchStart={matchState !== "upcoming" ? (e) => { window._matchTapX = e.touches[0].clientX; window._matchTapY = e.touches[0].clientY } : undefined}
+          onTouchEnd={matchState !== "upcoming" ? (e) => {
+            e.stopPropagation()
+            const dx = Math.abs(e.changedTouches[0].clientX - (window._matchTapX || 0))
+            const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
+            if (dx < 15 && dy < 15) setSelectedMatch(match)
+          } : undefined}
           style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>

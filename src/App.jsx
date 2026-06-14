@@ -1269,7 +1269,7 @@ export default function App() {
             const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
             if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
           } : undefined}
-          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: "pointer" })}>
+          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}

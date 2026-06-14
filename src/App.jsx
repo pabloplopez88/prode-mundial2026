@@ -61,6 +61,20 @@ const WC26_ID_MAP = {
   61:62,62:61,63:65,64:66,65:63,66:64,67:67,68:68,69:71,70:72,71:69,72:70,
 }
 
+
+function ptsBadgeStyle(pts, extra = {}) {
+  const colors = {
+    0: { bg: "#1a1f2e", color: "#4b5563" },
+    1: { bg: "#1a2535", color: "#6b8db5" },
+    2: { bg: "#1c2e48", color: "#7eaacc" },
+    3: { bg: "#1e3354", color: "#93c5fd" },
+    4: { bg: "#1a3d6b", color: "#60a5fa" },
+    5: { bg: "#1e4080", color: "#3b9eff" },
+  }
+  const c = colors[Math.min(Math.max(pts, 0), 5)]
+  return { background: c.bg, color: c.color, borderRadius: 6, fontWeight: 800, ...extra }
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -231,7 +245,7 @@ function MatchModal({ match, results, predictions, players, onClose }) {
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>
                   {pts !== null
-                    ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                     : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                   }
                 </div>
@@ -1147,7 +1161,7 @@ export default function App() {
                           </div>
                           {effectivePred.isDefault && <div style={{ fontSize: 10, color: inPlay ? C.accent : C.muted, fontWeight: 600 }}>(default)</div>}
                           {pts !== null && !inPlay && (
-                            <div style={{ fontSize: 11, color: pts > 0 ? "#60a5fa" : C.muted, fontWeight: 700 }}>+{pts} pts</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: ptsBadgeStyle(pts ?? 0).color }}>+{pts} pts</div>
                           )}
                         </div>
                       )}
@@ -1269,7 +1283,7 @@ export default function App() {
                   F{match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}
                 </span>
               )}
-              {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+              {pts !== null && matchState === "finished" && <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "2px 7px", fontSize: 11 }}>+{pts}pts</span>}
               {matchState === "inplay" && <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
               </div>}
@@ -1717,9 +1731,9 @@ export default function App() {
                         {/* Right: points */}
                         <div style={{ minWidth: 44, textAlign: "right" }}>
                           {pts !== null
-                            ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 800 }}>+{pts}</span>
+                            ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "4px 8px", fontSize: 13 }}>+{pts}</span>
                             : pred
-                              ? <span style={{ background: "#1e2940", color: C.muted, borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 800 }}>+0</span>
+                              ? <span style={{ ...ptsBadgeStyle(0), padding: "4px 8px", fontSize: 13 }}>+0</span>
                               : <span style={{ color: C.muted, fontSize: 13 }}>—</span>
                           }
                         </div>
@@ -2044,7 +2058,7 @@ export default function App() {
                   </div>
                   <div style={{ minWidth: 40, textAlign: "right" }}>
                     {pts !== null
-                      ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                       : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                     }
                   </div>

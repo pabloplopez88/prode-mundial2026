@@ -197,6 +197,77 @@ function InfoContent() {
 }
 
 
+
+function UpcomingMatchModal({ match, predictions, players, onClose }) {
+  if (!match) return null
+  const total = players.length
+  const preds = predictions.filter(p => p.match_id === match.id)
+  const missing = total - preds.length
+  let homeW = 0, draw = 0, awayW = 0
+  preds.forEach(p => {
+    const h = parseInt(p.home_score), a = parseInt(p.away_score)
+    if (isNaN(h) || isNaN(a)) return
+    if (h > a) homeW++
+    else if (h === a) draw++
+    else awayW++
+  })
+  const voted = homeW + draw + awayW
+  const pct = v => voted > 0 ? Math.round(v / voted * 100) : 0
+  const ph = pct(homeW), pd = pct(draw), pa = pct(awayW)
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={onClose}>
+      <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                {match.group ? `Gr. ${match.group} · F.${match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}` : match.stage} · {formatDate(match.date)}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(match.home)} {match.home}</span>
+                <span style={{ color: C.muted }}>vs</span>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{match.away} {flag(match.away)}</span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+          </div>
+        </div>
+        {/* Bar */}
+        <div style={{ padding: "24px 20px" }}>
+          {voted === 0
+            ? <div style={{ textAlign: "center", color: C.muted, fontSize: 13 }}>Ningún jugador cargó su pronóstico todavía</div>
+            : <>
+              {/* Percentages */}
+              <div style={{ display: "flex", marginBottom: 6 }}>
+                <div style={{ flex: ph, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#60a5fa", minWidth: ph > 0 ? 20 : 0 }}>{ph > 0 ? `${ph}%` : ""}</div>
+                <div style={{ flex: pd, textAlign: "center", fontSize: 12, fontWeight: 700, color: C.accent, minWidth: pd > 0 ? 20 : 0 }}>{pd > 0 ? `${pd}%` : ""}</div>
+                <div style={{ flex: pa, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#f87171", minWidth: pa > 0 ? 20 : 0 }}>{pa > 0 ? `${pa}%` : ""}</div>
+              </div>
+              {/* Bar */}
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", height: 28 }}>
+                {ph > 0 && <div style={{ flex: ph, background: "#1e3a5f", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 11, color: "#93c5fd", fontWeight: 700 }}>{match.home.split(" ")[0]}</span></div>}
+                {pd > 0 && <div style={{ flex: pd, background: "#2a2010", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: ph > 0 ? "1px solid #0a0e1a" : "none", borderRight: pa > 0 ? "1px solid #0a0e1a" : "none" }}><span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Empate</span></div>}
+                {pa > 0 && <div style={{ flex: pa, background: "#3f1515", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 700 }}>{match.away.split(" ")[0]}</span></div>}
+              </div>
+              {/* Labels */}
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 11, color: C.textDim }}>
+                <span>{flag(match.home)} {match.home}</span>
+                <span>{flag(match.away)} {match.away}</span>
+              </div>
+            </>
+          }
+          {missing > 0 && (
+            <div style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+              {missing} jugador{missing > 1 ? "es" : ""} aún no completó{missing > 1 ? "ron" : ""} su pronóstico
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MatchModal({ match, results, predictions, players, onClose }) {
   if (!match) return null
   const result = results.find(r => r.match_id === match.id)
@@ -288,6 +359,7 @@ export default function App() {
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [selectedUpcomingMatch, setSelectedUpcomingMatch] = useState(null)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1268,7 +1340,8 @@ export default function App() {
             const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
             if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
           } : undefined}
-          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
+          onClick={matchState === "upcoming" ? () => setSelectedUpcomingMatch(match) : undefined}
+          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: "pointer" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}

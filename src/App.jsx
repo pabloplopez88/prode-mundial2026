@@ -182,6 +182,62 @@ function InfoContent() {
   )
 }
 
+
+function MatchModal({ match, results, predictions, players, onClose }) {
+  if (!match) return null
+  const result = results.find(r => r.match_id === match.id)
+  const isFinished = result?.status === "FINISHED"
+  const isInPlay = result?.status === "IN_PLAY"
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={onClose}>
+      <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                {match.group ? `Gr. ${match.group} · F.${match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}` : match.stage} · {formatDate(match.date)}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(match.home)} {match.home}</span>
+                {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{match.away} {flag(match.away)}</span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding: "8px 16px 16px" }}>
+          {players.map(p => {
+            const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
+            const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+            return (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                <Avatar av={p.avatar} size={32} name={p.name} />
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ textAlign: "right" }}>
+                  {pred
+                    ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                    : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                  }
+                </div>
+                <div style={{ minWidth: 40, textAlign: "right" }}>
+                  {pts !== null
+                    ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                    : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                  }
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState("home")
   const [user, setUser] = useState(null)
@@ -1161,60 +1217,7 @@ export default function App() {
             </div>
           )}
         </div>
-        {/* Match predictions modal (home tab) */}
-        {selectedMatch && (() => {
-          const result = results.find(r => r.match_id === selectedMatch.id)
-          const isFinished = result?.status === "FINISHED"
-          const isInPlay = result?.status === "IN_PLAY"
-          return (
-            <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
-              <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
-                <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
-                        {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
-                        {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
-                        <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
-                      </div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
-                        {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
-                      </div>
-                    </div>
-                    <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
-                  </div>
-                </div>
-                <div style={{ padding: "8px 16px 16px" }}>
-                  {players.map(p => {
-                    const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
-                    const pts = isFinished && pred && result ? calcPoints(pred, result) : null
-                    return (
-                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                        <Avatar av={p.avatar} size={32} name={p.name} />
-                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                        <div style={{ textAlign: "right" }}>
-                          {pred
-                            ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
-                            : <span style={{ fontSize: 13, color: C.muted }}>—</span>
-                          }
-                        </div>
-                        <div style={{ minWidth: 40, textAlign: "right" }}>
-                          {pts !== null
-                            ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
-                            : <span style={{ fontSize: 12, color: C.muted }}>—</span>
-                          }
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )
-        })()}
+        <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}
       </div>
@@ -1713,63 +1716,7 @@ export default function App() {
         )
       })()}
 
-      {/* Match predictions modal */}
-      {selectedMatch && (() => {
-        const result = results.find(r => r.match_id === selectedMatch.id)
-        const isFinished = result?.status === "FINISHED"
-        const isInPlay = result?.status === "IN_PLAY"
-        return (
-          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
-            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
-              {/* Header */}
-              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
-                      {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
-                      {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
-                      <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
-                      {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
-                </div>
-              </div>
-              {/* Players predictions */}
-              <div style={{ padding: "8px 16px 16px" }}>
-                {players.map(p => {
-                  const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
-                  const pts = isFinished && pred && result ? calcPoints(pred, result) : null
-                  return (
-                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                      <Avatar av={p.avatar} size={32} name={p.name} />
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                      <div style={{ textAlign: "right" }}>
-                        {pred
-                          ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
-                          : <span style={{ fontSize: 13, color: C.muted }}>—</span>
-                        }
-                      </div>
-                      <div style={{ minWidth: 40, textAlign: "right" }}>
-                        {pts !== null
-                          ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
-                          : <span style={{ fontSize: 12, color: C.muted }}>—</span>
-                        }
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
+      <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
       <BottomNav />
     </div>
   )
@@ -2038,6 +1985,61 @@ export default function App() {
       </div>
     )
   }
+
+  // (MatchModal is now a standalone component)
+  const _unused = selectedMatch ? (() => {
+    const result = results.find(r => r.match_id === selectedMatch.id)
+    const isFinished = result?.status === "FINISHED"
+    const isInPlay = result?.status === "IN_PLAY"
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
+        <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                  {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
+                  {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                  {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+                </div>
+              </div>
+              <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+          </div>
+          <div style={{ padding: "8px 16px 16px" }}>
+            {players.map(p => {
+              const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
+              const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <Avatar av={p.avatar} size={32} name={p.name} />
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                  <div style={{ textAlign: "right" }}>
+                    {pred
+                      ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                      : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                    }
+                  </div>
+                  <div style={{ minWidth: 40, textAlign: "right" }}>
+                    {pts !== null
+                      ? <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "3px 7px", fontSize: 12, fontWeight: 800 }}>+{pts}</span>
+                      : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                    }
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  })() : null
 
   return null
 }

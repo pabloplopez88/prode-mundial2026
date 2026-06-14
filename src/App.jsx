@@ -1624,7 +1624,6 @@ export default function App() {
         })()}
       </div>
       <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
-      {selectedMatch && <div style={{position:"fixed",top:10,left:10,zIndex:9999,background:"red",color:"white",padding:10}}>MATCH: {selectedMatch.id}</div>}
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>

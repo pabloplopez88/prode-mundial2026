@@ -2488,14 +2488,13 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         ⚡ Sync manual
       </button>
       <button onClick={async () => {
-        const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
-        const rows = players.map((p, i) => {
-          const pb = board.find(b => b.id === p.id)
-          return { snapshot_date: today, player_id: p.id, total_pts: pb?.total ?? 0, rank: i + 1 }
-        })
-        const { error } = await supabase.from("leaderboard_snapshots").upsert(rows, { onConflict: "snapshot_date,player_id" })
-        if (error) showFlash("❌ Error al guardar snapshot")
-        else showFlash(`✓ Snapshot guardado (${today})`)
+        const now = new Date().toISOString()
+        const rows = board.map((p, i) => ({
+          snapshot_date: now, player_id: p.id, total_pts: p.total ?? 0, rank: i + 1
+        }))
+        const { error } = await supabase.from("leaderboard_snapshots").insert(rows)
+        if (error) showFlash("❌ Error: " + error.message)
+        else showFlash(`✓ Snapshot guardado`)
       }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         📸 Guardar snapshot de hoy
       </button>

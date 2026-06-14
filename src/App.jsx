@@ -210,7 +210,13 @@ function MatchModal({ match, results, predictions, players, onClose }) {
           </div>
         </div>
         <div style={{ padding: "8px 16px 16px" }}>
-          {players.map(p => {
+          {[...players].sort((a, b) => {
+            const pA = predictions.find(pr => pr.player_id === a.id && pr.match_id === match.id)
+            const pB = predictions.find(pr => pr.player_id === b.id && pr.match_id === match.id)
+            const ptA = isFinished && pA && result ? calcPoints(pA, result) : -1
+            const ptB = isFinished && pB && result ? calcPoints(pB, result) : -1
+            return ptB - ptA
+          }).map(p => {
             const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
             const pts = isFinished && pred && result ? calcPoints(pred, result) : null
             return (

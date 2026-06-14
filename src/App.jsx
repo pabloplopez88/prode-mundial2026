@@ -2457,12 +2457,15 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       </button>
       <button onClick={async () => {
         const now = new Date().toISOString()
+        // Get next snapshot number
+        const { data: last } = await supabase.from("leaderboard_snapshots").select("snapshot_num").order("snapshot_num", { ascending: false }).limit(1)
+        const nextNum = (last?.[0]?.snapshot_num ?? 0) + 1
         const rows = board.map((p, i) => ({
-          snapshot_date: now, player_id: p.id, total_pts: p.total ?? 0, rank: i + 1
+          snapshot_date: now, snapshot_num: nextNum, player_id: p.id, total_pts: p.total ?? 0, rank: i + 1
         }))
         const { error } = await supabase.from("leaderboard_snapshots").insert(rows)
         if (error) showFlash("❌ Error: " + error.message)
-        else showFlash(`✓ Snapshot guardado`)
+        else showFlash(`✓ Snapshot #${nextNum} guardado`)
       }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         📸 Guardar snapshot de hoy
       </button>

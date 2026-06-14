@@ -75,6 +75,46 @@ function ptsBadgeStyle(pts, extra = {}) {
   return { background: c.bg, color: c.color, borderRadius: 6, fontWeight: 800, ...extra }
 }
 
+
+function PredBar({ matchId, predictions, players, homeTeam, awayTeam }) {
+  const total = players.length
+  const preds = predictions.filter(p => p.match_id === matchId)
+  const missing = total - preds.length
+  let hw = 0, dr = 0, aw = 0
+  preds.forEach(p => {
+    const h = parseInt(p.home_score), a = parseInt(p.away_score)
+    if (isNaN(h) || isNaN(a)) return
+    if (h > a) hw++; else if (h === a) dr++; else aw++
+  })
+  const voted = hw + dr + aw
+  if (voted === 0) return null
+  const ph = Math.round(hw / voted * 100)
+  const pd = Math.round(dr / voted * 100)
+  const pa = 100 - ph - pd
+  return (
+    <div style={{ marginBottom: 8 }}>
+      {/* Percentages row */}
+      <div style={{ display: "flex", fontSize: 10, fontWeight: 700, marginBottom: 3 }}>
+        <div style={{ flex: ph || 0.01, textAlign: "center", color: "#60a5fa" }}>{ph > 0 ? `${ph}%` : ""}</div>
+        <div style={{ flex: pd || 0.01, textAlign: "center", color: "#c8a84b" }}>{pd > 0 ? `${pd}%` : ""}</div>
+        <div style={{ flex: pa || 0.01, textAlign: "center", color: "#f87171" }}>{pa > 0 ? `${pa}%` : ""}</div>
+      </div>
+      {/* Bar */}
+      <div style={{ display: "flex", borderRadius: 4, overflow: "hidden", height: 6 }}>
+        {ph > 0 && <div style={{ flex: ph, background: "#1e4080" }} />}
+        {pd > 0 && <div style={{ flex: pd, background: "#5a4010", borderLeft: ph > 0 ? "1px solid #0a0e1a" : "none", borderRight: pa > 0 ? "1px solid #0a0e1a" : "none" }} />}
+        {pa > 0 && <div style={{ flex: pa, background: "#5a1515" }} />}
+      </div>
+      {/* Labels */}
+      <div style={{ display: "flex", fontSize: 9, color: "#4b5563", marginTop: 3 }}>
+        <div style={{ flex: ph || 0.01, textAlign: "left" }}>{homeTeam.split(" ")[0]}</div>
+        <div style={{ flex: pd || 0.01, textAlign: "center" }}>Emp.</div>
+        <div style={{ flex: pa || 0.01, textAlign: "right" }}>{awayTeam.split(" ")[0]}</div>
+      </div>
+    </div>
+  )
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -1124,6 +1164,7 @@ export default function App() {
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
                     {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
+                    {!locked && <PredBar matchId={m.id} predictions={predictions} players={players} homeTeam={m.home} awayTeam={m.away} />}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
@@ -2325,6 +2366,7 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
           )}
         </div>
       </div>
+          {matchState === "upcoming" && <PredBar matchId={match.id} predictions={predictions} players={players} homeTeam={match.home} awayTeam={match.away} />}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ flex: 1, textAlign: "right", fontSize: 12, fontWeight: 700 }}>
           {(FLAGS && FLAGS[match.home]) || "🏳️"} {match.home}

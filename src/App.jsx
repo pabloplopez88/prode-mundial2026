@@ -1113,11 +1113,8 @@ export default function App() {
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
-                const matchStart2 = new Date(m.date)
-                const twoHrsPast = new Date() >= new Date(matchStart2.getTime() + 2 * 60 * 60 * 1000)
-                const inPlay = locked && !twoHrsPast
-                const inProgress = locked && result && result.home_score !== null
-                const finished = inProgress // for now same signal; could add status field later
+                const inPlay = locked && result?.status === "IN_PLAY"
+                const finished = locked && result?.status === "FINISHED"
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (

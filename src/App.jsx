@@ -61,6 +61,20 @@ const WC26_ID_MAP = {
   61:62,62:61,63:65,64:66,65:63,66:64,67:67,68:68,69:71,70:72,71:69,72:70,
 }
 
+
+function ptsBadgeStyle(pts, extra = {}) {
+  const colors = {
+    0: { bg: "#1a1f2e", color: "#4b5563" },
+    1: { bg: "#1a2535", color: "#6b8db5" },
+    2: { bg: "#1c2e48", color: "#7eaacc" },
+    3: { bg: "#1e3354", color: "#93c5fd" },
+    4: { bg: "#1a3d6b", color: "#60a5fa" },
+    5: { bg: "#1e4080", color: "#3b9eff" },
+  }
+  const c = colors[Math.min(Math.max(pts, 0), 5)]
+  return { background: c.bg, color: c.color, borderRadius: 6, fontWeight: 800, ...extra }
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -182,6 +196,69 @@ function InfoContent() {
   )
 }
 
+
+
+function MatchModal({ match, results, predictions, players, onClose }) {
+  if (!match) return null
+  const result = results.find(r => r.match_id === match.id)
+  const isFinished = result?.status === "FINISHED"
+  const isInPlay = result?.status === "IN_PLAY"
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={onClose}>
+      <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                {match.group ? `Gr. ${match.group} · F.${match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}` : match.stage} · {formatDate(match.date)}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(match.home)} {match.home}</span>
+                {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{match.away} {flag(match.away)}</span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding: "8px 16px 16px" }}>
+          {[...players].sort((a, b) => {
+            const pA = predictions.find(pr => pr.player_id === a.id && pr.match_id === match.id)
+            const pB = predictions.find(pr => pr.player_id === b.id && pr.match_id === match.id)
+            const ptA = isFinished && pA && result ? calcPoints(pA, result) : -1
+            const ptB = isFinished && pB && result ? calcPoints(pB, result) : -1
+            return ptB - ptA
+          }).map(p => {
+            const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
+            const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+            return (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                <Avatar av={p.avatar} size={32} name={p.name} />
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ textAlign: "right" }}>
+                  {pred
+                    ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                    : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                  }
+                </div>
+                <div style={{ minWidth: 40, textAlign: "right" }}>
+                  {pts !== null
+                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                    : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                  }
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState("home")
   const [user, setUser] = useState(null)
@@ -198,6 +275,7 @@ export default function App() {
   const [transitioning, setTransitioning] = useState(false)
   const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
   const groupContentRef = useRef(null)
+  const doSyncRef = useRef(null)
   const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
@@ -209,10 +287,13 @@ export default function App() {
   const [regClosesAt, setRegClosesAt] = useState("")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [selectedMatch, setSelectedMatch] = useState(null)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
   const [loading, setLoading] = useState(true)
+  const serverTimeOffsetRef = useRef(0) // ms difference: serverTime - clientTime
 
   // register form
   const [regName, setRegName] = useState("")
@@ -237,6 +318,8 @@ export default function App() {
   const [settPassError, setSettPassError] = useState("")
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
+  // Returns current time adjusted by server offset - immune to client clock manipulation
+  const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
 
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
@@ -268,6 +351,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    // Fetch server time to calculate offset - prevents client clock manipulation
+    fetch("/api/time").then(r => r.json()).then(({ now }) => {
+      serverTimeOffsetRef.current = new Date(now).getTime() - Date.now()
+    }).catch(() => { serverTimeOffsetRef.current = 0 })
     loadData()
     const saved = localStorage.getItem("prode_user")
     if (saved) {
@@ -435,12 +522,15 @@ export default function App() {
     }
   }, [knockoutMatches])
 
-  // Auto-sync on load and every 10 min
+  // Keep ref updated so interval always calls latest doSync
+  useEffect(() => { doSyncRef.current = doSync }, [doSync])
+
+  // Auto-sync on load and every 1 min - use ref to avoid resetting interval
   useEffect(() => {
-    doSync()
-    const interval = setInterval(doSync, 10 * 60 * 1000)
+    if (doSyncRef.current) doSyncRef.current()
+    const interval = setInterval(() => { if (doSyncRef.current) doSyncRef.current() }, 60 * 1000)
     return () => clearInterval(interval)
-  }, [doSync])
+  }, []) // empty deps - interval never resets
 
   // Auto-save default prediction when a match locks and user has no prediction
   useEffect(() => {
@@ -451,7 +541,7 @@ export default function App() {
       const { data: existing } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
       const existingIds = new Set((existing || []).map(p => p.match_id))
       const toSave = MATCHES.filter(m => {
-        if (!isLocked(m.date)) return false
+        if (!(serverNow() >= new Date(m.date + ":00-03:00"))) return false
         return !existingIds.has(m.id) // only if not in DB at all
       })
       if (toSave.length === 0) return
@@ -503,7 +593,7 @@ export default function App() {
     return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
   }
   const todayUnbet = user ? MATCHES.filter(m => {
-    if (!isSameDay(m.date) || isLocked(m.date)) return false
+    if (!isSameDay(m.date) || (serverNow() >= new Date(m.date + ":00-03:00"))) return false
     return !hasPrediction(m.id)
   }) : []
 
@@ -732,10 +822,9 @@ export default function App() {
     MATCHES.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count finished matches (2hs since kickoff)
-      const matchStart = new Date(m.date)
-      const finished = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
-      if (!finished) return
+      // Only count matches confirmed finished by worldcup26
+      const result = results.find(r => r.match_id === m.id)
+      if (!result || result.status !== "FINISHED") return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
       const pts = calcPoints(pred, r)
@@ -959,9 +1048,14 @@ export default function App() {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
     // Partidos de hoy (fecha real)
-    const todayMatches = MATCHES.filter(m => isSameDay(m.date))
+    const todayMatches = MATCHES.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => !isSameDay(m.date) && new Date(m.date + ':00-03:00') > new Date()).slice(0, 6)
+    const upcomingMatches = MATCHES.filter(m => {
+      const d = new Date(m.date + ':00-03:00')
+      const n = serverNow()
+      const sameDay = d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()
+      return !sameDay && d > n
+    }).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -1015,20 +1109,17 @@ export default function App() {
             {todayMatches.length === 0
               ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, amigo del campin </div>
               : todayMatches.map((m, i) => {
-                const locked = isLocked(m.date)
+                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
-                const matchStart2 = new Date(m.date)
-                const twoHrsPast = new Date() >= new Date(matchStart2.getTime() + 2 * 60 * 60 * 1000)
-                const inPlay = locked && !twoHrsPast
-                const inProgress = locked && result && result.home_score !== null
-                const finished = inProgress // for now same signal; could add status field later
+                const inPlay = locked && result?.status === "IN_PLAY"
+                const finished = locked && result?.status === "FINISHED"
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
-                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative" }}>
+                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: locked ? "pointer" : "default" }}>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
@@ -1068,7 +1159,7 @@ export default function App() {
                           </div>
                           {effectivePred.isDefault && <div style={{ fontSize: 10, color: inPlay ? C.accent : C.muted, fontWeight: 600 }}>(default)</div>}
                           {pts !== null && !inPlay && (
-                            <div style={{ fontSize: 11, color: pts > 0 ? "#60a5fa" : C.muted, fontWeight: 700 }}>+{pts} pts</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: ptsBadgeStyle(pts ?? 0).color }}>+{pts} pts</div>
                           )}
                         </div>
                       )}
@@ -1087,7 +1178,7 @@ export default function App() {
             <div style={crd({ padding: 0, overflow: "hidden" })}>
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
               {upcomingMatches.map((m, i) => {
-                const locked = isLocked(m.date)
+                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
                 const result = getResult(m.id)
                 const pred = myPred(m.id, locked)
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
@@ -1144,6 +1235,7 @@ export default function App() {
             </div>
           )}
         </div>
+        <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}
       </div>
@@ -1163,16 +1255,21 @@ export default function App() {
     ]
 
     const renderMatchCard = (match) => {
-      const locked = isLocked(match.date)
+      const locked = (serverNow() >= new Date(match.date + ":00-03:00"))
       const result = getResult(match.id)
       const pred = myPred(match.id, locked)
       const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
       const dbResult = getResult(match.id)
-      const matchStart = new Date(match.date + ":00-03:00")
-      const twoHoursPast = new Date() >= new Date(matchStart.getTime() + 2 * 60 * 60 * 1000)
-      const matchState = !locked ? "upcoming" : twoHoursPast ? "finished" : "inplay"
+      const matchState = !locked ? "upcoming" : (result?.status === "FINISHED") ? "finished" : (result?.status === "IN_PLAY") ? "inplay" : "inplay"
       return (
-        <div key={match.id} id={"match-" + match.id} style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12 })}>
+        <div key={match.id} id={"match-" + match.id}
+          onTouchStart={matchState !== "upcoming" ? (e) => { window._matchTapX = e.touches[0].clientX; window._matchTapY = e.touches[0].clientY } : undefined}
+          onTouchEnd={matchState !== "upcoming" ? (e) => {
+            const dx = Math.abs(e.changedTouches[0].clientX - (window._matchTapX || 0))
+            const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
+            if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
+          } : undefined}
+          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}
@@ -1184,7 +1281,7 @@ export default function App() {
                   F{match.id <= 24 ? 1 : match.id <= 48 ? 2 : 3}
                 </span>
               )}
-              {pts !== null && matchState === "finished" && <span style={{ background: pts > 0 ? "#1e3a5f" : "#1e2940", color: pts > 0 ? "#60a5fa" : C.muted, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>+{pts}pts</span>}
+              {pts !== null && matchState === "finished" && <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "2px 7px", fontSize: 11 }}>+{pts}pts</span>}
               {matchState === "inplay" && <div style={{ background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
               </div>}
@@ -1291,7 +1388,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ padding: "12px 14px", paddingBottom: 20, overflow: "hidden" }}
+      <div style={{ padding: "12px 14px", paddingBottom: 20 }}
         onTouchStart={e => {
           if (stage !== "Grupos") return
           window._swipeStartX = e.touches[0].clientX
@@ -1309,7 +1406,7 @@ export default function App() {
             window._swipeLocked = diffY > Math.abs(diffX) ? "vertical" : "horizontal"
           }
           if (window._swipeLocked === "vertical") return
-          if (window._swipeLocked === "horizontal") e.preventDefault()
+          if (window._swipeLocked === "horizontal" && Math.abs(diffX) > 10) e.preventDefault()
           const diff = diffX
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const idx = letters.indexOf(selectedGroup)
@@ -1328,7 +1425,10 @@ export default function App() {
         onTouchEnd={e => {
           if (window._swipeStartX === undefined) return
           const diff = -(e.changedTouches[0].clientX - window._swipeStartX)
+          const diffY = Math.abs(e.changedTouches[0].clientY - window._swipeStartY)
           window._swipeStartX = undefined
+          // If it was a tap (small movement), let click fire naturally
+          if (Math.abs(diff) < 10 && diffY < 10) { setSwipeOffset(0); return }
           const letters = ["A","B","C","D","E","F","G","H","I","J","K","L"]
           const w = window.innerWidth || 400
           const idx = letters.indexOf(selectedGroup)
@@ -1540,6 +1640,7 @@ export default function App() {
           )
         })()}
       </div>
+      <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>
@@ -1555,7 +1656,7 @@ export default function App() {
         {board.length === 0
           ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>
           : board.map((p, i) => (
-            <div key={p.id} style={crd({ display: "flex", alignItems: "center", gap: 12, background: p.id === user.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#5a7a0a" : p.id === user.id ? C.accent : C.border}`, padding: "12px 16px" })}>
+            <div key={p.id} onClick={() => setSelectedPlayer(p)} style={crd({ display: "flex", alignItems: "center", gap: 12, background: p.id === user.id ? "#131c2e" : C.card, border: `1px solid ${i === 0 ? "#5a7a0a" : p.id === user.id ? C.accent : C.border}`, padding: "12px 16px", cursor: "pointer" })}>
               <div style={{ fontSize: i < 3 ? 26 : 16, minWidth: 32, textAlign: "center", color: C.muted, fontWeight: 700 }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}</div>
               <Avatar av={p.avatar} size={38} name={p.name} />
               <div style={{ flex: 1 }}>
@@ -1570,6 +1671,80 @@ export default function App() {
           ))
         }
       </div>
+
+      {/* Player history modal */}
+      {selectedPlayer && (() => {
+        const finishedMatches = allMatches.filter(m => {
+          const r = results.find(r => r.match_id === m.id)
+          return r?.status === "FINISHED"
+        }).slice().reverse()
+        const playerPreds = predictions.filter(p => p.player_id === selectedPlayer.id)
+        const playerBoard = board.find(b => b.id === selectedPlayer.id)
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedPlayer(null)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+                <Avatar av={selectedPlayer.avatar} size={48} name={selectedPlayer.name} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>{selectedPlayer.name}</div>
+                  <div style={{ fontSize: 13, color: C.textDim }}>{playerBoard?.played || 0} jugados · {playerBoard?.perfect || 0} plenos 🔥</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 30, fontWeight: 800, color: C.accent }}>{playerBoard?.total || 0}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>pts totales</div>
+                </div>
+                <button onClick={() => setSelectedPlayer(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer", marginLeft: 4 }}>✕</button>
+              </div>
+              {/* Match list */}
+              <div style={{ padding: "8px 16px 16px" }}>
+                {finishedMatches.length === 0
+                  ? <div style={{ color: C.textDim, textAlign: "center", padding: 20 }}>No hay partidos terminados</div>
+                  : finishedMatches.map(m => {
+                    const result = results.find(r => r.match_id === m.id)
+                    const pred = playerPreds.find(p => p.match_id === m.id)
+                    const pts = pred && result && result.home_score !== null ? calcPoints(pred, result) : null
+                    return (
+                      <div key={m.id} style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 0", display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* Left: match info + prediction */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 3 }}>
+                            {m.group
+                              ? `Gr. ${m.group} · F.${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`
+                              : m.stage
+                            } · {new Date(m.date + ":00-03:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })} {formatTime(m.date)}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: C.textDim }}>{flag(m.home)} {m.home}</span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{result?.home_score}-{result?.away_score}</span>
+                            <span style={{ fontSize: 12, color: C.textDim }}>{m.away} {flag(m.away)}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: C.textDim }}>
+                            {pred
+                              ? <>Pronóstico: <strong style={{ color: C.accent }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (default)</span>}</>
+                              : <span style={{ color: C.muted }}>Sin pronóstico</span>
+                            }
+                          </div>
+                        </div>
+                        {/* Right: points */}
+                        <div style={{ minWidth: 44, textAlign: "right" }}>
+                          {pts !== null
+                            ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "4px 8px", fontSize: 13 }}>+{pts}</span>
+                            : pred
+                              ? <span style={{ ...ptsBadgeStyle(0), padding: "4px 8px", fontSize: 13 }}>+0</span>
+                              : <span style={{ color: C.muted, fontSize: 13 }}>—</span>
+                          }
+                        </div>
+                      </div>
+                    )
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <BottomNav />
     </div>
   )
@@ -1650,7 +1825,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
           )}
         </div>
       </div>
@@ -1736,7 +1911,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
           )}
         </div>
       </div>
@@ -1838,6 +2013,61 @@ export default function App() {
       </div>
     )
   }
+
+  // (MatchModal is now a standalone component)
+  const _unused = selectedMatch ? (() => {
+    const result = results.find(r => r.match_id === selectedMatch.id)
+    const isFinished = result?.status === "FINISHED"
+    const isInPlay = result?.status === "IN_PLAY"
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setSelectedMatch(null)}>
+        <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>
+                  {selectedMatch.group ? `Gr. ${selectedMatch.group} · F.${selectedMatch.id <= 24 ? 1 : selectedMatch.id <= 48 ? 2 : 3}` : selectedMatch.stage} · {formatDate(selectedMatch.date)}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{flag(selectedMatch.home)} {selectedMatch.home}</span>
+                  {result ? <span style={{ fontSize: 16, fontWeight: 800, color: isInPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</span> : <span style={{ color: C.muted }}>vs</span>}
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedMatch.away} {flag(selectedMatch.away)}</span>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? C.green : C.muted, marginTop: 4 }}>
+                  {isInPlay ? "● En juego" : isFinished ? "✓ Finalizado" : ""}
+                </div>
+              </div>
+              <button onClick={() => setSelectedMatch(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+          </div>
+          <div style={{ padding: "8px 16px 16px" }}>
+            {players.map(p => {
+              const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
+              const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <Avatar av={p.avatar} size={32} name={p.name} />
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                  <div style={{ textAlign: "right" }}>
+                    {pred
+                      ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
+                      : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                    }
+                  </div>
+                  <div style={{ minWidth: 40, textAlign: "right" }}>
+                    {pts !== null
+                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                      : <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                    }
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  })() : null
 
   return null
 }
@@ -2087,8 +2317,8 @@ function renderAdminMatch(match, getResult, editResults, setEditResults, saving,
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: "#6b7280" }}>{formatDate(match.date)}</div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-            {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+          <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : (new Date() >= new Date(match.date + ":00-03:00")) ? "#6b7280" : "" }}>
+            {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : (new Date() >= new Date(match.date + ":00-03:00")) ? "🔒 bloqueado" : ""}
           </div>
           {isInPlay && cur.match_time && (
             <div style={{ fontSize: 9, color: "#22c55e" }}>{`Última act. ${cur.match_time === "ET" ? "ET" : cur.match_time + "'"}`}</div>
@@ -2177,7 +2407,7 @@ function ResetPasswordPanel({ players, showFlash }) {
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players, serverNow }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
@@ -2225,7 +2455,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
       </button>
-      <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} />
+      <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
 
       {/* Reset password */}
       <ResetPasswordPanel players={players} showFlash={showFlash} />
@@ -2310,8 +2540,8 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ fontSize: 11, color: "#6b7280" }}><><span style={{ color: "#c8a84b", fontWeight: 700, marginRight: 6 }}>P{match.id}</span>{formatDate(match.date)}</></div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : isLocked(match.date) ? "#6b7280" : "" }}>
-                  {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : isLocked(match.date) ? "🔒 bloqueado" : ""}
+                <div style={{ fontSize: 11, fontWeight: 700, color: isInPlay ? "#22c55e" : isFinished ? "#e2e8f0" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "#6b7280" : "" }}>
+                  {isInPlay ? "● en juego" : isFinished ? "✓ finalizado" : (serverNow() >= new Date(match.date + ":00-03:00")) ? "🔒 bloqueado" : ""}
                 </div>
                 {isInPlay && cur.match_time && <div style={{ fontSize: 9, color: "#22c55e" }}>{cur.match_time === "ET" ? "Última act. ET" : `Última act. ${cur.match_time}'`}</div>}
               </div>

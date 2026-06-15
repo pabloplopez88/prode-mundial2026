@@ -2569,6 +2569,46 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         🔄 Poblar Flourish (partidos ya jugados)
       </button>
+      <button onClick={async () => {
+        try {
+          const { data: rows } = await supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true })
+          const { data: allPlayers } = await supabase.from("players").select("id,name,avatar")
+          if (!rows || !allPlayers) { showFlash("❌ Sin datos"); return }
+
+          // Get unique match labels in order
+          const matches = []
+          const seen = new Set()
+          rows.forEach(r => { if (!seen.has(r.match_order)) { seen.add(r.match_order); matches.push({ order: r.match_order, label: r.match_label }) } })
+          matches.sort((a, b) => a.order - b.order)
+
+          // Assign colors
+          const colors = ["#f9c6c9","#a8d8ea","#b5ead7","#ffd6a5","#c9b1ff","#ffc8dd","#caffbf","#fdffb6","#9bf6ff","#bde0fe","#ffadad","#d4a5a5","#e2cfc4","#f7d6e0","#d6e4f0","#e8d5b7"]
+
+          // Build pivot
+          const headers = ["Jugador","Image","Color","Inicio",...matches.map(m => m.label)]
+          const csvRows = [headers.join(",")]
+
+          allPlayers.forEach((p, i) => {
+            const color = colors[i % colors.length]
+            const avatarUrl = p.avatar?.startsWith("http") ? p.avatar.split("?")[0] : ""
+            const pts = matches.map(m => {
+              const r = rows.find(r => r.player_id === p.id && r.match_order === m.order)
+              return r?.cumulative_pts ?? ""
+            })
+            csvRows.push([`"${p.name}"`, `"${avatarUrl}"`, `"${color}"`, "0", ...pts].join(","))
+          })
+
+          const blob = new Blob([csvRows.join("
+")], { type: "text/csv" })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url; a.download = "flourish_prode.csv"; a.click()
+          URL.revokeObjectURL(url)
+          showFlash("✓ CSV descargado")
+        } catch(e) { showFlash("❌ " + e.message) }
+      }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
+        ⬇️ Descargar CSV Flourish
+      </button>
       <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
 
       {/* Reset password */}

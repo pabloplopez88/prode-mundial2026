@@ -75,6 +75,42 @@ function ptsBadgeStyle(pts, extra = {}) {
   return { background: c.bg, color: c.color, borderRadius: 6, fontWeight: 800, ...extra }
 }
 
+
+function PredBar({ matchId, predictions, players, homeTeam, awayTeam }) {
+  const total = players.length
+  const preds = predictions.filter(p => p.match_id === matchId)
+  let hw = 0, dr = 0, aw = 0
+  preds.forEach(p => {
+    const h = parseInt(p.home_score), a = parseInt(p.away_score)
+    if (isNaN(h) || isNaN(a)) return
+    if (h > a) hw++; else if (h === a) dr++; else aw++
+  })
+  const voted = hw + dr + aw
+  if (voted === 0) return null
+  const ph = Math.round(hw / voted * 100)
+  const pd = Math.round(dr / voted * 100)
+  const pa = 100 - ph - pd
+  const sections = [
+    { count: hw, pct: ph, color: "#1e4080", labelColor: "#60a5fa", label: homeTeam.split(" ")[0] },
+    { count: dr, pct: pd, color: "#3a2c0a", labelColor: "#c8a84b", label: "Empate" },
+    { count: aw, pct: pa, color: "#3f1515", labelColor: "#f87171", label: awayTeam.split(" ")[0] },
+  ].filter(s => s.count > 0)
+  return (
+    <div style={{ marginTop: 10, padding: "0 4px" }}>
+      <div style={{ display: "flex" }}>
+        {sections.map((s, i) => (
+          <div key={i} style={{ flex: s.pct, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: "100%", height: 5, background: s.color, borderLeft: i > 0 ? "1px solid #0a0e1a" : "none", borderRadius: i === 0 ? "3px 0 0 3px" : i === sections.length-1 ? "0 3px 3px 0" : 0 }} />
+            <div style={{ fontSize: 9, color: s.labelColor, fontWeight: 700, marginTop: 3, textAlign: "center", whiteSpace: "nowrap" }}>
+              {s.label} {s.pct}% <span style={{ color: "#4b5563", fontWeight: 400 }}>({s.count})</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -1171,6 +1207,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
                     </div>
                     </div>
+                    {inPlay && <PredBar matchId={m.id} predictions={predictions} players={players} homeTeam={m.home} awayTeam={m.away} />}
                   </div>
                 )
               })}

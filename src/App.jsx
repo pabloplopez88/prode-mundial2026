@@ -1121,6 +1121,7 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: locked ? "pointer" : "default" }}>
+                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
@@ -1191,6 +1192,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 1 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                       <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{formatDate(m.date)}</div>
                       <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       {hasPred

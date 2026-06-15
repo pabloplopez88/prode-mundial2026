@@ -496,67 +496,16 @@ export default function App() {
 
       if (upserts.length > 0) {
         await supabase.from("results").upsert(upserts, { onConflict: "match_id" })
-        const updatedResults = [...resultsRef.current]
-        upserts.forEach(u => {
-          const idx = updatedResults.findIndex(r => r.match_id === u.match_id)
-          if (idx >= 0) updatedResults[idx] = { ...updatedResults[idx], ...u }
-          else updatedResults.push(u)
+        setResults(prev => {
+          const next = [...prev]
+          upserts.forEach(u => {
+            const idx = next.findIndex(r => r.match_id === u.match_id)
+            if (idx >= 0) next[idx] = { ...next[idx], ...u }
+            else next.push(u)
+          })
+          resultsRef.current = next
+          return next
         })
-        resultsRef.current = updatedResults
-        setResults(updatedResults)
-
-        // Update flourish_data for newly finished matches
-        const newlyFinished = upserts.filter(u => {
-          if (u.status !== "FINISHED") return false
-          const prev = results.find(r => r.match_id === u.match_id)
-          return !prev || prev.status !== "FINISHED"
-        })
-        if (newlyFinished.length > 0) {
-          try {
-            // Get all data needed
-            const { data: allPreds } = await supabase.from("predictions").select("*")
-            const { data: allPlayers } = await supabase.from("players").select("id,name")
-            if (allPreds && allPlayers) {
-              // Get all finished results in chronological order
-              const allFinished = updatedResults
-                .filter(r => r.status === "FINISHED" && r.home_score !== null)
-                .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
-              
-              // Build cumulative points per player per match
-              const rows = []
-              let matchOrder = 0
-              for (const r of allFinished) {
-                matchOrder++
-                const m = MATCHES.find(m => m.id === r.match_id)
-                if (!m) continue
-                const label = `${m.home} ${r.home_score}-${r.away_score} ${m.away}`
-                for (const player of allPlayers) {
-                  // Calculate cumulative pts up to and including this match
-                  let cumPts = 0
-                  for (let order = 0; order <= matchOrder - 1; order++) {
-                    const fr = allFinished[order]
-                    const pred = allPreds.find(p => p.player_id === player.id && p.match_id === fr.match_id)
-                    if (!pred) continue
-                    const pts = calcPoints(pred, fr)
-                    if (pts !== null) cumPts += pts
-                  }
-                  rows.push({
-                    match_label: label,
-                    match_order: matchOrder,
-                    player_id: player.id,
-                    cumulative_pts: cumPts,
-                    updated_at: new Date().toISOString()
-                  })
-                }
-              }
-              // Delete existing and reinsert all (simpler than upsert with complex keys)
-              await supabase.from("flourish_data").delete().neq("id", 0)
-              if (rows.length > 0) await supabase.from("flourish_data").insert(rows)
-            }
-          } catch(e) { console.error("Flourish update error:", e) }
-        }
-
-
       }
 
       let msg
@@ -704,7 +653,7 @@ export default function App() {
     if (!user) return
     setSaving(true)
     const upserts = Object.entries(editPreds)
-      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score) }))
+      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     setEditPreds({}); setSaving(false)
@@ -1804,11 +1753,7 @@ export default function App() {
               <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>📈 Evolución del Prode</div>
               <button onClick={() => setShowEvolution(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
-            <iframe
-              src="https://public.flourish.studio/visualisation/29371257/"
-              style={{ flex: 1, border: "none", width: "100%" }}
-              allowFullScreen
-            />
+            <iframe src="https://public.flourish.studio/visualisation/29371257/" style={{ flex: 1, border: "none", width: "100%" }} allowFullScreen />
           </div>
         </div>
       )}
@@ -2523,20 +2468,6 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
         ⚡ Sync manual
       </button>
       <button onClick={async () => {
-        const now = new Date().toISOString()
-        // Get next snapshot number
-        const { data: last } = await supabase.from("leaderboard_snapshots").select("snapshot_num").order("snapshot_num", { ascending: false }).limit(1)
-        const nextNum = (last?.[0]?.snapshot_num ?? 0) + 1
-        const rows = board.map((p, i) => ({
-          snapshot_date: now, snapshot_num: nextNum, player_id: p.id, total_pts: p.total ?? 0, rank: i + 1
-        }))
-        const { error } = await supabase.from("leaderboard_snapshots").insert(rows)
-        if (error) showFlash("❌ Error: " + error.message)
-        else showFlash(`✓ Snapshot #${nextNum} guardado`)
-      }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
-        📸 Guardar snapshot de hoy
-      </button>
-      <button onClick={async () => {
         try {
           const { data: allPreds } = await supabase.from("predictions").select("*")
           const { data: allPlayers } = await supabase.from("players").select("id,name")
@@ -2549,7 +2480,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           allFinished.forEach((r, matchOrder) => {
             const m = MATCHES.find(m => m.id === r.match_id)
             if (!m) return
-            const label = `${m.home} ${r.home_score}-${r.away_score} ${m.away}`
+            const label = m.home + " " + r.home_score + "-" + r.away_score + " " + m.away
             allPlayers.forEach(player => {
               let cumPts = 0
               for (let i = 0; i <= matchOrder; i++) {
@@ -2564,7 +2495,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           })
           await supabase.from("flourish_data").delete().neq("id", 0)
           if (rows.length > 0) await supabase.from("flourish_data").insert(rows)
-          showFlash(`✓ Flourish actualizado (${allFinished.length} partidos)`)
+          showFlash("✓ Flourish actualizado (" + allFinished.length + " partidos)")
         } catch(e) { showFlash("❌ " + e.message) }
       }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         🔄 Poblar Flourish (partidos ya jugados)
@@ -2574,32 +2505,20 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const { data: rows } = await supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true })
           const { data: allPlayers } = await supabase.from("players").select("id,name,avatar")
           if (!rows || !allPlayers) { showFlash("❌ Sin datos"); return }
-
-          // Get unique match labels in order
           const matches = []
           const seen = new Set()
           rows.forEach(r => { if (!seen.has(r.match_order)) { seen.add(r.match_order); matches.push({ order: r.match_order, label: r.match_label }) } })
           matches.sort((a, b) => a.order - b.order)
-
-          // Assign colors
           const colors = ["#f9c6c9","#a8d8ea","#b5ead7","#ffd6a5","#c9b1ff","#ffc8dd","#caffbf","#fdffb6","#9bf6ff","#bde0fe","#ffadad","#d4a5a5","#e2cfc4","#f7d6e0","#d6e4f0","#e8d5b7"]
-
-          // Build pivot
           const headers = ["Jugador","Image","Color","Inicio",...matches.map(m => m.label)]
           const csvRows = [headers.join(",")]
-
           allPlayers.forEach((p, i) => {
             const color = colors[i % colors.length]
-            const avatarUrl = p.avatar?.startsWith("http") ? p.avatar.split("?")[0] : ""
-            const pts = matches.map(m => {
-              const r = rows.find(r => r.player_id === p.id && r.match_order === m.order)
-              return r?.cumulative_pts ?? ""
-            })
-            csvRows.push([`"${p.name}"`, `"${avatarUrl}"`, `"${color}"`, "0", ...pts].join(","))
+            const avatarUrl = p.avatar && p.avatar.startsWith("http") ? p.avatar.split("?")[0] : ""
+            const pts = matches.map(m => { const r = rows.find(r => r.player_id === p.id && r.match_order === m.order); return r ? r.cumulative_pts : "" })
+            csvRows.push(['"' + p.name + '"', '"' + avatarUrl + '"', '"' + color + '"', "0", ...pts].join(","))
           })
-
-          const blob = new Blob([csvRows.join("
-")], { type: "text/csv" })
+          const blob = new Blob([csvRows.join("\n")], { type: "text/csv" })
           const url = URL.createObjectURL(blob)
           const a = document.createElement("a")
           a.href = url; a.download = "flourish_prode.csv"; a.click()

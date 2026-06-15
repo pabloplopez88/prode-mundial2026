@@ -289,6 +289,7 @@ export default function App() {
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [showEvolution, setShowEvolution] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1702,7 +1703,7 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (tab === "table") return (
     <div style={appStyle}>
-      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 18 }} onClick={loadData}>🔄</button>} />
+      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => setShowEvolution(true)}>📈 Evolución</button>} />
       <div style={{ padding: "12px 14px" }}>
         {board.length === 0
           ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>
@@ -1796,6 +1797,21 @@ export default function App() {
         )
       })()}
 
+      {showEvolution && (
+        <div style={{ position: "fixed", inset: 0, background: "#000e", zIndex: 500, display: "flex", flexDirection: "column" }} onClick={() => setShowEvolution(false)}>
+          <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", background: "linear-gradient(135deg,#0f172a,#1e2a45)" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>📈 Evolución del Prode</div>
+              <button onClick={() => setShowEvolution(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <iframe
+              src="https://public.flourish.studio/visualisation/29371257/"
+              style={{ flex: 1, border: "none", width: "100%" }}
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
       <BottomNav />
     </div>
   )

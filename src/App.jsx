@@ -2512,7 +2512,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const colors = ["#f9c6c9","#a8d8ea","#b5ead7","#ffd6a5","#c9b1ff","#ffc8dd","#caffbf","#fdffb6","#9bf6ff","#bde0fe","#ffadad","#d4a5a5","#e2cfc4","#f7d6e0","#d6e4f0","#e8d5b7"]
           const headers = ["Jugador","Image","Color","Inicio",...matches.map(m => m.label)]
           const csvRows = [headers.join(",")]
-          allPlayers.forEach((p, i) => {
+          [...allPlayers].sort((a,b) => a.name.localeCompare(b.name)).forEach((p, i) => {
             const color = colors[i % colors.length]
             const avatarUrl = p.avatar && p.avatar.startsWith("http") ? p.avatar.split("?")[0] : ""
             const pts = matches.map(m => { const r = rows.find(r => r.player_id === p.id && r.match_order === m.order); return r ? r.cumulative_pts : "" })

@@ -312,7 +312,8 @@ export default function App() {
   const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
   const groupContentRef = useRef(null)
   const doSyncRef = useRef(null)
-  const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
+  const [scrollToMatchId, setScrollToMatchId] = useState(null)
+  const [highlightMatchId, setHighlightMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
   const [editResults, setEditResults] = useState({})
@@ -611,7 +612,9 @@ export default function App() {
       if (m && m.group) setSelectedGroup(m.group)
       setTimeout(() => {
         scrollToElement("match-" + scrollToMatchId, 230)
+        setHighlightMatchId(scrollToMatchId)
         setScrollToMatchId(null)
+        setTimeout(() => setHighlightMatchId(null), 1200)
       }, 100)
     }
   }, [tab, scrollToMatchId])
@@ -1321,7 +1324,7 @@ export default function App() {
             const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
             if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
           } : undefined}
-          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
+          style={crd({ border: `2px solid ${match.id === highlightMatchId ? C.accent : matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default", boxShadow: match.id === highlightMatchId ? `0 0 12px ${C.accent}88` : "none", transition: "border 0.3s, box-shadow 0.3s" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}

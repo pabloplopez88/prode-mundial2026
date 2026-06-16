@@ -614,7 +614,7 @@ export default function App() {
         scrollToElement("match-" + scrollToMatchId, 230)
         setHighlightMatchId(scrollToMatchId)
         setScrollToMatchId(null)
-        setTimeout(() => setHighlightMatchId(null), 1200)
+        setTimeout(() => setHighlightMatchId(null), 500)
       }, 100)
     }
   }, [tab, scrollToMatchId])

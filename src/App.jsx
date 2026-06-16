@@ -604,6 +604,18 @@ export default function App() {
 
 
 
+  // Scroll to match when navigating from home to fixture
+  useEffect(() => {
+    if (tab === "fixture" && scrollToMatchId) {
+      const m = MATCHES.find(m => m.id === scrollToMatchId)
+      if (m && m.group) setSelectedGroup(m.group)
+      setTimeout(() => {
+        scrollToElement("match-" + scrollToMatchId, 230)
+        setScrollToMatchId(null)
+      }, 100)
+    }
+  }, [tab, scrollToMatchId])
+
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
   const editPredsRef = useRef({})
@@ -1156,7 +1168,7 @@ export default function App() {
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
-                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: locked ? "pointer" : "default" }}>
+                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} onClick={!locked ? () => { setStage("Grupos"); setScrollToMatchId(m.id); setTab("fixture") } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: "pointer" }}>
                     <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
@@ -1223,7 +1235,7 @@ export default function App() {
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
                 return (
-                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div key={m.id} onClick={() => { setStage("Grupos"); setScrollToMatchId(m.id); setTab("fixture") }} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>

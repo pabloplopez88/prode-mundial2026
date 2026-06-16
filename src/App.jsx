@@ -1172,7 +1172,7 @@ export default function App() {
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
                   <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} onClick={!locked ? () => { setStage("Grupos"); setScrollToMatchId(m.id); setTab("fixture") } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: "pointer" }}>
-                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
+                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4, textAlign: "center" }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}

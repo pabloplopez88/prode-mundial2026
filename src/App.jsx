@@ -2527,9 +2527,14 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const { data: allPlayers } = await supabase.from("players").select("id,name")
           const { data: allResults } = await supabase.from("results").select("*")
           if (!allPreds || !allPlayers || !allResults) { showFlash("❌ Error al obtener datos"); return }
+          // Sort by match date from MATCHES (reliable order, not updated_at)
           const allFinished = allResults
             .filter(r => r.status === "FINISHED" && r.home_score !== null)
-            .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
+            .sort((a, b) => {
+              const ma = MATCHES.find(m => m.id === a.match_id)
+              const mb = MATCHES.find(m => m.id === b.match_id)
+              return new Date(ma?.date || 0) - new Date(mb?.date || 0)
+            })
           const rows = []
           allFinished.forEach((r, matchOrder) => {
             const m = MATCHES.find(m => m.id === r.match_id)

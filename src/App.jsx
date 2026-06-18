@@ -1330,7 +1330,7 @@ export default function App() {
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Topati — 41 pts</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>19 puntos menos que el primero</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>19 puntos menos que el primero. Pero tiene una hija y encima hace la app.</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1338,7 +1338,7 @@ export default function App() {
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Juancho — subió 8 puestos</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 11° y terminó 3°. 34 pts en la segunda mitad</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 11° y terminó 3°. 34 pts en la segunda mitad. Tengamos en cuenta que es hermano del organizador.</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1346,7 +1346,7 @@ export default function App() {
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Esbi — bajó 6 puestos</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 6° y terminó 12°. Solo 19 pts en la segunda mitad</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 6° y terminó 12°. Solo 19 pts en la segunda mitad. Brrrr.</div>
                     </div>
                   </div>
                 </div>

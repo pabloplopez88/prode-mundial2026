@@ -1386,7 +1386,7 @@ export default function App() {
                     ["Bigornia", 8, "Récord de la fecha"],
                     ["yayu", 7, ""],
                     ["Topati", 7, ""],
-                    ["Fede", 2, "El que menos se fue a pique"],
+                    ["Fede", 2, ""],
                   ].map(([name, count, note]) => (
                     <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                       <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
@@ -1419,7 +1419,7 @@ export default function App() {
                       <div style={{ fontSize: 11, color: Math.abs(avg - 3.12) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
                     </div>
                   ))}
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca imaginó más goles que los que hubo en realidad. Peluche y Topati fueron los más certeros (3.04 vs 3.12 real). Esbi fue el más conservador pero también el más alejado de la realidad.</div>
+
                 </div>
 
                 {/* Empates */}

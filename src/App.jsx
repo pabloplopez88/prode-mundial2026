@@ -275,9 +275,9 @@ function MatchModal({ match, results, predictions, players, onClose }) {
                 <Avatar av={p.avatar} size={32} name={p.name} />
                 <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
                 <div style={{ textAlign: "right" }}>
-                  {pred
-                    ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
-                    : (() => { const df = p.default_score || "0-0"; const [dh, da] = df.split("-"); return <span style={{ fontSize: 14, fontWeight: 800, color: C.muted }}><span style={{ fontSize: 10 }}>(def) </span>{dh} – {da}</span> })()
+                  {pred && !pred.is_default
+                    ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}</span>
+                    : (() => { const df = pred ? `${pred.home_score}-${pred.away_score}` : (p.default_score || "0-0"); const [dh, da] = df.split("-"); return <span style={{ fontSize: 14, fontWeight: 800, color: C.muted }}><span style={{ fontSize: 10 }}>(def) </span>{dh} – {da}</span> })()
                   }
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>

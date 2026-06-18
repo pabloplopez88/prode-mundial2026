@@ -277,7 +277,7 @@ function MatchModal({ match, results, predictions, players, onClose }) {
                 <div style={{ textAlign: "right" }}>
                   {pred
                     ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
-                    : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                    : (() => { const df = p.default_score || "0-0"; const [dh, da] = df.split("-"); return <span style={{ fontSize: 14, fontWeight: 800, color: C.muted }}>{dh} – {da}<span style={{ fontSize: 10 }}> (default)</span></span> })()
                   }
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>

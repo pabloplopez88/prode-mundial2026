@@ -1461,7 +1461,7 @@ export default function App() {
 
                 {/* Disidentes */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los disidentes</div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
                   <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
                   {[
                     ["Indio", "apostó empate en Qatar vs Suiza cuando el 92% decía Suiza → acertó"],

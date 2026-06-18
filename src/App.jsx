@@ -1315,6 +1315,42 @@ export default function App() {
 
               <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
 
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0f1a0f,#0a1020)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Peluche — 60 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Lideró de principio a fin</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Topati — 41 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>19 puntos menos que el primero</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Juancho — subió 8 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 11° y terminó 3°. 34 pts en la segunda mitad</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>📉</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Esbi — bajó 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 6° y terminó 12°. Solo 19 pts en la segunda mitad</div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Plenos */}
                 <div>
                   <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
@@ -1383,7 +1419,7 @@ export default function App() {
                       <div style={{ fontSize: 11, color: Math.abs(avg - 3.12) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
                     </div>
                   ))}
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca imaginó más goles que los que hubo. Esbi, el más conservador, fue el más realista.</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca imaginó más goles que los que hubo en realidad. Peluche y Topati fueron los más certeros (3.04 vs 3.12 real). Esbi fue el más conservador pero también el más alejado de la realidad.</div>
                 </div>
 
                 {/* Empates */}

@@ -327,6 +327,7 @@ export default function App() {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showEvolution, setShowEvolution] = useState(false)
+  const [showF1Summary, setShowF1Summary] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1117,7 +1118,7 @@ export default function App() {
             <div style={{ fontSize: 18, fontWeight: 800 }}>¡Hola, {user.name}!</div>
             <div style={{ fontSize: 13, color: C.textDim }}>Mundial 2026 · {players.length} participantes</div>
           </div>
-          <button onClick={() => setShowInfo(true)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 22, padding: "4px 8px", lineHeight: 1 }}>ℹ️</button>
+<button onClick={() => setShowInfo(true)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 22, padding: "4px 8px", lineHeight: 1 }}>ℹ️</button>
         </div>
         {showInfo && (
           <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowInfo(false)}>
@@ -1156,6 +1157,15 @@ export default function App() {
               </div>
             ))}
           </div>
+          {/* F1 Summary Banner */}
+          <div onClick={() => setShowF1Summary(true)} style={{ background: "linear-gradient(135deg,#1a1200,#2a1f00)", border: `2px solid ${C.accent}`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.15 }}>📊</div>
+            <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, marginBottom: 4 }}>📋 Resumen Fecha 1</div>
+            <div style={{ fontSize: 12, color: C.textDim }}>Plenos, ceros, disidentes y más · 24 partidos · 75 goles</div>
+            <div style={{ fontSize: 11, color: C.accentDim, marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
+          </div>
+
           <div style={crd({ padding: 0, overflow: "hidden" })}>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
             {todayMatches.length === 0
@@ -1290,6 +1300,159 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {showF1Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF1Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>📋 Resumen Fecha 1</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>24 partidos · 75 goles</div>
+                </div>
+                <button onClick={() => setShowF1Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Plenos */}
+                <div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Chacha", 4, "Corea del Sur 2-1 Rep. Checa, Canadá 1-1 Bosnia, Francia 3-1 Senegal, Argentina 3-0 Argelia"],
+                    ["Juancho", 4, "Arabia Saudita 1-1 Uruguay, Francia 3-1 Senegal, Argentina 3-0 Argelia, Ghana 1-0 Panamá"],
+                    ["Pini", 3, "Argentina 3-0 Argelia, Austria 3-1 Jordania, Uzbekistán 1-3 Colombia"],
+                    ["Rami", 3, "México 2-0 Sudáfrica, Arabia Saudita 1-1 Uruguay, Francia 3-1 Senegal"],
+                    ["Flaca", 2, "Canadá 1-1 Bosnia y Herz., Arabia Saudita 1-1 Uruguay"],
+                    ["Martin", 2, "México 2-0 Sudáfrica, Ghana 1-0 Panamá"],
+                    ["Peluche", 2, "Canadá 1-1 Bosnia y Herz., Países Bajos 2-2 Japón"],
+                    ["yayu", 2, "Países Bajos 2-2 Japón, Francia 3-1 Senegal"],
+                    ["Esbi", 1, "México 2-0 Sudáfrica"],
+                    ["Indio", 1, "Ghana 1-0 Panamá"],
+                    ["Topati", 1, "Francia 3-1 Senegal"],
+                    ["Fede", 0, "Ninguno 😬"],
+                    ["Bigornia", 0, "Ninguno 😬"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e4080" : count >= 2 ? "#1e3054" : count === 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count === 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  {[
+                    ["Bigornia", 8, "Récord de la fecha"],
+                    ["yayu", 7, ""],
+                    ["Topati", 7, ""],
+                    ["Fede", 2, "El que menos se fue a pique"],
+                  ].map(([name, count, note]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</span>
+                        {note && <span style={{ fontSize: 11, color: C.muted }}> · {note}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 Qatar 1-1 Suiza y Australia 2-0 Turquía — 11 de 13 sacaron 0 pts</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Portugal 1-1 Congo — 8 jugadores en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 75 goles · 3.12 por partido</div>
+                  {[
+                    ["Flaca", 78, 3.25], ["Peluche", 73, 3.04], ["Topati", 73, 3.04],
+                    ["Indio", 72, 3.00], ["Rami", 72, 3.00], ["Chacha", 69, 2.88],
+                    ["Bigornia", 67, 2.79], ["Pini", 67, 2.79], ["Fede", 60, 2.50],
+                    ["Martin", 57, 2.38], ["yayu", 56, 2.33], ["Juancho", 55, 2.29], ["Esbi", 50, 2.08],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 3.12) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca imaginó más goles que los que hubo. Esbi, el más conservador, fue el más realista.</div>
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 9 empates en 24 partidos (38%). El grupo los subestimó.</div>
+                  {[
+                    ["Flaca", 7, "29%"], ["Peluche", 6, "25%"], ["Esbi", 5, "21%"],
+                    ["yayu", 5, "21%"], ["Indio", 4, "17%"], ["Juancho", 4, "17%"],
+                    ["Martin", 4, "17%"], ["Pini", 4, "17%"], ["Chacha", 3, "12%"],
+                    ["Fede", 2, "8%"], ["Rami", 2, "8%"], ["Topati", 2, "8%"], ["Bigornia", 1, "4%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} pronósticos empate ({pct})</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca fue quien más apostó a empates. Bigornia apostó empate solo 1 vez en 24 partidos.</div>
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso del grupo vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Los peores errores colectivos — todos resultaron en empate:</div>
+                  {[
+                    ["España vs Cabo Verde", "100% del grupo dijo España", "Real: 0-0"],
+                    ["Bélgica vs Egipto", "100% del grupo dijo Bélgica", "Real: 1-1"],
+                    ["Portugal vs Congo", "100% del grupo dijo Portugal", "Real: 1-1"],
+                    ["Qatar vs Suiza", "92% dijo Suiza", "Real: 1-1"],
+                    ["Brasil vs Marruecos", "85% dijo Brasil", "Real: 1-1"],
+                    ["Irán vs Nueva Zelanda", "85% dijo Irán", "Real: 2-2"],
+                  ].map(([match, pred, result]) => (
+                    <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{pred} · {result}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Disidentes */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los disidentes</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
+                  {[
+                    ["Indio", "apostó empate en Qatar vs Suiza cuando el 92% decía Suiza → acertó"],
+                    ["Flaca y Peluche", "apostaron empate en Brasil vs Marruecos cuando el 85% decía Brasil → acertaron"],
+                    ["Juancho y yayu", "apostaron empate en Irán vs Nueva Zelanda cuando el 85% decía Irán → acertaron"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 700, margin: "12px 0 6px" }}>Fueron contra el grupo y la pagaron:</div>
+                  {[
+                    ["Pini", "apostó empate en México vs Sudáfrica cuando el 92% decía México → real 2-0, cero puntos"],
+                    ["Topati", "apostó local en Haití vs Escocia cuando el 92% decía Escocia → real 0-1, cero puntos"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✗ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
         <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}

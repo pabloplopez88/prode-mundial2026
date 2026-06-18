@@ -1342,7 +1342,7 @@ export default function App() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 20 }}>📉</span>
+                    <span style={{ fontSize: 20 }}>🥶</span>
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Esbi — bajó 6 puestos</div>

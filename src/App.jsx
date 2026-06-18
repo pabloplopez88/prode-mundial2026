@@ -1322,7 +1322,7 @@ export default function App() {
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Peluche — 60 pts</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>Lideró de principio a fin</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Peleado con Flaca y Rami. La Chacha Dorada también estuvo muy digno.</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

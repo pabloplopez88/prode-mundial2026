@@ -123,8 +123,9 @@ function Avatar({ av = "⚽", size = 36, name = "" }) {
   )
 }
 
-function ScoreInput({ value, onChange }) {
-  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
+function ScoreInput({ value, onChange, status }) {
+  const borderColor = status === "saved" ? "#22c55e" : status === "unsaved" ? "#ef4444" : C.accent
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${borderColor}`, borderRadius: 8, color: "#e2e8f0", fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
 }
 
 function ScoreBox({ value, matchState = "upcoming" }) {
@@ -318,6 +319,7 @@ export default function App() {
   const [highlightMatchId, setHighlightMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
+  const [inputStatus, setInputStatus] = useState({}) // matchId -> "saved" | "unsaved"
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
   const [autoSyncStatus, setAutoSyncStatus] = useState("idle")
@@ -386,10 +388,13 @@ export default function App() {
       if (savedUser) {
         const u = JSON.parse(savedUser)
         const myPreds = {}
+        const myStatus = {}
         pr.filter(p => p.player_id === u.id).forEach(p => {
           myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? ""), isDefault: p.is_default || false }
+          myStatus[p.match_id] = "saved"
         })
         setEditPreds(myPreds)
+        setInputStatus(myStatus)
         editPredsRef.current = myPreds
       }
     }
@@ -648,7 +653,14 @@ export default function App() {
       .map(([match_id]) => parseInt(match_id))
       .filter(match_id => !isMatchLocked(match_id)) // never delete locked matches
     // Fire and forget - don't touch editPreds state, inputs stay stable
-    if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    if (upserts.length > 0) {
+      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+      setInputStatus(prev => {
+        const next = { ...prev }
+        upserts.forEach(u => { next[u.match_id] = "saved" })
+        return next
+      })
+    }
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
     showFlash("✓ Guardado")
   }, [user])
@@ -1574,14 +1586,16 @@ export default function App() {
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {!locked ? (
                   <>
-                    <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
+                    <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} status={inputStatus[match.id]} onChange={v => {
                       setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], home_score: v } }; editPredsRef.current = next; return next })
+                      setInputStatus(prev => ({ ...prev, [match.id]: "unsaved" }))
                       clearTimeout(saveTimerRef.current)
                       saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                     }} />
                     <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                    <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
+                    <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} status={inputStatus[match.id]} onChange={v => {
                       setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], away_score: v } }; editPredsRef.current = next; return next })
+                      setInputStatus(prev => ({ ...prev, [match.id]: "unsaved" }))
                       clearTimeout(saveTimerRef.current)
                       saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                     }} />

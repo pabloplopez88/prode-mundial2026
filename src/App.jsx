@@ -365,7 +365,7 @@ export default function App() {
   const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
   // Single source of truth for whether a match is locked - use this everywhere
   const isMatchLocked = (matchId) => {
-    const m = MATCHES.find(m => m.id === matchId)
+    const m = MATCHES.find(m => m.id === matchId) || knockoutMatches.find(m => m.id === matchId)
     if (!m) return true // unknown match = treat as locked
     return serverNow() >= new Date(m.date + ":00-03:00")
   }

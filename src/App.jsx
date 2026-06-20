@@ -603,7 +603,7 @@ export default function App() {
         player_id: user.id, match_id: m.id,
         home_score: dh, away_score: da, is_default: true
       }))
-      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id", ignoreDuplicates: true }) // never overwrite existing
       setEditPreds(prev => {
         const next = { ...prev }
         toSave.forEach(m => {

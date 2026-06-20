@@ -131,3 +131,38 @@ export function isSameDay(dateStr) {
   const dArg = new Date(d.toLocaleString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }))
   return dArg.getFullYear() === nowArg.getFullYear() && dArg.getMonth() === nowArg.getMonth() && dArg.getDate() === nowArg.getDate()
 }
+
+export const KNOCKOUT_DATES = [
+  { id: 73, date: "2026-06-28T16:00" },
+  { id: 74, date: "2026-06-29T14:00" },
+  { id: 75, date: "2026-06-29T17:30" },
+  { id: 76, date: "2026-06-29T22:00" },
+  { id: 77, date: "2026-06-30T18:00" },
+  { id: 78, date: "2026-06-30T14:00" },
+  { id: 79, date: "2026-06-30T22:00" },
+  { id: 80, date: "2026-07-01T13:00" },
+  { id: 81, date: "2026-07-01T21:00" },
+  { id: 82, date: "2026-07-01T17:00" },
+  { id: 83, date: "2026-07-02T20:00" },
+  { id: 84, date: "2026-07-02T16:00" },
+  { id: 85, date: "2026-07-03T00:00" },
+  { id: 86, date: "2026-07-03T19:00" },
+  { id: 87, date: "2026-07-03T22:30" },
+  { id: 88, date: "2026-07-03T15:00" },
+  { id: 89, date: "2026-07-04T18:00" },
+  { id: 90, date: "2026-07-04T14:00" },
+  { id: 91, date: "2026-07-05T17:00" },
+  { id: 92, date: "2026-07-05T21:00" },
+  { id: 93, date: "2026-07-06T16:00" },
+  { id: 94, date: "2026-07-06T21:00" },
+  { id: 95, date: "2026-07-07T13:00" },
+  { id: 96, date: "2026-07-07T17:00" },
+  { id: 97, date: "2026-07-09T17:00" },
+  { id: 98, date: "2026-07-10T16:00" },
+  { id: 99, date: "2026-07-11T18:00" },
+  { id: 100, date: "2026-07-11T22:00" },
+  { id: 101, date: "2026-07-14T16:00" },
+  { id: 102, date: "2026-07-15T16:00" },
+  { id: 103, date: "2026-07-18T18:00" },
+  { id: 104, date: "2026-07-19T16:00" },
+]

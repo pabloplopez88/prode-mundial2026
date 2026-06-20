@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "./supabase"
-import { MATCHES, FLAGS, AVATARS, STAGES, calcPoints, formatDate, formatTime, isLocked, isSameDay } from "./data"
+import { MATCHES, FLAGS, AVATARS, STAGES, KNOCKOUT_DATES, calcPoints, formatDate, formatTime, isLocked, isSameDay } from "./data"
 
 const ADMIN_PASSWORD = "mundial2026"
 
@@ -365,8 +365,8 @@ export default function App() {
   const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
   // Single source of truth for whether a match is locked - use this everywhere
   const isMatchLocked = (matchId) => {
-    const m = MATCHES.find(m => m.id === matchId) || knockoutMatches.find(m => m.id === matchId)
-    if (!m) return true // unknown match = treat as locked
+    const m = MATCHES.find(m => m.id === matchId) || KNOCKOUT_DATES.find(m => m.id === matchId)
+    if (!m) return true
     return serverNow() >= new Date(m.date + ":00-03:00")
   }
 

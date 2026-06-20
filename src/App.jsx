@@ -579,8 +579,10 @@ export default function App() {
     const saveDefaultsForLockedMatches = async () => {
       const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
       // Only save default if match is locked AND there's no prediction AT ALL in Supabase
-      const { data: existing } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
-      const existingIds = new Set((existing || []).map(p => p.match_id))
+      const { data: existing, error: existingError } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
+      // If query failed, do NOT save defaults - risk of overwriting real predictions
+      if (existingError || existing === null) return
+      const existingIds = new Set(existing.map(p => p.match_id))
       const toSave = MATCHES.filter(m => {
         if (!(serverNow() >= new Date(m.date + ":00-03:00"))) return false
         return !existingIds.has(m.id) // only if not in DB at all
@@ -638,6 +640,7 @@ export default function App() {
     const toDelete = entries
       .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
       .map(([match_id]) => parseInt(match_id))
+      .filter(match_id => !(serverNow() >= new Date((MATCHES.find(m => m.id === match_id)?.date || "") + ":00-03:00")))
     // Fire and forget - don't touch editPreds state, inputs stay stable
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)

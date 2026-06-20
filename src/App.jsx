@@ -1906,7 +1906,7 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (tab === "table") return (
     <div style={appStyle}>
-      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => setShowEvolution(true)}>📈 Evolución</button>} />
+      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "#1a2035", border: `1px solid ${C.accentDim}`, borderRadius: 8, color: C.accent, cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "5px 10px", display: "flex", alignItems: "center", gap: 4 }} onClick={() => setShowEvolution(true)}>📈 Ver evolución →</button>} />
       <div style={{ padding: "12px 14px" }}>
         {board.length === 0
           ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>

@@ -361,6 +361,12 @@ export default function App() {
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
   // Returns current time adjusted by server offset - immune to client clock manipulation
   const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
+  // Single source of truth for whether a match is locked - use this everywhere
+  const isMatchLocked = (matchId) => {
+    const m = MATCHES.find(m => m.id === matchId)
+    if (!m) return true // unknown match = treat as locked
+    return serverNow() >= new Date(m.date + ":00-03:00")
+  }
 
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
@@ -584,7 +590,7 @@ export default function App() {
       if (existingError || existing === null) return
       const existingIds = new Set(existing.map(p => p.match_id))
       const toSave = MATCHES.filter(m => {
-        if (!(serverNow() >= new Date(m.date + ":00-03:00"))) return false
+        if (!isMatchLocked(m.id)) return false // not locked yet
         return !existingIds.has(m.id) // only if not in DB at all
       })
       if (toSave.length === 0) return
@@ -636,11 +642,11 @@ export default function App() {
     const upserts = entries
       .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
-      .filter(u => !(serverNow() >= new Date((MATCHES.find(m => m.id === u.match_id)?.date || "") + ":00-03:00")))
+      .filter(u => !isMatchLocked(u.match_id)) // never write locked matches
     const toDelete = entries
       .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
       .map(([match_id]) => parseInt(match_id))
-      .filter(match_id => !(serverNow() >= new Date((MATCHES.find(m => m.id === match_id)?.date || "") + ":00-03:00")))
+      .filter(match_id => !isMatchLocked(match_id)) // never delete locked matches
     // Fire and forget - don't touch editPreds state, inputs stay stable
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)

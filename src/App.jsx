@@ -285,7 +285,7 @@ function MatchModal({ match, results, predictions, players, onClose }) {
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>
                   {pts !== null
-                    ? <span style={{ ...ptsBadgeStyle(isFinished ? (pts ?? 0) : 5), background: isInPlay ? "#0f2a1a" : undefined, color: isInPlay ? C.green : undefined, padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), ...(isInPlay ? { background: "#0f2a1a", color: C.green } : {}), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                     : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                   }
                 </div>
@@ -2345,7 +2345,7 @@ export default function App() {
                   </div>
                   <div style={{ minWidth: 40, textAlign: "right" }}>
                     {pts !== null
-                      ? <span style={{ ...ptsBadgeStyle(isFinished ? (pts ?? 0) : 5), background: isInPlay ? "#0f2a1a" : undefined, color: isInPlay ? C.green : undefined, padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), ...(isInPlay ? { background: "#0f2a1a", color: C.green } : {}), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                       : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                     }
                   </div>

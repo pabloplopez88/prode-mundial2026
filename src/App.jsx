@@ -265,12 +265,12 @@ function MatchModal({ match, results, predictions, players, onClose }) {
           {[...players].sort((a, b) => {
             const pA = predictions.find(pr => pr.player_id === a.id && pr.match_id === match.id)
             const pB = predictions.find(pr => pr.player_id === b.id && pr.match_id === match.id)
-            const ptA = isFinished && pA && result ? calcPoints(pA, result) : -1
-            const ptB = isFinished && pB && result ? calcPoints(pB, result) : -1
+            const ptA = (isFinished || isInPlay) && pA && result && result.home_score !== null ? calcPoints(pA, result) : -1
+            const ptB = (isFinished || isInPlay) && pB && result && result.home_score !== null ? calcPoints(pB, result) : -1
             return ptB - ptA
           }).map(p => {
             const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
-            const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+            const pts = (isFinished || isInPlay) && pred && result && result.home_score !== null ? calcPoints(pred, result) : null
             return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                 <Avatar av={p.avatar} size={32} name={p.name} />
@@ -285,7 +285,7 @@ function MatchModal({ match, results, predictions, players, onClose }) {
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>
                   {pts !== null
-                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                    ? <span style={{ ...ptsBadgeStyle(isFinished ? (pts ?? 0) : 5), background: isInPlay ? "#0f2a1a" : undefined, color: isInPlay ? C.green : undefined, padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                     : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                   }
                 </div>
@@ -2332,7 +2332,7 @@ export default function App() {
           <div style={{ padding: "8px 16px 16px" }}>
             {players.map(p => {
               const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
-              const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+              const pts = (isFinished || isInPlay) && pred && result && result.home_score !== null ? calcPoints(pred, result) : null
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                   <Avatar av={p.avatar} size={32} name={p.name} />
@@ -2345,7 +2345,7 @@ export default function App() {
                   </div>
                   <div style={{ minWidth: 40, textAlign: "right" }}>
                     {pts !== null
-                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                      ? <span style={{ ...ptsBadgeStyle(isFinished ? (pts ?? 0) : 5), background: isInPlay ? "#0f2a1a" : undefined, color: isInPlay ? C.green : undefined, padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                       : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                     }
                   </div>

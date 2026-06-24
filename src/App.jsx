@@ -1382,7 +1382,68 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Plenos */}
+                {/* Tabla F2 */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva Fecha 2</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Solo los 24 partidos de esta fecha · La flecha muestra el movimiento en la tabla general</div>
+                  {[
+                    ["Fede",    74, 7, 2],
+                    ["Martin",  73, 9, 3],
+                    ["Bigornia",72,10, 4],
+                    ["Pini",    72,11, 7],
+                    ["Peluche", 70, 1, 1],
+                    ["yayu",    70, 8, 8],
+                    ["Esbi",    68,12,12],
+                    ["Indio",   66, 6, 6],
+                    ["Flaca",   63, 4, 5],
+                    ["Topati",  62,13,13],
+                    ["Rami",    60, 2, 9],
+                    ["Juancho", 58, 5,11],
+                    ["Chacha",  58, 3,10],
+                  ].map(([name, pts, from_, to_]) => {
+                    const change = from_ - to_
+                    const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "="
+                    const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: C.accent, minWidth: 36, textAlign: "right" }}>{pts}pts</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, minWidth: 72, textAlign: "right" }}>
+                          {change !== 0 ? `${arrow} ${from_}°→${to_}°` : `= ${from_}°`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Todos mejoraron */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>📈 Todos mejoramos en F2</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginBottom: 10 }}>Sin excepción, todos sacaron más puntos en F2 que en F1. La fecha fue más generosa.</div>
+                  {[
+                    ["Bigornia", 47, 72, 25],
+                    ["Martin",   48, 73, 25],
+                    ["Pini",     47, 72, 25],
+                    ["Esbi",     44, 68, 24],
+                    ["Fede",     52, 74, 22],
+                    ["Topati",   41, 62, 21],
+                    ["yayu",     49, 70, 21],
+                    ["Indio",    53, 66, 13],
+                    ["Peluche",  60, 70, 10],
+                    ["Flaca",    56, 63,  7],
+                    ["Rami",     58, 60,  2],
+                    ["Chacha",   56, 58,  2],
+                    ["Juancho",  56, 58,  2],
+                  ].map(([name, f1, f2, diff]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{f1} → {f2}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", minWidth: 36, textAlign: "right" }}>+{diff}</div>
+                    </div>
+                  ))}
+                </div>
+
+                                {/* Plenos */}
                 <div>
                   <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
                   {[

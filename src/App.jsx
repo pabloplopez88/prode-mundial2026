@@ -1360,7 +1360,7 @@ export default function App() {
                     <span style={{ fontSize: 20 }}>🥴</span>
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha — 58 pts</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha y Juancho — 58 pts</div>
                       <div style={{ fontSize: 11, color: C.muted }}>16 puntos menos que el primero de la fecha</div>
                     </div>
                   </div>
@@ -1368,16 +1368,16 @@ export default function App() {
                     <span style={{ fontSize: 20 }}>🚀</span>
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada en la tabla general</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Martin — subió 6 puestos</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F2 9° y la terminó 3°</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Martin y Bigornia — subieron 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Martin: 9°→3°. Bigornia: 10°→4°. Fede también remontó 5 (7°→2°)</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 20 }}>🥶</span>
                     <div>
                       <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída en la tabla general</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha — bajó 8 puestos</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F2 3° y la terminó 11°. También Rami (↓7) y Juancho (↓6)</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Rami y Chacha — bajaron 7 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Rami: 2°→9°. Chacha: 3°→10°. Juancho también cayó 6 (5°→11°)</div>
                     </div>
                   </div>
                 </div>

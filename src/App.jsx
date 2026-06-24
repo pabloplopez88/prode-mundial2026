@@ -332,6 +332,7 @@ export default function App() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showEvolution, setShowEvolution] = useState(false)
   const [showF1Summary, setShowF1Summary] = useState(false)
+  const [showF2Summary, setShowF2Summary] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1187,6 +1188,12 @@ export default function App() {
             <div style={{ flex: 1, fontSize: 13, color: C.accent, fontWeight: 700 }}>Ver resumen de la Fecha 1</div>
             <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
           </div>
+          {/* F2 Summary Banner */}
+          <div onClick={() => setShowF2Summary(true)} style={{ background: "#0f1624", border: `1px solid ${C.accentDim}`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: C.accent, fontWeight: 700 }}>Ver resumen de la Fecha 2</div>
+            <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
+          </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
@@ -1323,6 +1330,178 @@ export default function App() {
           )}
         </div>
 
+
+        {showF2Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF2Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>📋 Resumen Fecha 2</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>24 partidos · 66 goles</div>
+                </div>
+                <button onClick={() => setShowF2Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0f1a0f,#0a1020)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Fede — 74 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>La revancha del que no tenía ningún pleno en F1</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha — 58 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>16 puntos menos que el primero de la fecha</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Martin — subió 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F2 9° y la terminó 3°</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥶</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha — bajó 8 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F2 3° y la terminó 11°. También Rami (↓7) y Juancho (↓6)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plenos */}
+                <div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Fede", 5, "Brasil 3-0 Haití, Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Jordania 1-2 Argelia, Panamá 0-1 Croacia"],
+                    ["Indio", 5, "Rep. Checa 1-1 Sudáfrica, Escocia 0-1 Marruecos, Alemania 2-1 Costa de Marfil, Noruega 3-2 Senegal, Jordania 1-2 Argelia"],
+                    ["Juancho", 5, "EEUU 2-0 Australia, Brasil 3-0 Haití, Argentina 2-0 Austria, Francia 3-0 Irak, Jordania 1-2 Argelia"],
+                    ["Martin", 4, "Brasil 3-0 Haití, Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Panamá 0-1 Croacia"],
+                    ["Bigornia", 3, "Rep. Checa 1-1 Sudáfrica, Brasil 3-0 Haití, Nueva Zelanda 1-3 Egipto"],
+                    ["Esbi", 3, "Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Jordania 1-2 Argelia"],
+                    ["Pini", 3, "Argentina 2-0 Austria, Francia 3-0 Irak, Jordania 1-2 Argelia"],
+                    ["Topati", 3, "Turquía 0-1 Paraguay, Argentina 2-0 Austria, Colombia 1-0 RD del Congo"],
+                    ["Peluche", 3, "España 4-0 Arabia Saudita, Nueva Zelanda 1-3 Egipto, Argentina 2-0 Austria"],
+                    ["Chacha", 2, "Brasil 3-0 Haití, Jordania 1-2 Argelia"],
+                    ["yayu", 2, "Argentina 2-0 Austria, Francia 3-0 Irak"],
+                    ["Rami", 1, "Brasil 3-0 Haití"],
+                    ["Flaca", 0, "Ninguno 😬"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e4080" : count >= 2 ? "#1e3054" : count === 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count === 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 8 }}>✓ Martin: 0 ceros en 24 partidos. Perfecto.</div>
+                  {[
+                    ["Indio", 6],
+                    ["Juancho", 5],
+                    ["Rami", 4],
+                    ["Chacha", 4],
+                  ].map(([name, count]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 Bélgica 0-0 Irán — 6 de 13 sacaron 0 pts</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Uruguay 2-2 Cabo Verde — 5 en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 66 goles · 2.75 por partido</div>
+                  {[
+                    ["Peluche", 83, 3.46], ["Rami", 78, 3.25], ["Flaca", 77, 3.21],
+                    ["Bigornia", 75, 3.12], ["Chacha", 73, 3.04], ["Esbi", 65, 2.71],
+                    ["Pini", 64, 2.67], ["Indio", 64, 2.67], ["Juancho", 61, 2.54],
+                    ["Fede", 61, 2.54], ["Topati", 61, 2.54], ["yayu", 58, 2.42], ["Martin", 53, 2.21],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.75) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 5 empates en 24 partidos (21%). yayu no pronosticó ningún empate.</div>
+                  {[
+                    ["Juancho", 6, "25%"], ["Indio", 6, "25%"], ["Topati", 6, "25%"],
+                    ["Chacha", 5, "21%"], ["Flaca", 3, "12%"], ["Esbi", 3, "12%"],
+                    ["Bigornia", 2, "8%"], ["Peluche", 2, "8%"], ["Rami", 2, "8%"],
+                    ["Martin", 2, "8%"], ["Pini", 1, "4%"], ["Fede", 1, "4%"], ["yayu", 0, "0%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} pronósticos empate ({pct})</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso del grupo vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>4 errores colectivos, todos empates que nadie vio venir:</div>
+                  {[
+                    ["Ecuador vs Curazao", "100% dijo Ecuador", "Real: 0-0"],
+                    ["Uruguay vs Cabo Verde", "100% dijo Uruguay", "Real: 2-2"],
+                    ["Bélgica vs Irán", "92% dijo Bélgica", "Real: 0-0"],
+                    ["Inglaterra vs Ghana", "85% dijo Inglaterra", "Real: 0-0"],
+                  ].map(([match, pred, result]) => (
+                    <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{pred} · {result}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Contreras */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
+                  {[
+                    ["Flaca", "acertó empate en Bélgica-Irán (92% decía Bélgica) y en Inglaterra-Ghana (85% decía Inglaterra). La contreras del torneo."],
+                    ["Topati", "acertó empate en Inglaterra-Ghana cuando el 85% decía Inglaterra"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Ecuador-Curazao y Uruguay-Cabo Verde: nadie lo vio venir.</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
         {showF1Summary && (
           <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF1Summary(false)}>
             <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>

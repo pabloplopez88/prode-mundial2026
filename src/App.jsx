@@ -1189,12 +1189,12 @@ export default function App() {
             <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
           </div>
           {/* F2 Summary Banner */}
-          <div onClick={() => setShowF2Summary(true)} style={{ background: "linear-gradient(135deg,#0a1a12,#0f2010)", border: `2px solid #22c55e88`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+          <div onClick={() => setShowF2Summary(true)} style={{ background: "linear-gradient(135deg,#1a1000,#251800)", border: `2px solid #a07828aa`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.12 }}>📊</div>
-            <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#4ade80", marginBottom: 4 }}>📋 Resumen Fecha 2</div>
+            <div style={{ fontSize: 11, color: "#8a6020", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#b8922e", marginBottom: 4 }}>📋 Resumen Fecha 2</div>
             <div style={{ fontSize: 12, color: C.textDim }}>Plenos, ceros, pecheadas y más · 24 partidos · 66 goles</div>
-            <div style={{ fontSize: 11, color: "#16a34a", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
+            <div style={{ fontSize: 11, color: "#8a6020", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
           </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>
@@ -1558,7 +1558,7 @@ export default function App() {
                       <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
                     </div>
                   ))}
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Curiosidad: en F2 no hubo ningún contrera que se equivocara. Los que fueron contra el grupo siempre tuvieron razón. Ecuador-Curazao y Uruguay-Cabo Verde no tuvo contreras — nadie lo vio venir.</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Ecuador-Curazao y Uruguay-Cabo Verde: nadie lo vio venir.</div>
                 </div>
 
               </div>

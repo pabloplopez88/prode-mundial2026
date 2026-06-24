@@ -1419,7 +1419,7 @@ export default function App() {
                 {/* Todos mejoraron */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>📈 Todos mejoramos en F2</div>
-                  <div style={{ fontSize: 12, color: C.textDim, marginBottom: 10 }}>Sin excepción, todos sacaron más puntos en F2 que en F1. La fecha fue más generosa.</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginBottom: 10 }}>Sin excepción, todos sacaron más puntos en F2 que en F1.</div>
                   {[
                     ["Bigornia", 47, 72, 25],
                     ["Martin",   48, 73, 25],
@@ -1550,15 +1550,15 @@ export default function App() {
                   <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
                   <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
                   {[
-                    ["Flaca", "acertó empate en Bélgica-Irán (92% decía Bélgica) y en Inglaterra-Ghana (85% decía Inglaterra). La contreras del torneo."],
-                    ["Topati", "acertó empate en Inglaterra-Ghana cuando el 85% decía Inglaterra"],
+                    ["Flaca", "apostó empate en Bélgica-Irán (92% decía Bélgica) y en Inglaterra-Ghana (85% decía Inglaterra) → acertó ambas"],
+                    ["Topati", "apostó empate en Inglaterra-Ghana cuando el 85% decía Inglaterra → acertó"],
                   ].map(([name, detail]) => (
                     <div key={name} style={{ marginBottom: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
                       <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
                     </div>
                   ))}
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Ecuador-Curazao y Uruguay-Cabo Verde: nadie lo vio venir.</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Curiosidad: en F2 no hubo ningún contrera que se equivocara. Los que fueron contra el grupo siempre tuvieron razón. Ecuador-Curazao y Uruguay-Cabo Verde no tuvo contreras — nadie lo vio venir.</div>
                 </div>
 
               </div>

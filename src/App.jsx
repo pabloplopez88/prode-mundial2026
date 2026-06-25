@@ -36,8 +36,6 @@ function flag(team) { return FLAGS[team] || "🏳️" }
 const PNG_AVATARS = [
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/chacha_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/fede_00.png",
-  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/gon_00.png",
-  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/gonzi_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/joaco_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/lb_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/martin_00.png",
@@ -48,7 +46,6 @@ const PNG_AVATARS = [
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/rami_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/yayu_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/flaca_00.png",
-  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/munra_00.png",
   "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/juancho_00.png",
 ]
 

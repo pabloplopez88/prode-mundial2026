@@ -34,22 +34,22 @@ const crd = (extra = {}) => ({ background: C.card, border: `1px solid ${C.border
 function flag(team) { return FLAGS[team] || "🏳️" }
 
 const PNG_AVATARS = [
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/chacha_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/fede_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/gon_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/gonzi_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/joaco_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/lb_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/martin_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/negro_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pato_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pele_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pini_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/rami_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/yayu_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/flaca_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/munra_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/juancho_00.png?width=64&height=64&resize=cover",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/chacha_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/fede_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/gon_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/gonzi_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/joaco_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/lb_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/martin_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/negro_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pato_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pele_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pini_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/rami_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/yayu_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/flaca_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/munra_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/juancho_00.png",
 ]
 
 const WC26_ID_MAP = {

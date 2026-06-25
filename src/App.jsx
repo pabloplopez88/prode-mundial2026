@@ -1189,12 +1189,10 @@ export default function App() {
             <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
           </div>
           {/* F2 Summary Banner */}
-          <div onClick={() => setShowF2Summary(true)} style={{ background: "linear-gradient(135deg,#1a1000,#251800)", border: `2px solid #a07828aa`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.12 }}>📊</div>
-            <div style={{ fontSize: 11, color: "#8a6020", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#b8922e", marginBottom: 4 }}>📋 Resumen Fecha 2</div>
-            <div style={{ fontSize: 12, color: C.textDim }}>Plenos, ceros, pecheadas y más · 24 partidos · 66 goles</div>
-            <div style={{ fontSize: 11, color: "#8a6020", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
+          <div onClick={() => setShowF2Summary(true)} style={{ background: "#0f1420", border: `1px solid #7a5820aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#b8922e", fontWeight: 700 }}>Ver resumen de la Fecha 2</div>
+            <span style={{ fontSize: 13, color: "#7a5820" }}>→</span>
           </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>

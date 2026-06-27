@@ -789,8 +789,14 @@ export default function App() {
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
   // Resolve placeholder team names to real team names based on results
-  const resolveTeam = (placeholder) => {
+  const resolveTeam = (placeholder, matchId = null, side = null) => {
     if (!placeholder) return placeholder
+
+    // Check knockoutOverrides first
+    if (matchId && side) {
+      const override = knockoutOverrides.find(o => o.match_id === matchId && o.side === side)
+      if (override) return override.team_name
+    }
     
     // 1st/2nd of group: "1°A", "2°B" etc
     const groupMatch = placeholder.match(/^([12])°([A-L])$/)
@@ -883,8 +889,8 @@ export default function App() {
     ...knockoutMatches.map(m => ({
       ...m,
       group: "",
-      home: resolveTeam(m.home) || m.home,
-      away: resolveTeam(m.away) || m.away,
+      home: resolveTeam(m.home, m.id, "home") || m.home,
+      away: resolveTeam(m.away, m.id, "away") || m.away,
       // Keep originals for admin picker logic
       _homeRaw: m.home,
       _awayRaw: m.away,

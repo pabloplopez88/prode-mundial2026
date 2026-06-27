@@ -592,7 +592,8 @@ export default function App() {
       // If query failed, do NOT save defaults - risk of overwriting real predictions
       if (existingError || existing === null) return
       const existingIds = new Set(existing.map(p => p.match_id))
-      const toSave = MATCHES.filter(m => {
+      const allMatchesForDefaults = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+      const toSave = allMatchesForDefaults.filter(m => {
         if (!isMatchLocked(m.id)) return false // not locked yet
         return !existingIds.has(m.id) // only if not in DB at all
       })
@@ -622,7 +623,7 @@ export default function App() {
   // Scroll to match when navigating from home to fixture
   useEffect(() => {
     if (tab === "fixture" && scrollToMatchId) {
-      const m = MATCHES.find(m => m.id === scrollToMatchId)
+      const m = allMatches.find(m => m.id === scrollToMatchId)
       if (m && m.group) setSelectedGroup(m.group)
       setTimeout(() => {
         scrollToElement("match-" + scrollToMatchId, 230)
@@ -667,7 +668,7 @@ export default function App() {
     const ep = editPreds[matchId]
     return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
   }
-  const todayUnbet = user ? MATCHES.filter(m => {
+  const todayUnbet = user ? allMatches.filter(m => {
     if (!isSameDay(m.date) || (serverNow() >= new Date(m.date + ":00-03:00"))) return false
     return !hasPrediction(m.id)
   }) : []
@@ -900,12 +901,11 @@ export default function App() {
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
-    MATCHES.forEach(m => {
+    const allMatchesForBoard = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+    allMatchesForBoard.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count matches confirmed finished by worldcup26
-      const result = results.find(r => r.match_id === m.id)
-      if (!result || result.status !== "FINISHED") return
+      if (r.status !== "FINISHED") return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
       const pts = calcPoints(pred, r)
@@ -1129,9 +1129,9 @@ export default function App() {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
     // Partidos de hoy (fecha real)
-    const todayMatches = MATCHES.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
+    const todayMatches = allMatches.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => {
+    const upcomingMatches = allMatches.filter(m => {
       const d = new Date(m.date + ':00-03:00')
       const n = serverNow()
       const sameDay = d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()

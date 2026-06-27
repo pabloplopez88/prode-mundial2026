@@ -623,7 +623,7 @@ export default function App() {
   // Scroll to match when navigating from home to fixture
   useEffect(() => {
     if (tab === "fixture" && scrollToMatchId) {
-      const m = allMatches.find(m => m.id === scrollToMatchId)
+      const m = MATCHES.find(m => m.id === scrollToMatchId) || knockoutMatches.find(m => m.id === scrollToMatchId)
       if (m && m.group) setSelectedGroup(m.group)
       setTimeout(() => {
         scrollToElement("match-" + scrollToMatchId, 230)
@@ -668,7 +668,7 @@ export default function App() {
     const ep = editPreds[matchId]
     return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
   }
-  const todayUnbet = user ? allMatches.filter(m => {
+  const todayUnbet = user ? [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))].filter(m => {
     if (!isSameDay(m.date) || (serverNow() >= new Date(m.date + ":00-03:00"))) return false
     return !hasPrediction(m.id)
   }) : []

@@ -262,12 +262,18 @@ function MatchModal({ match, results, predictions, players, onClose }) {
           {[...players].sort((a, b) => {
             const pA = predictions.find(pr => pr.player_id === a.id && pr.match_id === match.id)
             const pB = predictions.find(pr => pr.player_id === b.id && pr.match_id === match.id)
-            const ptA = (isFinished || isInPlay) && pA && result && result.home_score !== null ? calcPoints(pA, result) : -1
-            const ptB = (isFinished || isInPlay) && pB && result && result.home_score !== null ? calcPoints(pB, result) : -1
+            const epA = pA || (() => { const [dh,da]=(a.default_score||"0-0").split("-"); return {home_score:parseInt(dh),away_score:parseInt(da)} })()
+            const epB = pB || (() => { const [dh,da]=(b.default_score||"0-0").split("-"); return {home_score:parseInt(dh),away_score:parseInt(da)} })()
+            const ptA = (isFinished || isInPlay) && epA && result && result.home_score !== null ? calcPoints(epA, result) : -1
+            const ptB = (isFinished || isInPlay) && epB && result && result.home_score !== null ? calcPoints(epB, result) : -1
             return ptB - ptA
           }).map(p => {
             const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
-            const pts = (isFinished || isInPlay) && pred && result && result.home_score !== null ? calcPoints(pred, result) : null
+            const effectivePred = pred || (() => {
+              const [dh, da] = (p.default_score || "0-0").split("-")
+              return { home_score: parseInt(dh), away_score: parseInt(da), is_default: true }
+            })()
+            const pts = (isFinished || isInPlay) && effectivePred && result && result.home_score !== null ? calcPoints(effectivePred, result) : null
             return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                 <Avatar av={p.avatar} size={32} name={p.name} />
@@ -2575,7 +2581,11 @@ export default function App() {
           <div style={{ padding: "8px 16px 16px" }}>
             {players.map(p => {
               const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
-              const pts = (isFinished || isInPlay) && pred && result && result.home_score !== null ? calcPoints(pred, result) : null
+              const effectivePred = pred || (() => {
+              const [dh, da] = (p.default_score || "0-0").split("-")
+              return { home_score: parseInt(dh), away_score: parseInt(da), is_default: true }
+            })()
+            const pts = (isFinished || isInPlay) && effectivePred && result && result.home_score !== null ? calcPoints(effectivePred, result) : null
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                   <Avatar av={p.avatar} size={32} name={p.name} />

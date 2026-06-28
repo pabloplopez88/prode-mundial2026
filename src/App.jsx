@@ -378,7 +378,7 @@ export default function App() {
   const loadData = useCallback(async () => {
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined,password_reset"),
-      supabase.from("predictions").select("*"),
+      supabase.from("predictions").select("*").limit(2000),
       supabase.from("results").select("*"),
       Promise.resolve({ data: [] }),
       supabase.from("knockout_matches").select("*").order("id"),

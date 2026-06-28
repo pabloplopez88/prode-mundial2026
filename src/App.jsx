@@ -375,7 +375,9 @@ export default function App() {
     return serverNow() >= new Date(m.date + ":00-03:00")
   }
 
+  const loadDataCallRef = React.useRef(0)
   const loadData = useCallback(async () => {
+    const callId = ++loadDataCallRef.current
     const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined,password_reset"),
       supabase.from("predictions").select("*"),
@@ -383,6 +385,8 @@ export default function App() {
       Promise.resolve({ data: [] }),
       supabase.from("knockout_matches").select("*").order("id"),
     ])
+    // If a newer loadData call has started, discard these results
+    if (callId !== loadDataCallRef.current) return
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
     supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })

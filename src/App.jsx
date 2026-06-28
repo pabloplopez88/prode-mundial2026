@@ -1156,7 +1156,7 @@ export default function App() {
       const n = serverNow()
       const sameDay = d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()
       return !sameDay && d > n
-    }).sort((a, b) => new Date(a.date + ':00-03:00') - new Date(b.date + ':00-03:00')).slice(0, 6)
+    }).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -1308,7 +1308,7 @@ export default function App() {
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
                 return (
-                  <div key={m.id} onClick={() => { setStage("Grupos"); setScrollToMatchId(m.id); setTab("fixture") }} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <div key={m.id} onClick={() => { setStage(m.stage || "Grupos"); setScrollToMatchId(m.id); setTab("fixture") }} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>

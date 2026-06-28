@@ -376,13 +376,19 @@ export default function App() {
   }
 
   const loadData = useCallback(async () => {
-    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
+    // Fetch predictions in two pages to avoid 1000 row limit
+    const [page1, page2] = await Promise.all([
+      supabase.from("predictions").select("*").range(0, 999),
+      supabase.from("predictions").select("*").range(1000, 1999),
+    ])
+    const allPredictions = [...(page1.data || []), ...(page2.data || [])]
+    const [{ data: pl }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined,password_reset"),
-      supabase.from("predictions").select("*").limit(2000),
       supabase.from("results").select("*"),
       Promise.resolve({ data: [] }),
       supabase.from("knockout_matches").select("*").order("id"),
     ])
+    const pr = allPredictions.length > 0 ? allPredictions : null
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
     supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })

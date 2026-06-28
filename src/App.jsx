@@ -398,9 +398,13 @@ export default function App() {
           myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? ""), isDefault: p.is_default || false }
           myStatus[p.match_id] = "saved"
         })
-        setEditPreds(myPreds)
-        setInputStatus(myStatus)
-        editPredsRef.current = myPreds
+        // Only update editPreds if we actually found predictions for this user
+        // This prevents overwriting editPreds with empty object on race conditions
+        if (Object.keys(myPreds).length > 0) {
+          setEditPreds(myPreds)
+          setInputStatus(myStatus)
+          editPredsRef.current = myPreds
+        }
       }
     }
     if (re) { setResults(re); resultsRef.current = re }
@@ -439,6 +443,13 @@ export default function App() {
 
     const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "predictions" }, ({ new: newRow, old: oldRow, eventType }) => {
+        setPredictions(prev => {
+          if (eventType === "DELETE") return prev.filter(p => !(p.player_id === oldRow.player_id && p.match_id === oldRow.match_id))
+          const next = prev.filter(p => !(p.player_id === newRow.player_id && p.match_id === newRow.match_id))
+          return [...next, newRow]
+        })
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadData])
@@ -649,6 +660,8 @@ export default function App() {
   const autoSavePredictions = useCallback(async () => {
     const preds = editPredsRef.current
     if (!user || Object.keys(preds).length === 0) return
+    // Don't run if still loading - prevents race condition on page refresh
+    if (loading) return
     const entries = Object.entries(preds)
     const upserts = entries
       .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))

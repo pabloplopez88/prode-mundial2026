@@ -134,9 +134,9 @@ export function isSameDay(dateStr) {
 
 export const KNOCKOUT_DATES = [
   { id: 73, date: "2026-06-28T16:00" },
-  { id: 74, date: "2026-06-29T14:00" },
-  { id: 75, date: "2026-06-29T17:30" },
-  { id: 76, date: "2026-06-29T22:00" },
+  { id: 74, date: "2026-06-29T17:30" },
+  { id: 75, date: "2026-06-29T22:00" },
+  { id: 76, date: "2026-06-29T14:00" },
   { id: 77, date: "2026-06-30T18:00" },
   { id: 78, date: "2026-06-30T14:00" },
   { id: 79, date: "2026-06-30T22:00" },

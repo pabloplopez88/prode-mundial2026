@@ -964,8 +964,8 @@ export default function App() {
       // Use knockoutMatches (raw) to avoid circular reference with allMatches
       const km = knockoutMatches.find(m => m.id === matchId)
       if (!km) return placeholder
-      const homeRes = resolveTeam(km.home)
-      const awayRes = resolveTeam(km.away)
+      const homeRes = resolveTeam(km.home, km.id, "home")
+      const awayRes = resolveTeam(km.away, km.id, "away")
       if (parseInt(r.home_score) > parseInt(r.away_score)) return homeRes
       if (parseInt(r.away_score) > parseInt(r.home_score)) return awayRes
       // Draw - check penalties

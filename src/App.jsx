@@ -1155,7 +1155,7 @@ export default function App() {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
     // Partidos de hoy (fecha real)
-    const todayMatches = allMatches.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
+    const todayMatches = allMatches.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() }).sort((a, b) => new Date(a.date + ':00-03:00') - new Date(b.date + ':00-03:00'))
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
     const upcomingMatches = allMatches.filter(m => {
       const d = new Date(m.date + ':00-03:00')
@@ -1224,12 +1224,10 @@ export default function App() {
             <span style={{ fontSize: 13, color: "#7a5820" }}>→</span>
           </div>
           {/* F3 Summary Banner */}
-          <div onClick={() => setShowF3Summary(true)} style={{ background: "linear-gradient(135deg,#1a1200,#2a1f00)", border: `2px solid ${C.accent}`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.15 }}>📊</div>
-            <div style={{ fontSize: 11, color: C.accentDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: C.accent, marginBottom: 4 }}>📋 Resumen Fecha 3</div>
-            <div style={{ fontSize: 12, color: C.textDim }}>Plenos, ceros, pecheadas y más · 24 partidos · 74 goles</div>
-            <div style={{ fontSize: 11, color: C.accentDim, marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
+          <div onClick={() => setShowF3Summary(true)} style={{ background: "#0f1420", border: `1px solid #4a3008aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#7a5010", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
+            <span style={{ fontSize: 13, color: "#4a3008" }}>→</span>
           </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>

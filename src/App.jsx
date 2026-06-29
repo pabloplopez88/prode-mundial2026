@@ -122,7 +122,7 @@ function Avatar({ av = "⚽", size = 36, name = "" }) {
 
 function ScoreInput({ value, onChange, status }) {
   const borderColor = status === "saved" ? "#22c55e" : status === "unsaved" ? "#ef4444" : C.accent
-  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${borderColor}`, borderRadius: 8, color: "#e2e8f0", fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-gramm="false" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${borderColor}`, borderRadius: 8, color: "#e2e8f0", fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
 }
 
 function ScoreBox({ value, matchState = "upcoming" }) {

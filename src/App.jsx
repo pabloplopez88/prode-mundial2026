@@ -623,10 +623,12 @@ export default function App() {
         if (isNaN(hs) || isNaN(as_)) return
 
         const apiStatus = finished ? "FINISHED" : "IN_PLAY"
+        const penHome = g.home_penalty_score != null && g.home_penalty_score !== "" ? parseInt(g.home_penalty_score) : null
+        const penAway = g.away_penalty_score != null && g.away_penalty_score !== "" ? parseInt(g.away_penalty_score) : null
         upserts.push({
           match_id: local.id,
           home_score: hs, away_score: as_,
-          penalty_home: null, penalty_away: null,
+          penalty_home: penHome, penalty_away: penAway,
           status: apiStatus, match_time: inPlay ? g.time_elapsed : null,
           updated_at: new Date().toISOString()
         })

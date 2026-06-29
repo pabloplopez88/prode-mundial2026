@@ -668,14 +668,12 @@ export default function App() {
 
   const autoSavePredictions = useCallback(async () => {
     const preds = editPredsRef.current
-    if (!user) { showFlash("❌ No hay usuario"); return }
-    if (Object.keys(preds).length === 0) { showFlash("❌ editPreds vacío"); return }
+    if (!user || Object.keys(preds).length === 0) return
     const entries = Object.entries(preds)
     const upserts = entries
       .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
       .filter(u => !isMatchLocked(u.match_id)) // never write locked matches
-    if (upserts.length === 0) { showFlash("❌ upserts vacío - todo bloqueado"); return }
     const toDelete = entries
       .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
       .map(([match_id]) => parseInt(match_id))

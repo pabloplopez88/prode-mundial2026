@@ -242,7 +242,7 @@ function TeamModal({ team, results, allMatches, onClose }) {
       return { ...m, result: r }
     })
     .filter(m => m.result && m.result.status === "FINISHED" && m.result.home_score !== null)
-    .sort((a, b) => new Date(a.date + ":00-03:00") - new Date(b.date + ":00-03:00"))
+    .sort((a, b) => new Date(b.date + ":00-03:00") - new Date(a.date + ":00-03:00"))
 
   const gf = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.home_score : m.result.away_score), 0)
   const gc = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.away_score : m.result.home_score), 0)

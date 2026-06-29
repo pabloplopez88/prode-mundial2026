@@ -232,6 +232,72 @@ function InfoContent() {
 
 
 
+
+function TeamModal({ team, results, allMatches, onClose }) {
+  if (!team) return null
+  const teamMatches = allMatches
+    .filter(m => (m.home === team || m.away === team))
+    .map(m => {
+      const r = results.find(r => r.match_id === m.id)
+      return { ...m, result: r }
+    })
+    .filter(m => m.result && m.result.status === "FINISHED" && m.result.home_score !== null)
+    .sort((a, b) => new Date(b.date + ":00-03:00") - new Date(a.date + ":00-03:00"))
+
+  const gf = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.home_score : m.result.away_score), 0)
+  const gc = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.away_score : m.result.home_score), 0)
+  const wins = teamMatches.filter(m => {
+    const scored = m.home === team ? m.result.home_score : m.result.away_score
+    const conceded = m.home === team ? m.result.away_score : m.result.home_score
+    return scored > conceded
+  }).length
+  const draws = teamMatches.filter(m => m.result.home_score === m.result.away_score).length
+  const losses = teamMatches.length - wins - draws
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 600, overflowY: "auto" }} onClick={onClose}>
+      <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 32 }}>{FLAGS[team] || "🏳️"}</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{team}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{teamMatches.length} partidos · {wins}G {draws}E {losses}P · {gf}:{gc}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ padding: "8px 16px 16px" }}>
+          {teamMatches.length === 0
+            ? <div style={{ color: C.muted, textAlign: "center", padding: 24 }}>Sin partidos jugados</div>
+            : teamMatches.map(m => {
+              const isHome = m.home === team
+              const scored = isHome ? m.result.home_score : m.result.away_score
+              const conceded = isHome ? m.result.away_score : m.result.home_score
+              const won = scored > conceded
+              const lost = scored < conceded
+              const resultColor = won ? C.green : lost ? "#ef4444" : C.accent
+              const resultLetter = won ? "G" : lost ? "P" : "E"
+              const opponent = isHome ? m.away : m.home
+              const scoreStr = isHome ? `${m.result.home_score}-${m.result.away_score}` : `${m.result.away_score}-${m.result.home_score}`
+              return (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 4, background: resultColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: resultColor }}>{resultLetter}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: C.text }}>vs {FLAGS[opponent] || "🏳️"} {opponent}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{m.stage !== "Grupos" ? m.stage : `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`}</div>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
+                </div>
+              )
+            })
+          }
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MatchModal({ match, results, predictions, players, onClose }) {
   if (!match) return null
   const result = results.find(r => r.match_id === match.id)
@@ -333,6 +399,7 @@ export default function App() {
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [selectedTeam, setSelectedTeam] = useState(null)
   const [showEvolution, setShowEvolution] = useState(false)
   const [showF1Summary, setShowF1Summary] = useState(false)
   const [showF2Summary, setShowF2Summary] = useState(false)
@@ -1991,6 +2058,7 @@ export default function App() {
           </div>
         )}
         <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
+      <TeamModal team={selectedTeam} results={results} allMatches={allMatches} onClose={() => setSelectedTeam(null)} />
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}
       </div>
@@ -2045,8 +2113,8 @@ export default function App() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ flex: 1, textAlign: "right" }}>
-              <div style={{ fontSize: 26 }}>{flag(match.home)}</div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
+              <div style={{ fontSize: 26, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.home) }}>{flag(match.home)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.home) }}>{match.home}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
               {result && result.home_score !== null && (
@@ -2092,8 +2160,8 @@ export default function App() {
               )}
             </div>
             <div style={{ flex: 1, textAlign: "left" }}>
-              <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
+              <div style={{ fontSize: 26, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.away) }}>{flag(match.away)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.away) }}>{match.away}</div>
             </div>
           </div>
         </div>
@@ -2398,6 +2466,7 @@ export default function App() {
         })()}
       </div>
       <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
+      <TeamModal team={selectedTeam} results={results} allMatches={allMatches} onClose={() => setSelectedTeam(null)} />
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>

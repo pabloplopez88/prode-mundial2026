@@ -376,6 +376,7 @@ export default function App() {
   }
 
   const loadData = useCallback(async () => {
+    try {
     // Fetch predictions in two pages to avoid 1000 row limit
     const [page1, page2] = await Promise.all([
       supabase.from("predictions").select("*").range(0, 999),
@@ -414,7 +415,9 @@ export default function App() {
       }
     }
     if (re) { setResults(re); resultsRef.current = re }
-    setLoading(false)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {

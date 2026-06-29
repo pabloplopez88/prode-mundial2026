@@ -376,7 +376,7 @@ export default function App() {
   const [results, setResults] = useState([])
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
-  const [stage, setStage] = useState("Grupos")
+  const [stage, setStage] = useState("16avos")
   const [selectedGroup, setSelectedGroup] = useState("A")
   const [prevGroup, setPrevGroup] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)

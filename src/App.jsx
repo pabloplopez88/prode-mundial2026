@@ -1339,7 +1339,7 @@ export default function App() {
                         ? <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                           {result.penalty_home != null && result.penalty_away != null && (
-                            <div style={{ fontSize: 11, color: C.muted }}>({result.penalty_home} - {result.penalty_away})</div>
+                            <div style={{ fontSize: 11, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                           )}
                         </div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
@@ -2135,7 +2135,7 @@ export default function App() {
                     <div style={{ fontSize: 9, color: C.green }}>{`Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}`}</div>
                   )}
                   {result.penalty_home != null && result.penalty_away != null && (
-                    <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home} - {result.penalty_away})</div>
+                    <div style={{ fontSize: 10, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                   )}
                 </div>
               )}

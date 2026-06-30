@@ -3311,7 +3311,7 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const { data: allPlayers } = await supabase.from("players").select("id,name")
           const { data: allResults } = await supabase.from("results").select("*")
           if (!allPreds || !allPlayers || !allResults) { showFlash("❌ Error al obtener datos"); return }
-          const allMatchesForFlourishBtn = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+          const allMatchesForFlourishBtn = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "", home: resolveTeam(m.home, m.id, "home") || m.home, away: resolveTeam(m.away, m.id, "away") || m.away }))]
           // Sort by match date (reliable order, not updated_at)
           const allFinished = allResults
             .filter(r => r.status === "FINISHED" && r.home_score !== null)

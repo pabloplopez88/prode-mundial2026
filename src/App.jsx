@@ -287,7 +287,14 @@ function TeamModal({ team, results, allMatches, onClose }) {
                     <div style={{ fontSize: 13, color: C.text }}>vs {FLAGS[opponent] || "🏳️"} {opponent}</div>
                     <div style={{ fontSize: 11, color: C.muted }}>{m.stage !== "Grupos" ? m.stage : `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`}</div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
+                    {m.result.penalty_home != null && m.result.penalty_away != null && (() => {
+                      const penScored = isHome ? m.result.penalty_home : m.result.penalty_away
+                      const penConceded = isHome ? m.result.penalty_away : m.result.penalty_home
+                      return <div style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>({penScored} - {penConceded})</div>
+                    })()}
+                  </div>
                 </div>
               )
             })
@@ -972,7 +979,7 @@ export default function App() {
       if (r.penalty_home != null && r.penalty_away != null) {
         return parseInt(r.penalty_home) > parseInt(r.penalty_away) ? homeRes : awayRes
       }
-      return placeholder // draw - shouldn't happen in knockout
+      return "⏳" // penalties not loaded yet
     }
 
     // Loser of match: "Perdedor Semi X" -> not resolved dynamically (manual)
@@ -1332,7 +1339,7 @@ export default function App() {
                         ? <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
                           {result.penalty_home != null && result.penalty_away != null && (
-                            <div style={{ fontSize: 11, color: C.muted }}>({result.penalty_home} - {result.penalty_away}) pen</div>
+                            <div style={{ fontSize: 11, color: C.muted }}>({result.penalty_home} - {result.penalty_away})</div>
                           )}
                         </div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
@@ -2128,7 +2135,7 @@ export default function App() {
                     <div style={{ fontSize: 9, color: C.green }}>{`Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}`}</div>
                   )}
                   {result.penalty_home != null && result.penalty_away != null && (
-                    <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home} - {result.penalty_away}) pen</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home} - {result.penalty_away})</div>
                   )}
                 </div>
               )}

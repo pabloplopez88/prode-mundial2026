@@ -289,7 +289,7 @@ function TeamModal({ team, results, allMatches, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
-                    {m.result.penalty_home != null && m.result.penalty_away != null && (() => {
+                    {m.result.penalty_home != null && m.result.penalty_away != null && m.result.status === "FINISHED" && (() => {
                       const penScored = isHome ? m.result.penalty_home : m.result.penalty_away
                       const penConceded = isHome ? m.result.penalty_away : m.result.penalty_home
                       return <div style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>({penScored} - {penConceded})</div>
@@ -1338,7 +1338,7 @@ export default function App() {
                       {result && result.home_score !== null
                         ? <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
-                          {result.penalty_home != null && result.penalty_away != null && (
+                          {result.penalty_home != null && result.penalty_away != null && result.status === "FINISHED" && (
                             <div style={{ fontSize: 11, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                           )}
                         </div>
@@ -2134,7 +2134,7 @@ export default function App() {
                   {matchState === "inplay" && (
                     <div style={{ fontSize: 9, color: C.green }}>{`Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}`}</div>
                   )}
-                  {result.penalty_home != null && result.penalty_away != null && (
+                  {result.penalty_home != null && result.penalty_away != null && result.status === "FINISHED" && (
                     <div style={{ fontSize: 10, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                   )}
                 </div>

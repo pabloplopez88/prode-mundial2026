@@ -3307,21 +3307,22 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       </button>
       <button onClick={async () => {
         try {
-          const { data: allPreds } = await supabase.from("predictions").select("*")
+          const { data: allPreds } = await supabase.from("predictions").select("*").range(0, 1999)
           const { data: allPlayers } = await supabase.from("players").select("id,name")
           const { data: allResults } = await supabase.from("results").select("*")
           if (!allPreds || !allPlayers || !allResults) { showFlash("❌ Error al obtener datos"); return }
-          // Sort by match date from MATCHES (reliable order, not updated_at)
+          const allMatchesForFlourishBtn = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+          // Sort by match date (reliable order, not updated_at)
           const allFinished = allResults
             .filter(r => r.status === "FINISHED" && r.home_score !== null)
             .sort((a, b) => {
-              const ma = MATCHES.find(m => m.id === a.match_id)
-              const mb = MATCHES.find(m => m.id === b.match_id)
+              const ma = allMatchesForFlourishBtn.find(m => m.id === a.match_id)
+              const mb = allMatchesForFlourishBtn.find(m => m.id === b.match_id)
               return new Date(ma?.date || 0) - new Date(mb?.date || 0)
             })
           const rows = []
           allFinished.forEach((r, matchOrder) => {
-            const m = MATCHES.find(m => m.id === r.match_id)
+            const m = allMatchesForFlourishBtn.find(m => m.id === r.match_id)
             if (!m) return
             const label = m.home + " " + r.home_score + "-" + r.away_score + " " + m.away
             allPlayers.forEach(player => {
@@ -3358,7 +3359,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
           const sortedPlayers = allPlayers.slice().sort((a,b) => a.name.localeCompare(b.name))
           sortedPlayers.forEach((p, i) => {
             const color = colors[i % colors.length]
-            const avatarUrl = p.avatar && p.avatar.startsWith("http") ? p.avatar.split("?")[0] : ""
+            const rawAvatar = p.avatar || ""
+            const avatarUrl = rawAvatar
+              .replace("https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/", "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/")
+              .replace("https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/", "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/")
+              .split("?")[0]
             const pts = matches.map(m => { const r = rows.find(r => r.player_id === p.id && r.match_order === m.order); return r ? r.cumulative_pts : "" })
             csvRows.push(['"' + p.name + '"', '"' + avatarUrl + '"', '"' + color + '"', "0", ...pts].join(","))
           })

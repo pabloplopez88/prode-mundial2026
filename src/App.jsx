@@ -3307,7 +3307,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       </button>
       <button onClick={async () => {
         try {
-          const { data: allPreds } = await supabase.from("predictions").select("*").range(0, 1999)
+          const [predPage1, predPage2] = await Promise.all([
+            supabase.from("predictions").select("*").range(0, 999),
+            supabase.from("predictions").select("*").range(1000, 1999),
+          ])
+          const allPreds = [...(predPage1.data || []), ...(predPage2.data || [])]
           const { data: allPlayers } = await supabase.from("players").select("id,name")
           const { data: allResults } = await supabase.from("results").select("*")
           if (!allPreds || !allPlayers || !allResults) { showFlash("❌ Error al obtener datos"); return }

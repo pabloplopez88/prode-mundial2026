@@ -289,7 +289,7 @@ function TeamModal({ team, results, allMatches, onClose }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
-                    {m.result.penalty_home != null && m.result.penalty_away != null && m.result.status === "FINISHED" && (() => {
+                    {m.result.penalty_home != null && m.result.penalty_away != null && m.result.status === "FINISHED" && m.result.home_score === m.result.away_score && (() => {
                       const penScored = isHome ? m.result.penalty_home : m.result.penalty_away
                       const penConceded = isHome ? m.result.penalty_away : m.result.penalty_home
                       return <div style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>({penScored} - {penConceded})</div>

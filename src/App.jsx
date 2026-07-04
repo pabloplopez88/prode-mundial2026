@@ -383,7 +383,7 @@ export default function App() {
   const [results, setResults] = useState([])
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
-  const [stage, setStage] = useState("16avos")
+  const [stage, setStage] = useState("8vos")
   const [selectedGroup, setSelectedGroup] = useState("A")
   const [prevGroup, setPrevGroup] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
@@ -411,6 +411,7 @@ export default function App() {
   const [showF1Summary, setShowF1Summary] = useState(false)
   const [showF2Summary, setShowF2Summary] = useState(false)
   const [showF3Summary, setShowF3Summary] = useState(false)
+  const [show16Summary, setShow16Summary] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -1306,142 +1307,151 @@ export default function App() {
             <div style={{ flex: 1, fontSize: 13, color: "#7a5010", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
             <span style={{ fontSize: 13, color: "#4a3008" }}>→</span>
           </div>
-
-          <div style={crd({ padding: 0, overflow: "hidden" })}>
-            <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
-            {todayMatches.length === 0
-              ? <div style={{ padding: "14px 14px 16px", fontSize: 14, color: C.textDim }}>Hoy no hay partidos, amigo del campin </div>
-              : todayMatches.map((m, i) => {
-                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
-                const result = getResult(m.id)
-                const pred = myPred(m.id, locked)
-                const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const hasPred = hasPrediction(m.id)
-                const inPlay = locked && result?.status === "IN_PLAY"
-                const finished = locked && result?.status === "FINISHED"
-                const showDefault = locked && !hasPred
-                const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
-                return (
-                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} onClick={!locked ? () => { setStage(m.stage || "Grupos"); setScrollToMatchId(m.id); setTab("fixture") } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: "pointer" }}>
-                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4, textAlign: "center" }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
-                    {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
-                      <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
-                    </div>}
-                    {locked && !inPlay && result && result.home_score !== null && <span style={{ position: "absolute", top: 8, right: 14, fontSize: 10, color: C.text, fontWeight: 700 }}>✓ finalizado</span>}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ flex: 1, textAlign: "right" }}>
-                      <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
-                    </div>
-                    <div style={{ textAlign: "center", minWidth: 110 }}>
-                      <div style={{ fontSize: 11, color: inPlay ? C.green : C.muted, marginBottom: 4 }}>{inPlay ? `Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}` : formatTime(m.date)}</div>
-                      {result && result.home_score !== null
-                        ? <div style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
-                          {result.penalty_home != null && result.penalty_away != null && result.status === "FINISHED" && (
-                            <div style={{ fontSize: 11, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
-                          )}
-                        </div>
-                        : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
-                      }
-                      {/* Before match */}
-                      {!locked && !hasPred && (
-                        <div style={{ fontSize: 10, color: C.red, marginTop: 4, fontWeight: 600 }}>sin pronóstico</div>
-                      )}
-                      {!locked && hasPred && (
-                        <div style={{ marginTop: 4, textAlign: "center" }}>
-                          <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>{pred.home_score} : {pred.away_score}</div>
-                        </div>
-                      )}
-                      {/* During/after match */}
-                      {locked && effectivePred && (
-                        <div style={{ marginTop: 4, textAlign: "center" }}>
-                          <div style={{ fontSize: 10, color: inPlay ? C.accentDim : C.muted, fontWeight: 600 }}>mi pronóstico</div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: inPlay ? C.accent : C.muted }}>
-                            {effectivePred.home_score} : {effectivePred.away_score}
-                          </div>
-                          {effectivePred.isDefault && <div style={{ fontSize: 10, color: inPlay ? C.accent : C.muted, fontWeight: 600 }}>(default)</div>}
-                          {pts !== null && !inPlay && (
-                            <div style={{ fontSize: 11, fontWeight: 700, color: ptsBadgeStyle(pts ?? 0).color }}>+{pts} pts</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
-                    </div>
-                    </div>
-                    {inPlay && <PredBar matchId={m.id} predictions={predictions} players={players} homeTeam={m.home} awayTeam={m.away} />}
-                  </div>
-                )
-              })}
+          {/* 16avos Summary Banner */}
+          <div onClick={() => setShow16Summary(true)} style={{ background: "#0f1420", border: "1px solid #2a4a7aaa", borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#4a7abf", fontWeight: 700 }}>Ver resumen de 16avos</div>
+            <span style={{ fontSize: 13, color: "#2a4a7a" }}>→</span>
           </div>
 
-          {upcomingMatches.length > 0 && (
-            <div style={crd({ padding: 0, overflow: "hidden" })}>
-              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>⏭ PRÓXIMOS PARTIDOS</div>
-              {upcomingMatches.map((m, i) => {
-                const locked = (serverNow() >= new Date(m.date + ":00-03:00"))
-                const result = getResult(m.id)
-                const pred = myPred(m.id, locked)
-                const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
-                const hasPred = hasPrediction(m.id)
-                return (
-                  <div key={m.id} onClick={() => { setStage(m.stage || "Grupos"); setScrollToMatchId(m.id); setTab("fixture") }} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <div style={{ flex: 1, textAlign: "right" }}>
-                      <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
-                    </div>
-                    <div style={{ textAlign: "center", minWidth: 100 }}>
-                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 1 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
-                      <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{formatDate(m.date)}</div>
-                      <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
-                      {hasPred
-                        ? <div style={{ marginTop: 4, textAlign: "center" }}>
-                            <div style={{ fontSize: 10, color: C.accentDim, fontWeight: 600 }}>mi pronóstico</div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>
-                              {pred.home_score} : {pred.away_score}
-                            </div>
-                          </div>
-                        : <div style={{ fontSize: 10, color: C.red, marginTop: 4, fontWeight: 600 }}>sin pronóstico</div>
-                      }
-                    </div>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <div style={{ fontSize: 22 }}>{flag(m.away)}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {nextMatch && (
-            <div style={crd()}>
-              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginBottom: 8 }}>⏱ PRÓXIMO PARTIDO</div>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ textAlign: "center", flex: 1 }}>
-                  <div style={{ fontSize: 28 }}>{flag(nextMatch.home)}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{nextMatch.home}</div>
+        {show16Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShow16Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#60a5fa" }}>📋 Resumen 16avos de Final</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>16 partidos · 3 definidos por penales</div>
                 </div>
-                <div style={{ textAlign: "center", padding: "0 10px" }}>
-                  <div style={{ fontSize: 11, color: C.muted }}>{formatDate(nextMatch.date)}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: C.textDim, margin: "4px 0" }}>VS</div>
-                  <div style={{ fontSize: 11, color: C.muted }}>{nextMatch.venue}</div>
-                </div>
-                <div style={{ textAlign: "center", flex: 1 }}>
-                  <div style={{ fontSize: 28 }}>{flag(nextMatch.away)}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{nextMatch.away}</div>
-                </div>
+                <button onClick={() => setShow16Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
               </div>
-              {!hasPrediction(nextMatch.id) && (
-                <button onClick={() => setTab("fixture")} style={btn("ghost", { width: "100%", marginTop: 10, fontSize: 13 })}>Cargar pronóstico →</button>
-              )}
-            </div>
-          )}
-        </div>
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
 
+                <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    ["🥇", "El mejor de la fase", "Fede y Bigornia — 52 pts", "Empatados en la cima. Fede con 6 plenos.", "#60a5fa"],
+                    ["🥴", "El peor de la fase", "Indio — 35 pts", "17 puntos menos que los líderes", "#f87171"],
+                    ["🚀", "La mayor remontada en tabla general", "Flaca — subió 2 puestos", "9°→7° en la tabla general", "#4ade80"],
+                    ["🥶", "La mayor caída en tabla general", "Peluche, Rami y Pini — bajaron 2", "Peluche: 1°→3° · Rami: 6°→8° · Pini: 8°→10°", "#f87171"],
+                  ].map(([icon, label, value, sub, color]) => (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 20 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize: 13, color: C.textDim }}>{label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color }}>{value}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{sub}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva 16avos</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Solo los 16 partidos · La flecha muestra el movimiento en la tabla general</div>
+                  {[
+                    ["Fede",52,2,1], ["Bigornia",52,5,4], ["Esbi",51,4,5], ["Martin",50,3,2],
+                    ["Juancho",50,7,6], ["Chacha",48,12,11], ["Flaca",47,9,7], ["Topati",45,13,13],
+                    ["yayu",43,10,9], ["Peluche",43,1,3], ["Pini",38,8,10], ["Rami",37,6,8], ["Indio",35,11,12],
+                  ].map(([name, pts, from_, to_]) => {
+                    const change = from_ - to_
+                    const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#60a5fa", minWidth: 36, textAlign: "right" }}>{pts}pts</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, minWidth: 72, textAlign: "right" }}>
+                          {change !== 0 ? `${change > 0 ? "↑" : "↓"}${Math.abs(change)} ${from_}°→${to_}°` : `= ${from_}°`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Fede", 6, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Francia 3-0 Suecia, Portugal 2-1 Croacia, Australia 1-1 Egipto, Colombia 1-0 Ghana"],
+                    ["Topati", 5, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, España 3-0 Austria, Portugal 2-1 Croacia, Inglaterra 2-1 RD del Congo"],
+                    ["Martin", 4, "Canadá 1-0 Sudáfrica, Países Bajos 1-1 Marruecos, Estados Unidos 2-0 Bosnia, Colombia 1-0 Ghana"],
+                    ["Esbi", 3, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Portugal 2-1 Croacia"],
+                    ["Bigornia", 3, "Noruega 2-1 Costa de Marfil, Bélgica 3-2 Senegal, Portugal 2-1 Croacia"],
+                    ["Juancho", 3, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, Portugal 2-1 Croacia"],
+                    ["Flaca", 3, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Australia 1-1 Egipto"],
+                    ["Indio", 3, "Canadá 1-0 Sudáfrica, Brasil 2-1 Japón, Portugal 2-1 Croacia"],
+                    ["yayu", 2, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia"],
+                    ["Peluche", 2, "Inglaterra 2-1 RD del Congo, Portugal 2-1 Croacia"],
+                    ["Pini", 1, "Estados Unidos 2-0 Bosnia"],
+                    ["Rami", 1, "Colombia 1-0 Ghana"],
+                    ["Chacha", 1, "Canadá 1-0 Sudáfrica"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 5 ? "#1e3060" : count >= 3 ? "#1e3054" : "#1a2035", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 5 ? "#60a5fa" : count >= 3 ? "#93c5fd" : "#6b7280" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  {[["Pini",4],["Topati",3],["Peluche",3],["Rami",3]].map(([name, count]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <span style={{ fontSize: 13, color: C.text }}>{name}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 México 2-0 Ecuador — 10 de 13 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Alemania 1-1 Paraguay (pen 3-4) — 7 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥉 Bélgica 3-2 Senegal — 4 en cero</div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 42 goles · 2.62 por partido. Martin con 1.44 goles por partido pronosticados y quedó 4°.</div>
+                  {[
+                    ["Flaca",50,3.12],["Bigornia",50,3.12],["Juancho",48,3.00],["Indio",47,2.94],
+                    ["Peluche",47,2.94],["Rami",43,2.69],["Topati",43,2.69],["Esbi",43,2.69],
+                    ["Chacha",43,2.69],["Pini",43,2.69],["Fede",40,2.50],["yayu",38,2.38],["Martin",23,1.44],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.62) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/p</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>3 empates en 16 partidos, los 3 por penales. Peluche único sin ningún empate pronosticado.</div>
+                  {[
+                    ["Flaca",4,"25%"],["Fede",4,"25%"],["Chacha",4,"25%"],["Indio",4,"25%"],
+                    ["Rami",3,"19%"],["Topati",3,"19%"],["Martin",3,"19%"],["Pini",3,"19%"],
+                    ["Esbi",2,"12%"],["yayu",2,"12%"],["Bigornia",1,"6%"],["Juancho",1,"6%"],["Peluche",0,"0%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} empates ({pct})</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso vs realidad</div>
+                  <div style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ Alemania 1-1 Paraguay (pen 3-4)</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>100% dijo Alemania · Real: empate → ganó Paraguay en penales</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
 
 
         {showF3Summary && (

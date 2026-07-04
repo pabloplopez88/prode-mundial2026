@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "./supabase"
-import { MATCHES, FLAGS, AVATARS, STAGES, calcPoints, formatDate, formatTime, isLocked, isSameDay } from "./data"
+import { MATCHES, FLAGS, AVATARS, STAGES, KNOCKOUT_DATES, calcPoints, formatDate, formatTime, isLocked, isSameDay } from "./data"
 
 const ADMIN_PASSWORD = "mundial2026"
 
@@ -34,22 +34,19 @@ const crd = (extra = {}) => ({ background: C.card, border: `1px solid ${C.border
 function flag(team) { return FLAGS[team] || "🏳️" }
 
 const PNG_AVATARS = [
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/chacha_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/fede_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/gon_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/gonzi_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/joaco_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/lb_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/martin_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/negro_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pato_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pele_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/pini_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/rami_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/yayu_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/flaca_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/munra_00.png?width=64&height=64&resize=cover",
-  "https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/juancho_00.png?width=64&height=64&resize=cover",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/chacha_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/fede_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/joaco_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/lb_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/martin_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/negro_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pato_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pele_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/pini_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/rami_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/yayu_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/flaca_00.png",
+  "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/juancho_00.png",
 ]
 
 const WC26_ID_MAP = {
@@ -75,6 +72,42 @@ function ptsBadgeStyle(pts, extra = {}) {
   return { background: c.bg, color: c.color, borderRadius: 6, fontWeight: 800, ...extra }
 }
 
+
+function PredBar({ matchId, predictions, players, homeTeam, awayTeam }) {
+  const total = players.length
+  const preds = predictions.filter(p => p.match_id === matchId)
+  let hw = 0, dr = 0, aw = 0
+  preds.forEach(p => {
+    const h = parseInt(p.home_score), a = parseInt(p.away_score)
+    if (isNaN(h) || isNaN(a)) return
+    if (h > a) hw++; else if (h === a) dr++; else aw++
+  })
+  const voted = hw + dr + aw
+  if (voted === 0) return null
+  const ph = Math.round(hw / voted * 100)
+  const pd = Math.round(dr / voted * 100)
+  const pa = 100 - ph - pd
+  const sections = [
+    { count: hw, pct: ph, color: "#1e4080", labelColor: "#60a5fa", label: homeTeam.split(" ")[0] },
+    { count: dr, pct: pd, color: "#3a2c0a", labelColor: "#c8a84b", label: "Empate" },
+    { count: aw, pct: pa, color: "#3f1515", labelColor: "#f87171", label: awayTeam.split(" ")[0] },
+  ].filter(s => s.count > 0)
+  return (
+    <div style={{ marginTop: 10, padding: "0 4px" }}>
+      <div style={{ display: "flex" }}>
+        {sections.map((s, i) => (
+          <div key={i} style={{ flex: s.pct, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: "100%", height: 5, background: s.color, borderLeft: i > 0 ? "1px solid #0a0e1a" : "none", borderRadius: i === 0 ? "3px 0 0 3px" : i === sections.length-1 ? "0 3px 3px 0" : 0 }} />
+            <div style={{ fontSize: 9, color: s.labelColor, fontWeight: 700, marginTop: 3, textAlign: "center", whiteSpace: "nowrap" }}>
+              {s.label} {s.pct}% <span style={{ color: "#4b5563", fontWeight: 400 }}>({s.count})</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Avatar({ av = "⚽", size = 36, name = "" }) {
   const isUrl = av && (av.startsWith("http") || av.startsWith("/"))
   return (
@@ -87,8 +120,9 @@ function Avatar({ av = "⚽", size = 36, name = "" }) {
   )
 }
 
-function ScoreInput({ value, onChange }) {
-  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${C.accent}`, borderRadius: 8, color: C.accent, fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
+function ScoreInput({ value, onChange, status }) {
+  const borderColor = status === "saved" ? "#22c55e" : status === "unsaved" ? "#ef4444" : C.accent
+  return <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-gramm="false" style={{ width: 44, height: 44, background: "#1a2035", border: `2px solid ${borderColor}`, borderRadius: 8, color: "#e2e8f0", fontSize: 20, fontWeight: 800, textAlign: "center", outline: "none" }} value={value ?? ""} onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 20)) onChange(v) }} />
 }
 
 function ScoreBox({ value, matchState = "upcoming" }) {
@@ -198,6 +232,79 @@ function InfoContent() {
 
 
 
+
+function TeamModal({ team, results, allMatches, onClose }) {
+  if (!team) return null
+  const teamMatches = allMatches
+    .filter(m => (m.home === team || m.away === team))
+    .map(m => {
+      const r = results.find(r => r.match_id === m.id)
+      return { ...m, result: r }
+    })
+    .filter(m => m.result && m.result.status === "FINISHED" && m.result.home_score !== null)
+    .sort((a, b) => new Date(b.date + ":00-03:00") - new Date(a.date + ":00-03:00"))
+
+  const gf = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.home_score : m.result.away_score), 0)
+  const gc = teamMatches.reduce((acc, m) => acc + (m.home === team ? m.result.away_score : m.result.home_score), 0)
+  const wins = teamMatches.filter(m => {
+    const scored = m.home === team ? m.result.home_score : m.result.away_score
+    const conceded = m.home === team ? m.result.away_score : m.result.home_score
+    return scored > conceded
+  }).length
+  const draws = teamMatches.filter(m => m.result.home_score === m.result.away_score).length
+  const losses = teamMatches.length - wins - draws
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 600, overflowY: "auto" }} onClick={onClose}>
+      <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 32 }}>{FLAGS[team] || "🏳️"}</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{team}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{teamMatches.length} partidos · {wins}G {draws}E {losses}P · {gf}:{gc}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ padding: "8px 16px 16px" }}>
+          {teamMatches.length === 0
+            ? <div style={{ color: C.muted, textAlign: "center", padding: 24 }}>Sin partidos jugados</div>
+            : teamMatches.map(m => {
+              const isHome = m.home === team
+              const scored = isHome ? m.result.home_score : m.result.away_score
+              const conceded = isHome ? m.result.away_score : m.result.home_score
+              const won = scored > conceded
+              const lost = scored < conceded
+              const resultColor = won ? C.green : lost ? "#ef4444" : C.accent
+              const resultLetter = won ? "G" : lost ? "P" : "E"
+              const opponent = isHome ? m.away : m.home
+              const scoreStr = isHome ? `${m.result.home_score}-${m.result.away_score}` : `${m.result.away_score}-${m.result.home_score}`
+              return (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 4, background: resultColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: resultColor }}>{resultLetter}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: C.text }}>vs {FLAGS[opponent] || "🏳️"} {opponent}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{m.stage !== "Grupos" ? m.stage : `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: resultColor }}>{scoreStr}</div>
+                    {m.result.penalty_home != null && m.result.penalty_away != null && m.result.status === "FINISHED" && (() => {
+                      const penScored = isHome ? m.result.penalty_home : m.result.penalty_away
+                      const penConceded = isHome ? m.result.penalty_away : m.result.penalty_home
+                      return <div style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>({penScored} - {penConceded})</div>
+                    })()}
+                  </div>
+                </div>
+              )
+            })
+          }
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MatchModal({ match, results, predictions, players, onClose }) {
   if (!match) return null
   const result = results.find(r => r.match_id === match.id)
@@ -228,25 +335,33 @@ function MatchModal({ match, results, predictions, players, onClose }) {
           {[...players].sort((a, b) => {
             const pA = predictions.find(pr => pr.player_id === a.id && pr.match_id === match.id)
             const pB = predictions.find(pr => pr.player_id === b.id && pr.match_id === match.id)
-            const ptA = isFinished && pA && result ? calcPoints(pA, result) : -1
-            const ptB = isFinished && pB && result ? calcPoints(pB, result) : -1
+            const epA = pA || (() => { const [dh,da]=(a.default_score||"0-0").split("-"); return {home_score:parseInt(dh),away_score:parseInt(da)} })()
+            const epB = pB || (() => { const [dh,da]=(b.default_score||"0-0").split("-"); return {home_score:parseInt(dh),away_score:parseInt(da)} })()
+            const ptA = (isFinished || isInPlay) && epA && result && result.home_score !== null ? calcPoints(epA, result) : -1
+            const ptB = (isFinished || isInPlay) && epB && result && result.home_score !== null ? calcPoints(epB, result) : -1
             return ptB - ptA
           }).map(p => {
             const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === match.id)
-            const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+            const effectivePred = pred || (() => {
+              const [dh, da] = (p.default_score || "0-0").split("-")
+              return { home_score: parseInt(dh), away_score: parseInt(da), is_default: true }
+            })()
+            const pts = (isFinished || isInPlay) && effectivePred && result && result.home_score !== null ? calcPoints(effectivePred, result) : null
             return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                 <Avatar av={p.avatar} size={32} name={p.name} />
                 <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</div>
                 <div style={{ textAlign: "right" }}>
                   {pred
-                    ? <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}{pred.is_default ? <span style={{ fontSize: 10, color: C.muted }}> (def)</span> : ""}</span>
-                    : <span style={{ fontSize: 13, color: C.muted }}>—</span>
+                    ? pred.is_default === true
+                      ? <span style={{ fontSize: 14, fontWeight: 800, color: C.muted }}><span style={{ fontSize: 10 }}>(def) </span>{pred.home_score} – {pred.away_score}</span>
+                      : <span style={{ fontSize: 14, fontWeight: 800, color: C.accent }}>{pred.home_score} – {pred.away_score}</span>
+                    : (() => { const [dh, da] = (p.default_score || "0-0").split("-"); return <span style={{ fontSize: 14, fontWeight: 800, color: C.muted }}><span style={{ fontSize: 10 }}>(def) </span>{dh} – {da}</span> })()
                   }
                 </div>
                 <div style={{ minWidth: 40, textAlign: "right" }}>
                   {pts !== null
-                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                    ? <span style={{ ...ptsBadgeStyle(pts ?? 0), ...(isInPlay ? { background: "#0f2a1a", color: C.green } : {}), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                     : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                   }
                 </div>
@@ -268,7 +383,7 @@ export default function App() {
   const [results, setResults] = useState([])
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
-  const [stage, setStage] = useState("Grupos")
+  const [stage, setStage] = useState("16avos")
   const [selectedGroup, setSelectedGroup] = useState("A")
   const [prevGroup, setPrevGroup] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
@@ -276,9 +391,11 @@ export default function App() {
   const [transitionDir, setTransitionDir] = useState(0) // -1 = going left, 1 = going right
   const groupContentRef = useRef(null)
   const doSyncRef = useRef(null)
-  const [scrollToMatchId, setScrollToMatchId] = useState(null) // "fecha" | "grupo"
+  const [scrollToMatchId, setScrollToMatchId] = useState(null)
+  const [highlightMatchId, setHighlightMatchId] = useState(null) // "fecha" | "grupo"
   const [gruposSubFilter, setGruposSubFilter] = useState(null) // group letter or date string
   const [editPreds, setEditPreds] = useState({})
+  const [inputStatus, setInputStatus] = useState({}) // matchId -> "saved" | "unsaved"
   const [editResults, setEditResults] = useState({})
   const [adminMode, setAdminMode] = useState(false)
   const [autoSyncStatus, setAutoSyncStatus] = useState("idle")
@@ -289,6 +406,12 @@ export default function App() {
   const [showInfo, setShowInfo] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [selectedTeam, setSelectedTeam] = useState(null)
+  const [showEvolution, setShowEvolution] = useState(false)
+  const [showF1Summary, setShowF1Summary] = useState(false)
+  const [showF2Summary, setShowF2Summary] = useState(false)
+  const [showF3Summary, setShowF3Summary] = useState(false)
+  const [show16Summary, setShow16Summary] = useState(false)
   const [adminPass, setAdminPass] = useState("")
   const [saving, setSaving] = useState(false)
   const [flash, setFlash] = useState("")
@@ -320,15 +443,28 @@ export default function App() {
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(""), 2500) }
   // Returns current time adjusted by server offset - immune to client clock manipulation
   const serverNow = () => new Date(Date.now() + serverTimeOffsetRef.current)
+  // Single source of truth for whether a match is locked - use this everywhere
+  const isMatchLocked = (matchId) => {
+    const m = MATCHES.find(m => m.id === matchId) || KNOCKOUT_DATES.find(m => m.id === matchId)
+    if (!m) return true
+    return serverNow() >= new Date(m.date + ":00-03:00")
+  }
 
   const loadData = useCallback(async () => {
-    const [{ data: pl }, { data: pr }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
+    try {
+    // Fetch predictions in two pages to avoid 1000 row limit
+    const [page1, page2] = await Promise.all([
+      supabase.from("predictions").select("*").range(0, 999),
+      supabase.from("predictions").select("*").range(1000, 1999),
+    ])
+    const allPredictions = [...(page1.data || []), ...(page2.data || [])]
+    const [{ data: pl }, { data: re }, { data: ms }, { data: km }] = await Promise.all([
       supabase.from("players").select("id,name,avatar,default_score,joined,password_reset"),
-      supabase.from("predictions").select("*"),
       supabase.from("results").select("*"),
       Promise.resolve({ data: [] }),
       supabase.from("knockout_matches").select("*").order("id"),
     ])
+    const pr = allPredictions.length > 0 ? allPredictions : null
     if (pl) setPlayers(pl)
     if (km) setKnockoutMatches(km)
     supabase.from("knockout_overrides").select("*").then(({ data: ko }) => { if (ko) setKnockoutOverrides(ko) })
@@ -339,15 +475,24 @@ export default function App() {
       if (savedUser) {
         const u = JSON.parse(savedUser)
         const myPreds = {}
+        const myStatus = {}
         pr.filter(p => p.player_id === u.id).forEach(p => {
           myPreds[p.match_id] = { home_score: String(p.home_score ?? ""), away_score: String(p.away_score ?? ""), isDefault: p.is_default || false }
+          myStatus[p.match_id] = "saved"
         })
-        setEditPreds(myPreds)
-        editPredsRef.current = myPreds
+        // Only update editPreds if we actually found predictions for this user
+        // This prevents overwriting editPreds with empty object on race conditions
+        if (Object.keys(myPreds).length > 0) {
+          setEditPreds(myPreds)
+          setInputStatus(myStatus)
+          editPredsRef.current = myPreds
+        }
       }
     }
     if (re) { setResults(re); resultsRef.current = re }
-    setLoading(false)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -382,6 +527,13 @@ export default function App() {
 
     const channel = supabase.channel("all_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "results" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "predictions" }, ({ new: newRow, old: oldRow, eventType }) => {
+        setPredictions(prev => {
+          if (eventType === "DELETE") return prev.filter(p => !(p.player_id === oldRow.player_id && p.match_id === oldRow.match_id))
+          const next = prev.filter(p => !(p.player_id === newRow.player_id && p.match_id === newRow.match_id))
+          return [...next, newRow]
+        })
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [loadData])
@@ -479,10 +631,12 @@ export default function App() {
         if (isNaN(hs) || isNaN(as_)) return
 
         const apiStatus = finished ? "FINISHED" : "IN_PLAY"
+        const penHome = g.home_penalty_score != null && g.home_penalty_score !== "" && g.home_penalty_score !== "null" ? parseInt(g.home_penalty_score) : null
+        const penAway = g.away_penalty_score != null && g.away_penalty_score !== "" && g.away_penalty_score !== "null" ? parseInt(g.away_penalty_score) : null
         upserts.push({
           match_id: local.id,
           home_score: hs, away_score: as_,
-          penalty_home: null, penalty_away: null,
+          penalty_home: penHome, penalty_away: penAway,
           status: apiStatus, match_time: inPlay ? g.time_elapsed : null,
           updated_at: new Date().toISOString()
         })
@@ -538,10 +692,13 @@ export default function App() {
     const saveDefaultsForLockedMatches = async () => {
       const [dh, da] = (user.default_score || "0-0").split("-").map(Number)
       // Only save default if match is locked AND there's no prediction AT ALL in Supabase
-      const { data: existing } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
-      const existingIds = new Set((existing || []).map(p => p.match_id))
-      const toSave = MATCHES.filter(m => {
-        if (!(serverNow() >= new Date(m.date + ":00-03:00"))) return false
+      const { data: existing, error: existingError } = await supabase.from("predictions").select("match_id").eq("player_id", user.id)
+      // If query failed, do NOT save defaults - risk of overwriting real predictions
+      if (existingError || existing === null) return
+      const existingIds = new Set(existing.map(p => p.match_id))
+      const allMatchesForDefaults = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+      const toSave = allMatchesForDefaults.filter(m => {
+        if (!isMatchLocked(m.id)) return false // not locked yet
         return !existingIds.has(m.id) // only if not in DB at all
       })
       if (toSave.length === 0) return
@@ -549,7 +706,7 @@ export default function App() {
         player_id: user.id, match_id: m.id,
         home_score: dh, away_score: da, is_default: true
       }))
-      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id", ignoreDuplicates: true }) // never overwrite existing
       setEditPreds(prev => {
         const next = { ...prev }
         toSave.forEach(m => {
@@ -567,6 +724,20 @@ export default function App() {
 
 
 
+  // Scroll to match when navigating from home to fixture
+  useEffect(() => {
+    if (tab === "fixture" && scrollToMatchId) {
+      const m = MATCHES.find(m => m.id === scrollToMatchId) || knockoutMatches.find(m => m.id === scrollToMatchId)
+      if (m && m.group) setSelectedGroup(m.group)
+      setTimeout(() => {
+        scrollToElement("match-" + scrollToMatchId, 230)
+        setHighlightMatchId(scrollToMatchId)
+        setScrollToMatchId(null)
+        setTimeout(() => setHighlightMatchId(null), 500)
+      }, 100)
+    }
+  }, [tab, scrollToMatchId])
+
   // Auto-save predictions after 1.5s of inactivity
   const saveTimerRef = useRef(null)
   const editPredsRef = useRef({})
@@ -579,11 +750,20 @@ export default function App() {
     const upserts = entries
       .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
+      .filter(u => !isMatchLocked(u.match_id)) // never write locked matches
     const toDelete = entries
       .filter(([, sc]) => (sc.home_score === "" || sc.home_score === undefined) && (sc.away_score === "" || sc.away_score === undefined))
       .map(([match_id]) => parseInt(match_id))
+      .filter(match_id => !isMatchLocked(match_id)) // never delete locked matches
     // Fire and forget - don't touch editPreds state, inputs stay stable
-    if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+    if (upserts.length > 0) {
+      await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
+      setInputStatus(prev => {
+        const next = { ...prev }
+        upserts.forEach(u => { next[u.match_id] = "saved" })
+        return next
+      })
+    }
     if (toDelete.length > 0) await supabase.from("predictions").delete().eq("player_id", user.id).in("match_id", toDelete)
     showFlash("✓ Guardado")
   }, [user])
@@ -592,7 +772,7 @@ export default function App() {
     const ep = editPreds[matchId]
     return ep && (ep.home_score !== "" && ep.home_score !== undefined) && (ep.away_score !== "" && ep.away_score !== undefined)
   }
-  const todayUnbet = user ? MATCHES.filter(m => {
+  const todayUnbet = user ? [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))].filter(m => {
     if (!isSameDay(m.date) || (serverNow() >= new Date(m.date + ":00-03:00"))) return false
     return !hasPrediction(m.id)
   }) : []
@@ -652,7 +832,7 @@ export default function App() {
     if (!user) return
     setSaving(true)
     const upserts = Object.entries(editPreds)
-      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score) }))
+      .map(([match_id, sc]) => ({ player_id: user.id, match_id: parseInt(match_id), home_score: parseInt(sc.home_score), away_score: parseInt(sc.away_score), is_default: false }))
       .filter(u => !isNaN(u.home_score) && !isNaN(u.away_score))
     if (upserts.length > 0) await supabase.from("predictions").upsert(upserts, { onConflict: "player_id,match_id" })
     setEditPreds({}); setSaving(false)
@@ -714,8 +894,14 @@ export default function App() {
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
   // Resolve placeholder team names to real team names based on results
-  const resolveTeam = (placeholder) => {
+  const resolveTeam = (placeholder, matchId = null, side = null) => {
     if (!placeholder) return placeholder
+
+    // Check knockoutOverrides first
+    if (matchId && side) {
+      const override = knockoutOverrides.find(o => o.match_id === matchId && o.side === side)
+      if (override) return override.team_name
+    }
     
     // 1st/2nd of group: "1°A", "2°B" etc
     const groupMatch = placeholder.match(/^([12])°([A-L])$/)
@@ -786,15 +972,15 @@ export default function App() {
       // Use knockoutMatches (raw) to avoid circular reference with allMatches
       const km = knockoutMatches.find(m => m.id === matchId)
       if (!km) return placeholder
-      const homeRes = resolveTeam(km.home)
-      const awayRes = resolveTeam(km.away)
+      const homeRes = resolveTeam(km.home, km.id, "home")
+      const awayRes = resolveTeam(km.away, km.id, "away")
       if (parseInt(r.home_score) > parseInt(r.away_score)) return homeRes
       if (parseInt(r.away_score) > parseInt(r.home_score)) return awayRes
       // Draw - check penalties
       if (r.penalty_home != null && r.penalty_away != null) {
         return parseInt(r.penalty_home) > parseInt(r.penalty_away) ? homeRes : awayRes
       }
-      return placeholder // draw - shouldn't happen in knockout
+      return "⏳" // penalties not loaded yet
     }
 
     // Loser of match: "Perdedor Semi X" -> not resolved dynamically (manual)
@@ -808,8 +994,8 @@ export default function App() {
     ...knockoutMatches.map(m => ({
       ...m,
       group: "",
-      home: resolveTeam(m.home) || m.home,
-      away: resolveTeam(m.away) || m.away,
+      home: resolveTeam(m.home, m.id, "home") || m.home,
+      away: resolveTeam(m.away, m.id, "away") || m.away,
       // Keep originals for admin picker logic
       _homeRaw: m.home,
       _awayRaw: m.away,
@@ -819,19 +1005,18 @@ export default function App() {
 
   const board = players.map(p => {
     let total = 0, played = 0, perfect = 0
-    MATCHES.forEach(m => {
+    const allMatchesForBoard = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "" }))]
+    allMatchesForBoard.forEach(m => {
       const r = results.find(r => r.match_id === m.id)
       if (!r || r.home_score === null) return
-      // Only count matches confirmed finished by worldcup26
-      const result = results.find(r => r.match_id === m.id)
-      if (!result || result.status !== "FINISHED") return
+      if (r.status !== "FINISHED") return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
       if (!pred) return
       const pts = calcPoints(pred, r)
       if (pts !== null) { total += pts; played++; if (pts === 5) perfect++ }
     })
     return { ...p, total, played, perfect }
-  }).sort((a, b) => b.total - a.total)
+  }).sort((a, b) => b.total - a.total || b.perfect - a.perfect)
 
   const myPred = (matchId, locked = false) => {
     const edited = editPreds[matchId]
@@ -1048,14 +1233,14 @@ export default function App() {
     const me = board.find(p => p.id === user.id)
     const myRank = board.findIndex(p => p.id === user.id) + 1
     // Partidos de hoy (fecha real)
-    const todayMatches = MATCHES.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() })
+    const todayMatches = allMatches.filter(m => { const d = new Date(m.date + ':00-03:00'); const n = serverNow(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate() }).sort((a, b) => new Date(a.date + ':00-03:00') - new Date(b.date + ':00-03:00'))
     // Próximos 6 partidos que no son de hoy y aún no arrancaron
-    const upcomingMatches = MATCHES.filter(m => {
+    const upcomingMatches = allMatches.filter(m => {
       const d = new Date(m.date + ':00-03:00')
       const n = serverNow()
       const sameDay = d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()
       return !sameDay && d > n
-    }).slice(0, 6)
+    }).sort((a, b) => new Date(a.date + ':00-03:00') - new Date(b.date + ':00-03:00')).slice(0, 6)
     const nextMatch = null
     return (
       <div style={appStyle}>
@@ -1065,7 +1250,7 @@ export default function App() {
             <div style={{ fontSize: 18, fontWeight: 800 }}>¡Hola, {user.name}!</div>
             <div style={{ fontSize: 13, color: C.textDim }}>Mundial 2026 · {players.length} participantes</div>
           </div>
-          <button onClick={() => setShowInfo(true)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 22, padding: "4px 8px", lineHeight: 1 }}>ℹ️</button>
+<button onClick={() => setShowInfo(true)} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", fontSize: 22, padding: "4px 8px", lineHeight: 1 }}>ℹ️</button>
         </div>
         {showInfo && (
           <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowInfo(false)}>
@@ -1104,6 +1289,33 @@ export default function App() {
               </div>
             ))}
           </div>
+          {/* F1 Summary Banner */}
+          <div onClick={() => setShowF1Summary(true)} style={{ background: "#0f1624", border: `1px solid ${C.accentDim}`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: C.accent, fontWeight: 700 }}>Ver resumen de la Fecha 1</div>
+            <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
+          </div>
+          {/* F2 Summary Banner */}
+          <div onClick={() => setShowF2Summary(true)} style={{ background: "#0f1420", border: `1px solid #7a5820aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#b8922e", fontWeight: 700 }}>Ver resumen de la Fecha 2</div>
+            <span style={{ fontSize: 13, color: "#7a5820" }}>→</span>
+          </div>
+          {/* F3 Summary Banner */}
+          <div onClick={() => setShowF3Summary(true)} style={{ background: "#0f1420", border: `1px solid #4a3008aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#7a5010", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
+            <span style={{ fontSize: 13, color: "#4a3008" }}>→</span>
+          </div>
+          {/* 16avos Summary Banner */}
+          <div onClick={() => setShow16Summary(true)} style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", border: `2px solid #3b6ea8`, borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.15 }}>⚔️</div>
+            <div style={{ fontSize: 11, color: "#4a7abf", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#60a5fa", marginBottom: 4 }}>📋 Resumen 16avos</div>
+            <div style={{ fontSize: 12, color: C.textDim }}>16 partidos · 3 penales · eliminación directa</div>
+            <div style={{ fontSize: 11, color: "#4a7abf", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
+          </div>
+
           <div style={crd({ padding: 0, overflow: "hidden" })}>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>
             {todayMatches.length === 0
@@ -1119,7 +1331,8 @@ export default function App() {
                 const showDefault = locked && !hasPred
                 const effectivePred = hasPred ? pred : (locked ? pred : null) // pred already returns default when locked
                 return (
-                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: locked ? "pointer" : "default" }}>
+                  <div key={m.id} onClickCapture={locked ? (e) => { e.stopPropagation(); setSelectedMatch(m) } : undefined} onClick={!locked ? () => { setStage(m.stage || "Grupos"); setScrollToMatchId(m.id); setTab("fixture") } : undefined} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", position: "relative", cursor: "pointer" }}>
+                    <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 4, textAlign: "center" }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                     {inPlay && <div style={{ position: "absolute", top: 8, right: 14, background: "#0f2a1a", borderRadius: 4, padding: "3px 7px", textAlign: "center" }}>
                       <div style={{ fontSize: 10, color: C.green, fontWeight: 800 }}>⚽ en juego</div>
                     </div>}
@@ -1134,8 +1347,8 @@ export default function App() {
                       {result && result.home_score !== null
                         ? <div style={{ textAlign: "center" }}>
                           <div style={{ fontSize: 18, fontWeight: 800, color: inPlay ? C.green : C.text }}>{result.home_score} – {result.away_score}</div>
-                          {result.penalty_home != null && result.penalty_away != null && (
-                            <div style={{ fontSize: 11, color: C.muted }}>({result.penalty_home} - {result.penalty_away}) pen</div>
+                          {result.penalty_home != null && result.penalty_away != null && result.status === "FINISHED" && (
+                            <div style={{ fontSize: 11, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                           )}
                         </div>
                         : <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
@@ -1169,6 +1382,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.away}</div>
                     </div>
                     </div>
+                    {inPlay && <PredBar matchId={m.id} predictions={predictions} players={players} homeTeam={m.home} awayTeam={m.away} />}
                   </div>
                 )
               })}
@@ -1184,12 +1398,13 @@ export default function App() {
                 const pts = result && result.home_score !== null ? calcPoints(pred, result) : null
                 const hasPred = hasPrediction(m.id)
                 return (
-                  <div key={m.id} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div key={m.id} onClick={() => { setStage(m.stage || "Grupos"); setScrollToMatchId(m.id); setTab("fixture") }} style={{ padding: "10px 14px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontSize: 22 }}>{flag(m.home)}</div>
                       <div style={{ fontSize: 11, fontWeight: 700 }}>{m.home}</div>
                     </div>
                     <div style={{ textAlign: "center", minWidth: 100 }}>
+                      <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginBottom: 1 }}>{m.group ? `Gr. ${m.group} · F${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}` : m.stage}</div>
                       <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{formatDate(m.date)}</div>
                       <div style={{ fontSize: 13, color: C.textDim, fontWeight: 700 }}>VS</div>
                       {hasPred
@@ -1235,7 +1450,812 @@ export default function App() {
             </div>
           )}
         </div>
+
+
+
+
+        {show16Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShow16Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#60a5fa" }}>📋 Resumen 16avos de Final</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>16 partidos · 3 definidos por penales</div>
+                </div>
+                <button onClick={() => setShow16Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fase</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#60a5fa" }}>Fede y Bigornia — 52 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Empatados en la cima. Fede con 6 plenos.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fase</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Indio — 35 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>17 puntos menos que los líderes</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada en tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Flaca — subió 2 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>9°→7° en la tabla general</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥶</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída en tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Peluche, Rami y Pini — bajaron 2 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Peluche: 1°→3° · Rami: 6°→8° · Pini: 8°→10°</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla 16avos */}
+                <div>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva 16avos</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Solo los 16 partidos de esta fase · La flecha muestra el movimiento en la tabla general</div>
+                  {[
+                    ["Fede",    52, 2, 1],
+                    ["Bigornia",52, 5, 4],
+                    ["Esbi",    51, 4, 5],
+                    ["Martin",  50, 3, 2],
+                    ["Juancho", 50, 7, 6],
+                    ["Chacha",  48,12,11],
+                    ["Flaca",   47, 9, 7],
+                    ["Topati",  45,13,13],
+                    ["yayu",    43,10, 9],
+                    ["Peluche", 43, 1, 3],
+                    ["Pini",    38, 8,10],
+                    ["Rami",    37, 6, 8],
+                    ["Indio",   35,11,12],
+                  ].map(([name, pts, from_, to_]) => {
+                    const change = from_ - to_
+                    const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "="
+                    const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#60a5fa", minWidth: 36, textAlign: "right" }}>{pts}pts</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, minWidth: 72, textAlign: "right" }}>
+                          {change !== 0 ? `${arrow} ${from_}°→${to_}°` : `= ${from_}°`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Plenos */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Fede", 6, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Francia 3-0 Suecia, Portugal 2-1 Croacia, Australia 1-1 Egipto, Colombia 1-0 Ghana"],
+                    ["Topati", 5, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, España 3-0 Austria, Portugal 2-1 Croacia, Inglaterra 2-1 RD del Congo"],
+                    ["Martin", 4, "Canadá 1-0 Sudáfrica, Países Bajos 1-1 Marruecos, Estados Unidos 2-0 Bosnia, Colombia 1-0 Ghana"],
+                    ["Esbi", 3, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Portugal 2-1 Croacia"],
+                    ["Bigornia", 3, "Noruega 2-1 Costa de Marfil, Bélgica 3-2 Senegal, Portugal 2-1 Croacia"],
+                    ["Juancho", 3, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, Portugal 2-1 Croacia"],
+                    ["Flaca", 3, "Brasil 2-1 Japón, Noruega 2-1 Costa de Marfil, Australia 1-1 Egipto"],
+                    ["Indio", 3, "Canadá 1-0 Sudáfrica, Brasil 2-1 Japón, Portugal 2-1 Croacia"],
+                    ["yayu", 2, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia"],
+                    ["Peluche", 2, "Inglaterra 2-1 RD del Congo, Portugal 2-1 Croacia"],
+                    ["Pini", 1, "Estados Unidos 2-0 Bosnia"],
+                    ["Rami", 1, "Colombia 1-0 Ghana"],
+                    ["Chacha", 1, "Canadá 1-0 Sudáfrica"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 5 ? "#1e3060" : count >= 3 ? "#1e3054" : count >= 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 5 ? "#60a5fa" : count >= 3 ? "#93c5fd" : count >= 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  {[["Pini", 4], ["Topati", 3], ["Peluche", 3], ["Rami", 3]].map(([name, count]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <span style={{ fontSize: 13, color: C.text }}>{name}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 México 2-0 Ecuador — 10 de 13 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Alemania 1-1 Paraguay (pen 3-4) — 7 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥉 Bélgica 3-2 Senegal — 4 en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 42 goles · 2.62 por partido</div>
+                  {[
+                    ["Flaca", 50, 3.12], ["Bigornia", 50, 3.12], ["Juancho", 48, 3.00],
+                    ["Indio", 47, 2.94], ["Peluche", 47, 2.94], ["Rami", 43, 2.69],
+                    ["Topati", 43, 2.69], ["Esbi", 43, 2.69], ["Chacha", 43, 2.69],
+                    ["Pini", 43, 2.69], ["Fede", 40, 2.50], ["yayu", 38, 2.38], ["Martin", 23, 1.44],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.62) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Martin pronosticó apenas 1.44 goles por partido y quedó 4° en la fase.</div>
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 3 empates en 16 partidos (19%), los 3 definidos por penales. Peluche fue el único en no pronosticar ningún empate.</div>
+                  {[
+                    ["Flaca", 4, "25%"], ["Fede", 4, "25%"], ["Chacha", 4, "25%"], ["Indio", 4, "25%"],
+                    ["Rami", 3, "19%"], ["Topati", 3, "19%"], ["Martin", 3, "19%"], ["Pini", 3, "19%"],
+                    ["Esbi", 2, "12%"], ["yayu", 2, "12%"], ["Bigornia", 1, "6%"], ["Juancho", 1, "6%"],
+                    ["Peluche", 0, "0%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} empates ({pct})</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso vs realidad</div>
+                  <div style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ Alemania 1-1 Paraguay (pen 3-4)</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>100% dijo Alemania · Real: empate → ganó Paraguay en penales</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.muted }}>El resto de los partidos: el grupo acertó el ganador o hubo división de opiniones.</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+        {showF3Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF3Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>📋 Resumen Fecha 3</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>24 partidos · 74 goles</div>
+                </div>
+                <button onClick={() => setShowF3Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0f1a0f,#0a1020)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Martin — 66 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>4 plenos, solo 3 ceros. Implacable.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha — 42 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>9 ceros — récord del torneo. 24 puntos menos que el primero.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Esbi — subió 8 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F3 en el 12° y la terminó 4°. Juancho también remontó 5.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥶</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Indio — bajó 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó F3 en el 5° y la terminó 11°. Pini y yayu también cayeron 4.</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla F3 */}
+                <div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva Fecha 3</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Solo los 24 partidos de esta fecha · La flecha muestra el movimiento en la tabla general</div>
+                  {[
+                    ["Martin",  66, 3, 2],
+                    ["Esbi",    63,12, 4],
+                    ["Fede",    61, 2, 3],
+                    ["Juancho", 60,10, 5],
+                    ["Peluche", 60, 1, 1],
+                    ["Rami",    56, 9, 6],
+                    ["Bigornia",55, 7, 7],
+                    ["Pini",    53, 4, 8],
+                    ["Flaca",   49, 8, 9],
+                    ["yayu",    48, 6,10],
+                    ["Topati",  46,13,13],
+                    ["Indio",   44, 5,11],
+                    ["Chacha",  42,11,12],
+                  ].map(([name, pts, from_, to_]) => {
+                    const change = from_ - to_
+                    const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "="
+                    const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: C.accent, minWidth: 36, textAlign: "right" }}>{pts}pts</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, minWidth: 72, textAlign: "right" }}>
+                          {change !== 0 ? `${arrow} ${from_}°→${to_}°` : `= ${from_}°`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Plenos */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Martin", 4, "Curazao 0-2 Costa de Marfil, Japón 1-1 Suecia, Uruguay 0-1 España, Panamá 0-2 Inglaterra"],
+                    ["Rami", 3, "Suiza 2-1 Canadá, Curazao 0-2 Costa de Marfil, Croacia 2-1 Ghana"],
+                    ["Bigornia", 3, "Escocia 0-3 Brasil, Panamá 0-2 Inglaterra, Croacia 2-1 Ghana"],
+                    ["Pini", 3, "Escocia 0-3 Brasil, Curazao 0-2 Costa de Marfil, Egipto 1-1 Irán"],
+                    ["Flaca", 3, "Escocia 0-3 Brasil, Curazao 0-2 Costa de Marfil, Egipto 1-1 Irán"],
+                    ["Juancho", 3, "Suiza 2-1 Canadá, Curazao 0-2 Costa de Marfil, Túnez 1-3 Países Bajos"],
+                    ["Esbi", 2, "Bosnia y Herz. 3-1 Qatar, Egipto 1-1 Irán"],
+                    ["Chacha", 2, "Curazao 0-2 Costa de Marfil, RD del Congo 3-1 Uzbekistán"],
+                    ["Fede", 1, "Panamá 0-2 Inglaterra"],
+                    ["Peluche", 1, "Bosnia y Herz. 3-1 Qatar"],
+                    ["yayu", 0, "Ninguno 😬"],
+                    ["Topati", 0, "Ninguno 😬"],
+                    ["Indio", 0, "Ninguno 😬"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e4080" : count >= 2 ? "#1e3054" : count === 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count === 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 8 }}>Chacha: 9 ceros — récord del torneo 🏴</div>
+                  {[
+                    ["Flaca", 7], ["Indio", 7], ["Rami", 6], ["Bigornia", 6], ["Topati", 6],
+                    ["Martin", 3], ["Fede", 3],
+                  ].map(([name, count]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <span style={{ fontSize: 13, color: C.text }}>{name}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 Argelia 3-3 Austria — 10 de 13 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Ecuador 2-1 Alemania — 9 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥉 Sudáfrica 1-0 Corea del Sur y Rep. Checa 0-3 México — 7 en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 74 goles · 3.08 por partido</div>
+                  {[
+                    ["Flaca", 79, 3.29], ["Chacha", 73, 3.04], ["Peluche", 73, 3.04],
+                    ["Rami", 72, 3.00], ["Juancho", 71, 2.96], ["Bigornia", 69, 2.88],
+                    ["Fede", 68, 2.83], ["Indio", 67, 2.79], ["Pini", 66, 2.75],
+                    ["Topati", 59, 2.46], ["Esbi", 59, 2.46], ["yayu", 50, 2.08], ["Martin", 43, 1.79],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 3.08) < 0.1 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Martin pronosticó 1.79 goles por partido — el más conservador del torneo — y ganó la fecha.</div>
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 6 empates en 24 partidos (25%). Pini apostó a empate en el 42% de sus pronósticos — récord histórico del prode.</div>
+                  {[
+                    ["Pini", 10, "42%"], ["Indio", 7, "29%"], ["Fede", 7, "29%"],
+                    ["Esbi", 6, "25%"], ["Flaca", 6, "25%"], ["Topati", 5, "21%"],
+                    ["Martin", 4, "17%"], ["yayu", 4, "17%"], ["Peluche", 4, "17%"],
+                    ["Juancho", 2, "8%"], ["Chacha", 2, "8%"], ["Rami", 1, "4%"], ["Bigornia", 1, "4%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} empates ({pct})</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso vs realidad</div>
+                  {[
+                    ["Sudáfrica 1-0 Corea del Sur", "100% dijo Corea del Sur", "Real: ganó Sudáfrica"],
+                    ["Turquía 3-2 Estados Unidos", "100% dijo Estados Unidos", "Real: ganó Turquía"],
+                    ["Japón 1-1 Suecia", "77% dijo Japón", "Real: empate"],
+                  ].map(([match, pred, result]) => (
+                    <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{pred} · {result}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Contreras */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
+                  {[
+                    ["Juancho, Martin y Pini", "apostaron empate en Japón vs Suecia cuando el 77% decía Japón → acertaron"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Sudáfrica-Corea y Turquía-EEUU: nadie lo vio venir.</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+        {showF2Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF2Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>📋 Resumen Fecha 2</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>24 partidos · 66 goles</div>
+                </div>
+                <button onClick={() => setShowF2Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0f1a0f,#0a1020)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Fede — 74 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>La revancha del que no tenía ningún pleno en F1</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Chacha y Juancho — 58 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>16 puntos menos que el primero de la fecha</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Martin y Bigornia — subieron 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Martin: 9°→3°. Bigornia: 10°→4°. Fede también remontó 5 (7°→2°)</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥶</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída en la tabla general</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Rami y Chacha — bajaron 7 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Rami: 2°→9°. Chacha: 3°→10°. Juancho también cayó 6 (5°→11°)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla F2 */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva Fecha 2</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Solo los 24 partidos de esta fecha · La flecha muestra el movimiento en la tabla general</div>
+                  {[
+                    ["Fede",    74, 7, 2],
+                    ["Martin",  73, 9, 3],
+                    ["Bigornia",72,10, 4],
+                    ["Pini",    72,11, 7],
+                    ["Peluche", 70, 1, 1],
+                    ["yayu",    70, 8, 8],
+                    ["Esbi",    68,12,12],
+                    ["Indio",   66, 6, 6],
+                    ["Flaca",   63, 4, 5],
+                    ["Topati",  62,13,13],
+                    ["Rami",    60, 2, 9],
+                    ["Juancho", 58, 5,11],
+                    ["Chacha",  58, 3,10],
+                  ].map(([name, pts, from_, to_]) => {
+                    const change = from_ - to_
+                    const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "="
+                    const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
+                    return (
+                      <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: C.accent, minWidth: 36, textAlign: "right" }}>{pts}pts</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color, minWidth: 72, textAlign: "right" }}>
+                          {change !== 0 ? `${arrow} ${from_}°→${to_}°` : `= ${from_}°`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Todos mejoraron */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>📈 Todos mejoramos en F2</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginBottom: 10 }}>Sin excepción, todos sacaron más puntos en F2 que en F1.</div>
+                  {[
+                    ["Bigornia", 47, 72, 25],
+                    ["Martin",   48, 73, 25],
+                    ["Pini",     47, 72, 25],
+                    ["Esbi",     44, 68, 24],
+                    ["Fede",     52, 74, 22],
+                    ["Topati",   41, 62, 21],
+                    ["yayu",     49, 70, 21],
+                    ["Indio",    53, 66, 13],
+                    ["Peluche",  60, 70, 10],
+                    ["Flaca",    56, 63,  7],
+                    ["Rami",     58, 60,  2],
+                    ["Chacha",   56, 58,  2],
+                    ["Juancho",  56, 58,  2],
+                  ].map(([name, f1, f2, diff]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{f1} → {f2}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", minWidth: 36, textAlign: "right" }}>+{diff}</div>
+                    </div>
+                  ))}
+                </div>
+
+                                {/* Plenos */}
+                <div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Fede", 5, "Brasil 3-0 Haití, Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Jordania 1-2 Argelia, Panamá 0-1 Croacia"],
+                    ["Indio", 5, "Rep. Checa 1-1 Sudáfrica, Escocia 0-1 Marruecos, Alemania 2-1 Costa de Marfil, Noruega 3-2 Senegal, Jordania 1-2 Argelia"],
+                    ["Juancho", 5, "EEUU 2-0 Australia, Brasil 3-0 Haití, Argentina 2-0 Austria, Francia 3-0 Irak, Jordania 1-2 Argelia"],
+                    ["Martin", 4, "Brasil 3-0 Haití, Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Panamá 0-1 Croacia"],
+                    ["Bigornia", 3, "Rep. Checa 1-1 Sudáfrica, Brasil 3-0 Haití, Nueva Zelanda 1-3 Egipto"],
+                    ["Esbi", 3, "Alemania 2-1 Costa de Marfil, Argentina 2-0 Austria, Jordania 1-2 Argelia"],
+                    ["Pini", 3, "Argentina 2-0 Austria, Francia 3-0 Irak, Jordania 1-2 Argelia"],
+                    ["Topati", 3, "Turquía 0-1 Paraguay, Argentina 2-0 Austria, Colombia 1-0 RD del Congo"],
+                    ["Peluche", 3, "España 4-0 Arabia Saudita, Nueva Zelanda 1-3 Egipto, Argentina 2-0 Austria"],
+                    ["Chacha", 2, "Brasil 3-0 Haití, Jordania 1-2 Argelia"],
+                    ["yayu", 2, "Argentina 2-0 Austria, Francia 3-0 Irak"],
+                    ["Rami", 1, "Brasil 3-0 Haití"],
+                    ["Flaca", 0, "Ninguno 😬"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e4080" : count >= 2 ? "#1e3054" : count === 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count === 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 8 }}>✓ Martin: 0 ceros en 24 partidos. Perfecto.</div>
+                  {[
+                    ["Indio", 6],
+                    ["Juancho", 5],
+                    ["Rami", 4],
+                    ["Chacha", 4],
+                  ].map(([name, count]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 Bélgica 0-0 Irán — 6 de 13 sacaron 0 pts</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Uruguay 2-2 Cabo Verde — 5 en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 66 goles · 2.75 por partido</div>
+                  {[
+                    ["Peluche", 83, 3.46], ["Rami", 78, 3.25], ["Flaca", 77, 3.21],
+                    ["Bigornia", 75, 3.12], ["Chacha", 73, 3.04], ["Esbi", 65, 2.71],
+                    ["Pini", 64, 2.67], ["Indio", 64, 2.67], ["Juancho", 61, 2.54],
+                    ["Fede", 61, 2.54], ["Topati", 61, 2.54], ["yayu", 58, 2.42], ["Martin", 53, 2.21],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.75) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 5 empates en 24 partidos (21%). yayu no pronosticó ningún empate.</div>
+                  {[
+                    ["Juancho", 6, "25%"], ["Indio", 6, "25%"], ["Topati", 6, "25%"],
+                    ["Chacha", 5, "21%"], ["Flaca", 3, "12%"], ["Esbi", 3, "12%"],
+                    ["Bigornia", 2, "8%"], ["Peluche", 2, "8%"], ["Rami", 2, "8%"],
+                    ["Martin", 2, "8%"], ["Pini", 1, "4%"], ["Fede", 1, "4%"], ["yayu", 0, "0%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} pronósticos empate ({pct})</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso del grupo vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>4 errores colectivos, todos empates que nadie vio venir:</div>
+                  {[
+                    ["Ecuador vs Curazao", "100% dijo Ecuador", "Real: 0-0"],
+                    ["Uruguay vs Cabo Verde", "100% dijo Uruguay", "Real: 2-2"],
+                    ["Bélgica vs Irán", "92% dijo Bélgica", "Real: 0-0"],
+                    ["Inglaterra vs Ghana", "85% dijo Inglaterra", "Real: 0-0"],
+                  ].map(([match, pred, result]) => (
+                    <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{pred} · {result}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Contreras */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
+                  {[
+                    ["Flaca", "apostó empate en Bélgica-Irán (92% decía Bélgica) y en Inglaterra-Ghana (85% decía Inglaterra) → acertó ambas"],
+                    ["Topati", "apostó empate en Inglaterra-Ghana cuando el 85% decía Inglaterra → acertó"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Ecuador-Curazao y Uruguay-Cabo Verde: nadie lo vio venir.</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+        {showF1Summary && (
+          <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShowF1Summary(false)}>
+            <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e2a45)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>📋 Resumen Fecha 1</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>24 partidos · 75 goles</div>
+                </div>
+                <button onClick={() => setShowF1Summary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+              </div>
+
+              <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+                {/* Intro */}
+                <div style={{ background: "linear-gradient(135deg,#0f1a0f,#0a1020)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥇</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El mejor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>Peluche — 60 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Peleado con Flaca y Rami. La Chacha Dorada también estuvo muy digno.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥴</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>El peor de la fecha</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Topati — 41 pts</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>19 puntos menos que el primero. Pero tiene una hija y encima hace la app.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🚀</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor remontada</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#4ade80" }}>Juancho — subió 8 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 11° y terminó 3°. 34 pts en la segunda mitad. Tengamos en cuenta que es hermano del organizador.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>🥶</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.textDim }}>La mayor caída</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f87171" }}>Esbi — bajó 6 puestos</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Arrancó 6° y terminó 12°. Solo 19 pts en la segunda mitad. Brrrr.</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plenos */}
+                <div>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
+                  {[
+                    ["Chacha", 4, "Corea del Sur 2-1 Rep. Checa, Canadá 1-1 Bosnia, Francia 3-1 Senegal, Argentina 3-0 Argelia"],
+                    ["Juancho", 4, "Arabia Saudita 1-1 Uruguay, Francia 3-1 Senegal, Argentina 3-0 Argelia, Ghana 1-0 Panamá"],
+                    ["Pini", 3, "Argentina 3-0 Argelia, Austria 3-1 Jordania, Uzbekistán 1-3 Colombia"],
+                    ["Rami", 3, "México 2-0 Sudáfrica, Arabia Saudita 1-1 Uruguay, Francia 3-1 Senegal"],
+                    ["Flaca", 2, "Canadá 1-1 Bosnia y Herz., Arabia Saudita 1-1 Uruguay"],
+                    ["Martin", 2, "México 2-0 Sudáfrica, Ghana 1-0 Panamá"],
+                    ["Peluche", 2, "Canadá 1-1 Bosnia y Herz., Países Bajos 2-2 Japón"],
+                    ["yayu", 2, "Países Bajos 2-2 Japón, Francia 3-1 Senegal"],
+                    ["Esbi", 1, "México 2-0 Sudáfrica"],
+                    ["Indio", 1, "Ghana 1-0 Panamá"],
+                    ["Topati", 1, "Francia 3-1 Senegal"],
+                    ["Fede", 0, "Ninguno 😬"],
+                    ["Bigornia", 0, "Ninguno 😬"],
+                  ].map(([name, count, detail]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e4080" : count >= 2 ? "#1e3054" : count === 1 ? "#1a2035" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count === 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ceros */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
+                  {[
+                    ["Bigornia", 8, "Récord de la fecha"],
+                    ["yayu", 7, ""],
+                    ["Topati", 7, ""],
+                    ["Fede", 2, ""],
+                  ].map(([name, count, note]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</span>
+                        {note && <span style={{ fontSize: 11, color: C.muted }}> · {note}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
+                    <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 Qatar 1-1 Suiza y Australia 2-0 Turquía — 11 de 13 sacaron 0 pts</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Portugal 1-1 Congo — 8 jugadores en cero</div>
+                  </div>
+                </div>
+
+                {/* Goles */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 75 goles · 3.12 por partido</div>
+                  {[
+                    ["Flaca", 78, 3.25], ["Peluche", 73, 3.04], ["Topati", 73, 3.04],
+                    ["Indio", 72, 3.00], ["Rami", 72, 3.00], ["Chacha", 69, 2.88],
+                    ["Bigornia", 67, 2.79], ["Pini", 67, 2.79], ["Fede", 60, 2.50],
+                    ["Martin", 57, 2.38], ["yayu", 56, 2.33], ["Juancho", 55, 2.29], ["Esbi", 50, 2.08],
+                  ].map(([name, total, avg]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 3.12) < 0.15 ? C.green : C.muted }}>{avg.toFixed(2)}/partido</div>
+                    </div>
+                  ))}
+
+                </div>
+
+                {/* Empates */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Hubo 9 empates en 24 partidos (38%). El grupo los subestimó.</div>
+                  {[
+                    ["Flaca", 7, "29%"], ["Peluche", 6, "25%"], ["Esbi", 5, "21%"],
+                    ["yayu", 5, "21%"], ["Indio", 4, "17%"], ["Juancho", 4, "17%"],
+                    ["Martin", 4, "17%"], ["Pini", 4, "17%"], ["Chacha", 3, "12%"],
+                    ["Fede", 2, "8%"], ["Rami", 2, "8%"], ["Topati", 2, "8%"], ["Bigornia", 1, "4%"],
+                  ].map(([name, n, pct]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{n} pronósticos empate ({pct})</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Flaca fue quien más apostó a empates. Bigornia apostó empate solo 1 vez en 24 partidos.</div>
+                </div>
+
+                {/* Consenso */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso del grupo vs realidad</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Los peores errores colectivos — todos resultaron en empate:</div>
+                  {[
+                    ["España vs Cabo Verde", "100% del grupo dijo España", "Real: 0-0"],
+                    ["Bélgica vs Egipto", "100% del grupo dijo Bélgica", "Real: 1-1"],
+                    ["Portugal vs Congo", "100% del grupo dijo Portugal", "Real: 1-1"],
+                    ["Qatar vs Suiza", "92% dijo Suiza", "Real: 1-1"],
+                    ["Brasil vs Marruecos", "85% dijo Brasil", "Real: 1-1"],
+                    ["Irán vs Nueva Zelanda", "85% dijo Irán", "Real: 2-2"],
+                  ].map(([match, pred, result]) => (
+                    <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{pred} · {result}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Disidentes */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 12, color: C.accent, fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🦅 Los contreras</div>
+                  <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 6 }}>Fueron contra el grupo y tuvieron razón:</div>
+                  {[
+                    ["Indio", "apostó empate en Qatar vs Suiza cuando el 92% decía Suiza → acertó"],
+                    ["Flaca y Peluche", "apostaron empate en Brasil vs Marruecos cuando el 85% decía Brasil → acertaron"],
+                    ["Juancho y yayu", "apostaron empate en Irán vs Nueva Zelanda cuando el 85% decía Irán → acertaron"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✓ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 700, margin: "12px 0 6px" }}>Fueron contra el grupo y la pagaron:</div>
+                  {[
+                    ["Pini", "apostó empate en México vs Sudáfrica cuando el 92% decía México → real 2-0, cero puntos"],
+                    ["Topati", "apostó local en Haití vs Escocia cuando el 92% decía Escocia → real 0-1, cero puntos"],
+                  ].map(([name, detail]) => (
+                    <div key={name} style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>✗ {name}: </span>
+                      <span style={{ fontSize: 12, color: C.textDim }}>{detail}</span>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
         <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
+      <TeamModal team={selectedTeam} results={results} allMatches={allMatches} onClose={() => setSelectedTeam(null)} />
         <BottomNav />
         {flash && <FlashMsg msg={flash} />}
       </div>
@@ -1269,7 +2289,7 @@ export default function App() {
             const dy = Math.abs(e.changedTouches[0].clientY - (window._matchTapY || 0))
             if (dx < 15 && dy < 15) { e.stopPropagation(); setSelectedMatch(match) }
           } : undefined}
-          style={crd({ border: `1px solid ${matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default" })}>
+          style={crd({ border: `2px solid ${match.id === highlightMatchId ? C.accent : matchState === "inplay" ? "#1a3a1a" : result ? "#1e2a2e" : C.border}`, padding: 12, cursor: matchState !== "upcoming" ? "pointer" : "default", boxShadow: match.id === highlightMatchId ? `0 0 12px ${C.accent}88` : "none", transition: "border 0.3s, box-shadow 0.3s" })}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ fontSize: 11, color: C.muted }}>
               {match.id >= 73 && <span style={{ color: C.accent, fontWeight: 700, marginRight: 6 }}>P{match.id}</span>}
@@ -1290,8 +2310,8 @@ export default function App() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ flex: 1, textAlign: "right" }}>
-              <div style={{ fontSize: 26 }}>{flag(match.home)}</div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.home}</div>
+              <div style={{ fontSize: 26, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.home) }}>{flag(match.home)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.home) }}>{match.home}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 110 }}>
               {result && result.home_score !== null && (
@@ -1302,22 +2322,24 @@ export default function App() {
                   {matchState === "inplay" && (
                     <div style={{ fontSize: 9, color: C.green }}>{`Ult. ${result?.updated_at ? new Date(result.updated_at).toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Buenos_Aires"}) : "?"}`}</div>
                   )}
-                  {result.penalty_home != null && result.penalty_away != null && (
-                    <div style={{ fontSize: 10, color: C.muted }}>({result.penalty_home} - {result.penalty_away}) pen</div>
+                  {result.penalty_home != null && result.penalty_away != null && result.status === "FINISHED" && (
+                    <div style={{ fontSize: 10, color: C.text }}>({result.penalty_home} - {result.penalty_away})</div>
                   )}
                 </div>
               )}
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {!locked ? (
                   <>
-                    <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} onChange={v => {
+                    <ScoreInput value={editPreds[match.id]?.home_score ?? pred?.home_score} status={inputStatus[match.id]} onChange={v => {
                       setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], home_score: v } }; editPredsRef.current = next; return next })
+                      setInputStatus(prev => ({ ...prev, [match.id]: "unsaved" }))
                       clearTimeout(saveTimerRef.current)
                       saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                     }} />
                     <span style={{ color: C.muted, fontWeight: 900 }}>:</span>
-                    <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} onChange={v => {
+                    <ScoreInput value={editPreds[match.id]?.away_score ?? pred?.away_score} status={inputStatus[match.id]} onChange={v => {
                       setEditPreds(prev => { const next = { ...prev, [match.id]: { ...prev[match.id], away_score: v } }; editPredsRef.current = next; return next })
+                      setInputStatus(prev => ({ ...prev, [match.id]: "unsaved" }))
                       clearTimeout(saveTimerRef.current)
                       saveTimerRef.current = setTimeout(autoSavePredictions, 1500)
                     }} />
@@ -1335,8 +2357,8 @@ export default function App() {
               )}
             </div>
             <div style={{ flex: 1, textAlign: "left" }}>
-              <div style={{ fontSize: 26 }}>{flag(match.away)}</div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>{match.away}</div>
+              <div style={{ fontSize: 26, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.away) }}>{flag(match.away)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setSelectedTeam(match.away) }}>{match.away}</div>
             </div>
           </div>
         </div>
@@ -1641,6 +2663,7 @@ export default function App() {
         })()}
       </div>
       <MatchModal match={selectedMatch} results={results} predictions={predictions} players={players} onClose={() => setSelectedMatch(null)} />
+      <TeamModal team={selectedTeam} results={results} allMatches={allMatches} onClose={() => setSelectedTeam(null)} />
       <BottomNav />
       {flash && <FlashMsg msg={flash} />}
     </div>
@@ -1651,7 +2674,7 @@ export default function App() {
   // ════════════════════════════════════════════════════════════════════════════
   if (tab === "table") return (
     <div style={appStyle}>
-      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontSize: 18 }} onClick={loadData}>🔄</button>} />
+      <Header title="🏅 Tabla de Posiciones" right={<button style={{ background: "#1a2035", border: `1px solid ${C.accentDim}`, borderRadius: 8, color: C.accent, cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "5px 10px", display: "flex", alignItems: "center", gap: 4 }} onClick={() => setShowEvolution(true)}>📈 Ver evolución →</button>} />
       <div style={{ padding: "12px 14px" }}>
         {board.length === 0
           ? <div style={crd({ textAlign: "center", color: C.textDim, padding: 40 })}>Todavía no hay jugadores</div>
@@ -1745,6 +2768,17 @@ export default function App() {
         )
       })()}
 
+      {showEvolution && (
+        <div style={{ position: "fixed", inset: 0, background: "#000e", zIndex: 500, display: "flex", flexDirection: "column" }} onClick={() => setShowEvolution(false)}>
+          <div style={{ background: C.bg, margin: "20px 16px 40px", borderRadius: 16, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", background: "linear-gradient(135deg,#0f172a,#1e2a45)" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: C.accent }}>📈 Evolución del Prode</div>
+              <button onClick={() => setShowEvolution(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <iframe src="https://public.flourish.studio/visualisation/29371257/" style={{ flex: 1, border: "none", width: "100%" }} allowFullScreen />
+          </div>
+        </div>
+      )}
       <BottomNav />
     </div>
   )
@@ -1825,7 +2859,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} board={board} resolveTeam={resolveTeam} />
           )}
         </div>
       </div>
@@ -1911,7 +2945,7 @@ export default function App() {
 
             </>
           ) : (
-            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
+            <AdminPanel results={results} editResults={editResults} setEditResults={setEditResults} saveResults={saveResults} saving={saving} stage={stage} setStage={setStage} showFlash={showFlash} regClosesAt={regClosesAt} setRegClosesAt={setRegClosesAt} registrationOpen={registrationOpen} setRegistrationOpen={setRegistrationOpen} autoSyncStatus={autoSyncStatus} allMatches={allMatches} allStages={allStages} doSync={doSync} doSyncDate={doSyncDate} lastSyncTime={lastSyncTime} knockoutOverrides={knockoutOverrides} setKnockoutOverrides={setKnockoutOverrides} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} board={board} resolveTeam={resolveTeam} />
           )}
         </div>
       </div>
@@ -2043,7 +3077,11 @@ export default function App() {
           <div style={{ padding: "8px 16px 16px" }}>
             {players.map(p => {
               const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === selectedMatch.id)
-              const pts = isFinished && pred && result ? calcPoints(pred, result) : null
+              const effectivePred = pred || (() => {
+              const [dh, da] = (p.default_score || "0-0").split("-")
+              return { home_score: parseInt(dh), away_score: parseInt(da), is_default: true }
+            })()
+            const pts = (isFinished || isInPlay) && effectivePred && result && result.home_score !== null ? calcPoints(effectivePred, result) : null
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                   <Avatar av={p.avatar} size={32} name={p.name} />
@@ -2056,7 +3094,7 @@ export default function App() {
                   </div>
                   <div style={{ minWidth: 40, textAlign: "right" }}>
                     {pts !== null
-                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
+                      ? <span style={{ ...ptsBadgeStyle(pts ?? 0), ...(isInPlay ? { background: "#0f2a1a", color: C.green } : {}), padding: "3px 7px", fontSize: 12 }}>+{pts}</span>
                       : <span style={{ fontSize: 12, color: C.muted }}>—</span>
                     }
                   </div>
@@ -2407,7 +3445,7 @@ function ResetPasswordPanel({ players, showFlash }) {
   )
 }
 
-function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players, serverNow }) {
+function AdminPanel({ results, editResults, setEditResults, saveResults, saving, stage, setStage, showFlash, regClosesAt, setRegClosesAt, registrationOpen, setRegistrationOpen, autoSyncStatus, allMatches, allStages, doSync, doSyncDate, lastSyncTime, knockoutOverrides, setKnockoutOverrides, knockoutMatches, players, serverNow, board, resolveTeam }) {
   const getResult = (id) => results.find(r => r.match_id === id)
   const [adminGruposView, setAdminGruposView] = useState("grupo")
   const [tercerosPicker, setTercerosPicker] = useState(null)
@@ -2454,6 +3492,82 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       <button onClick={async () => { const msg = await doSync(); showFlash("✓ " + (msg || "Sync completado")) }}
         style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
         ⚡ Sync manual
+      </button>
+      <button onClick={async () => {
+        try {
+          const [predPage1, predPage2] = await Promise.all([
+            supabase.from("predictions").select("*").range(0, 999),
+            supabase.from("predictions").select("*").range(1000, 1999),
+          ])
+          const allPreds = [...(predPage1.data || []), ...(predPage2.data || [])]
+          const { data: allPlayers } = await supabase.from("players").select("id,name")
+          const { data: allResults } = await supabase.from("results").select("*")
+          if (!allPreds || !allPlayers || !allResults) { showFlash("❌ Error al obtener datos"); return }
+          const allMatchesForFlourishBtn = [...MATCHES, ...knockoutMatches.map(m => ({ ...m, group: "", home: resolveTeam(m.home, m.id, "home") || m.home, away: resolveTeam(m.away, m.id, "away") || m.away }))]
+          // Sort by match date (reliable order, not updated_at)
+          const allFinished = allResults
+            .filter(r => r.status === "FINISHED" && r.home_score !== null)
+            .sort((a, b) => {
+              const ma = allMatchesForFlourishBtn.find(m => m.id === a.match_id)
+              const mb = allMatchesForFlourishBtn.find(m => m.id === b.match_id)
+              return new Date(ma?.date || 0) - new Date(mb?.date || 0)
+            })
+          const rows = []
+          allFinished.forEach((r, matchOrder) => {
+            const m = allMatchesForFlourishBtn.find(m => m.id === r.match_id)
+            if (!m) return
+            const label = m.home + " " + r.home_score + "-" + r.away_score + " " + m.away
+            allPlayers.forEach(player => {
+              let cumPts = 0
+              for (let i = 0; i <= matchOrder; i++) {
+                const fr = allFinished[i]
+                const pred = allPreds.find(p => p.player_id === player.id && p.match_id === fr.match_id)
+                if (!pred) continue
+                const pts = calcPoints(pred, fr)
+                if (pts !== null) cumPts += pts
+              }
+              rows.push({ match_label: label, match_order: matchOrder + 1, player_id: player.id, cumulative_pts: cumPts, updated_at: new Date().toISOString() })
+            })
+          })
+          await supabase.from("flourish_data").delete().neq("id", 0)
+          if (rows.length > 0) await supabase.from("flourish_data").insert(rows)
+          showFlash("✓ Flourish actualizado (" + allFinished.length + " partidos)")
+        } catch(e) { showFlash("❌ " + e.message) }
+      }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
+        🔄 Poblar Flourish (partidos ya jugados)
+      </button>
+      <button onClick={async () => {
+        try {
+          const { data: rows } = await supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true })
+          const { data: allPlayers } = await supabase.from("players").select("id,name,avatar")
+          if (!rows || !allPlayers) { showFlash("❌ Sin datos"); return }
+          const matches = []
+          const seen = new Set()
+          rows.forEach(r => { if (!seen.has(r.match_order)) { seen.add(r.match_order); matches.push({ order: r.match_order, label: r.match_label }) } })
+          matches.sort((a, b) => a.order - b.order)
+          const colors = ["#f9c6c9","#a8d8ea","#b5ead7","#ffd6a5","#c9b1ff","#ffc8dd","#caffbf","#fdffb6","#9bf6ff","#bde0fe","#ffadad","#d4a5a5","#e2cfc4","#f7d6e0","#d6e4f0","#e8d5b7"]
+          const headers = ["Jugador","Image","Color","Inicio",...matches.map(m => m.label)]
+          const csvRows = [headers.join(",")]
+          const sortedPlayers = allPlayers.slice().sort((a,b) => a.name.localeCompare(b.name))
+          sortedPlayers.forEach((p, i) => {
+            const color = colors[i % colors.length]
+            const rawAvatar = p.avatar || ""
+            const avatarUrl = rawAvatar
+              .replace("https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/render/image/public/avatars/", "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/")
+              .replace("https://egtvnxoheujqcmzjfwys.supabase.co/storage/v1/object/public/avatars/", "https://raw.githubusercontent.com/pabloplopez88/prode-mundial2026/main/public/avatars/")
+              .split("?")[0]
+            const pts = matches.map(m => { const r = rows.find(r => r.player_id === p.id && r.match_order === m.order); return r ? r.cumulative_pts : "" })
+            csvRows.push(['"' + p.name + '"', '"' + avatarUrl + '"', '"' + color + '"', "0", ...pts].join(","))
+          })
+          const blob = new Blob([csvRows.join("\n")], { type: "text/csv" })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url; a.download = "flourish_prode.csv"; a.click()
+          URL.revokeObjectURL(url)
+          showFlash("✓ CSV descargado")
+        } catch(e) { showFlash("❌ " + e.message) }
+      }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
+        ⬇️ Descargar CSV Flourish
       </button>
       <WCDebugPanel allMatches={allMatches} knockoutMatches={knockoutMatches} players={players} serverNow={serverNow} />
 

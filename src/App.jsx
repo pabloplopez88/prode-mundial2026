@@ -1306,6 +1306,12 @@ export default function App() {
             <div style={{ flex: 1, fontSize: 13, color: "#7a5010", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
             <span style={{ fontSize: 13, color: "#4a3008" }}>→</span>
           </div>
+          {/* 16avos Summary Banner */}
+          <div style={{ background: "#0f1420", border: "1px solid #2a4a7aaa", borderRadius: 10, padding: "10px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#4a7abf", fontWeight: 700 }}>Ver resumen de 16avos</div>
+            <span style={{ fontSize: 13, color: "#2a4a7a" }}>→</span>
+          </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, padding: "12px 14px 8px" }}>📅 PARTIDOS DE HOY</div>

@@ -1295,22 +1295,24 @@ export default function App() {
             <span style={{ fontSize: 13, color: C.accentDim }}>→</span>
           </div>
           {/* F2 Summary Banner */}
-          <div onClick={() => setShowF2Summary(true)} style={{ background: "#0f1420", border: `1px solid #7a5820aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <div onClick={() => setShowF2Summary(true)} style={{ background: "#0f1420", border: "1px solid #9a7030aa", borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16 }}>📋</span>
-            <div style={{ flex: 1, fontSize: 13, color: "#b8922e", fontWeight: 700 }}>Ver resumen de la Fecha 2</div>
-            <span style={{ fontSize: 13, color: "#7a5820" }}>→</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#c8922e", fontWeight: 700 }}>Ver resumen de la Fecha 2</div>
+            <span style={{ fontSize: 13, color: "#9a7030" }}>→</span>
           </div>
           {/* F3 Summary Banner */}
-          <div onClick={() => setShowF3Summary(true)} style={{ background: "#0f1420", border: `1px solid #4a3008aa`, borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <div onClick={() => setShowF3Summary(true)} style={{ background: "#0f1420", border: "1px solid #c8a84baa", borderRadius: 10, padding: "10px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16 }}>📋</span>
-            <div style={{ flex: 1, fontSize: 13, color: "#7a5010", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
-            <span style={{ fontSize: 13, color: "#4a3008" }}>→</span>
+            <div style={{ flex: 1, fontSize: 13, color: "#e8c86b", fontWeight: 700 }}>Ver resumen de la Fecha 3</div>
+            <span style={{ fontSize: 13, color: "#c8a84b" }}>→</span>
           </div>
           {/* 16avos Summary Banner */}
-          <div style={{ background: "#0f1420", border: "1px solid #2a4a7aaa", borderRadius: 10, padding: "10px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 16 }}>📋</span>
-            <div style={{ flex: 1, fontSize: 13, color: "#4a7abf", fontWeight: 700 }}>Ver resumen de 16avos</div>
-            <span style={{ fontSize: 13, color: "#2a4a7a" }}>→</span>
+          <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", border: "2px solid #3b6ea8", borderRadius: 14, padding: "16px 20px", marginBottom: 10, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.15 }}>⚔️</div>
+            <div style={{ fontSize: 11, color: "#4a7abf", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#60a5fa", marginBottom: 4 }}>📋 Resumen 16avos</div>
+            <div style={{ fontSize: 12, color: C.textDim }}>16 partidos · 3 definidos por penales</div>
+            <div style={{ fontSize: 11, color: "#4a7abf", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
           </div>
 
           <div style={crd({ padding: 0, overflow: "hidden" })}>

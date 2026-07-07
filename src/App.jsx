@@ -2714,7 +2714,7 @@ export default function App() {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 10, color: C.muted, marginBottom: 3 }}>
                             {m.group
-                              ? `Gr. ${m.group} · F.${m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3}`
+                              ? "Gr. " + m.group + " · F." + (m.id <= 24 ? 1 : m.id <= 48 ? 2 : 3)
                               : m.stage
                             } · {new Date(m.date + ":00-03:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" })} {formatTime(m.date)}
                           </div>
@@ -2725,8 +2725,8 @@ export default function App() {
                           </div>
                           <div style={{ fontSize: 11, color: C.textDim }}>
                             {pred
-                              ? <>Pronóstico: <strong style={{ color: C.accent }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (default)</span>}</>
-                              : <span style={{ color: C.muted }}>Sin pronóstico</span>
+                              ? <>Pronóstico: <strong style={{ color: pred.is_default ? C.muted : C.accent }}>{pred.home_score}-{pred.away_score}</strong>{pred.is_default && <span style={{ color: C.muted }}> (def)</span>}</>
+                              : <span style={{ color: C.muted }}>null-null</span>
                             }
                           </div>
                         </div>

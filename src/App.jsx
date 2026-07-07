@@ -1011,8 +1011,11 @@ export default function App() {
       if (!r || r.home_score === null) return
       if (r.status !== "FINISHED") return
       const pred = predictions.find(pr => pr.player_id === p.id && pr.match_id === m.id)
-      if (!pred) return
-      const pts = calcPoints(pred, r)
+      const effectivePred = pred || (() => {
+        const [dh, da] = (p.default_score || "0-0").split("-")
+        return { home_score: parseInt(dh), away_score: parseInt(da) }
+      })()
+      const pts = calcPoints(effectivePred, r)
       if (pts !== null) { total += pts; played++; if (pts === 5) perfect++ }
     })
     return { ...p, total, played, perfect }

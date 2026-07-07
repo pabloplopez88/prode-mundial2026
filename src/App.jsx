@@ -968,7 +968,7 @@ export default function App() {
     if (wpMatch) {
       const matchId = parseInt(wpMatch[1])
       const r = results.find(r => r.match_id === matchId)
-      if (!r || r.home_score === null) return placeholder
+      if (!r || r.home_score === null || r.status !== "FINISHED") return placeholder
       // Use knockoutMatches (raw) to avoid circular reference with allMatches
       const km = knockoutMatches.find(m => m.id === matchId)
       if (!km) return placeholder

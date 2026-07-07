@@ -719,7 +719,7 @@ export default function App() {
     saveDefaultsForLockedMatches()
     const interval = setInterval(saveDefaultsForLockedMatches, 60000)
     return () => clearInterval(interval)
-  }, [user])
+  }, [user, knockoutMatches])
 
 
 

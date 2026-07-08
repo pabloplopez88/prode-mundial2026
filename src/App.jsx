@@ -3510,7 +3510,10 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
             })
           })
           await supabase.from("flourish_data").delete().neq("id", 0)
-          if (rows.length > 0) await supabase.from("flourish_data").insert(rows)
+          // Insert in batches of 500 to avoid Supabase limits
+          for (let i = 0; i < rows.length; i += 500) {
+            await supabase.from("flourish_data").insert(rows.slice(i, i + 500))
+          }
           showFlash("✓ Flourish actualizado (" + allFinished.length + " partidos)")
         } catch(e) { showFlash("❌ " + e.message) }
       }} style={{ background: "#1a2035", border: "1px solid #1e2940", borderRadius: 8, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", marginBottom: 8, width: "100%" }}>
@@ -3518,7 +3521,11 @@ function AdminPanel({ results, editResults, setEditResults, saveResults, saving,
       </button>
       <button onClick={async () => {
         try {
-          const { data: rows } = await supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true })
+          const [fp1, fp2] = await Promise.all([
+            supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true }).range(0, 999),
+            supabase.from("flourish_data").select("match_label,match_order,player_id,cumulative_pts").order("match_order", { ascending: true }).range(1000, 1999),
+          ])
+          const rows = [...(fp1.data || []), ...(fp2.data || [])]
           const { data: allPlayers } = await supabase.from("players").select("id,name,avatar")
           if (!rows || !allPlayers) { showFlash("❌ Sin datos"); return }
           const matches = []

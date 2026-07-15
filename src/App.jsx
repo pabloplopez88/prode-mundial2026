@@ -383,7 +383,7 @@ export default function App() {
   const [results, setResults] = useState([])
   const [knockoutMatches, setKnockoutMatches] = useState([])
   const [knockoutOverrides, setKnockoutOverrides] = useState([])
-  const [stage, setStage] = useState("Semi")
+  const [stage, setStage] = useState("4tos")
   const [selectedGroup, setSelectedGroup] = useState("A")
   const [prevGroup, setPrevGroup] = useState(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
@@ -983,8 +983,34 @@ export default function App() {
       return "⏳" // penalties not loaded yet
     }
 
-    // Loser of match: "Perdedor Semi X" -> not resolved dynamically (manual)
-    // Already a real team name or 3° placeholder
+    // Winner/Loser of Semi: "Ganador Semi 1", "Perdedor Semi 1" etc
+    const semiMatch = placeholder.match(/^(Ganador|Perdedor) Semi (\d+)$/)
+    if (semiMatch) {
+      const isWinner = semiMatch[1] === "Ganador"
+      const semiNum = parseInt(semiMatch[2])
+      // Semi 1 = P101, Semi 2 = P102
+      const semiId = 100 + semiNum
+      const r = results.find(r => r.match_id === semiId)
+      if (!r || r.home_score === null || r.status !== "FINISHED") return placeholder
+      const km = knockoutMatches.find(m => m.id === semiId)
+      if (!km) return placeholder
+      const homeRes = resolveTeam(km.home, km.id, "home")
+      const awayRes = resolveTeam(km.away, km.id, "away")
+      let winner, loser
+      if (parseInt(r.home_score) > parseInt(r.away_score)) {
+        winner = homeRes; loser = awayRes
+      } else if (parseInt(r.away_score) > parseInt(r.home_score)) {
+        winner = awayRes; loser = homeRes
+      } else if (r.penalty_home != null && r.penalty_away != null) {
+        winner = parseInt(r.penalty_home) > parseInt(r.penalty_away) ? homeRes : awayRes
+        loser = parseInt(r.penalty_home) > parseInt(r.penalty_away) ? awayRes : homeRes
+      } else {
+        return "⏳"
+      }
+      return isWinner ? winner : loser
+    }
+
+    // Already a real team name
     return placeholder
   }
 

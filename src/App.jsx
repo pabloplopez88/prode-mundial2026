@@ -1322,7 +1322,7 @@ export default function App() {
             <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 48, opacity: 0.15 }}>⚔️</div>
             <div style={{ fontSize: 11, color: "#4a7abf", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Ya disponible</div>
             <div style={{ fontSize: 18, fontWeight: 900, color: "#60a5fa", marginBottom: 4 }}>📋 Resumen 8vos + 4tos + Semis</div>
-            <div style={{ fontSize: 12, color: C.textDim }}>26 partidos · España vs Argentina en la Final</div>
+            <div style={{ fontSize: 12, color: C.textDim }}>14 partidos · España vs Argentina en la Final</div>
             <div style={{ fontSize: 11, color: "#4a7abf", marginTop: 8, fontWeight: 700 }}>Tocá para ver →</div>
           </div>
 

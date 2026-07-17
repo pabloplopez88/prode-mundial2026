@@ -1482,7 +1482,7 @@ export default function App() {
                     ["🥇", "El mejor de la fase", "Bigornia — 43 pts", "3 plenos, ganó la eliminatoria.", "#60a5fa"],
                     ["🥴", "El peor de la fase", "Flaca — 21 pts", "22 puntos menos que el primero. 6 ceros.", "#f87171"],
                     ["🚀", "La mayor remontada en tabla general", "yayu — subió 3 puestos", "10°→7° en la tabla general", "#4ade80"],
-                    ["🥶", "La mayor caída en tabla general", "Flaca — bajó 2 puestos", "8°→10°. Pini también cayó 1 (9°→10°)", "#f87171"],
+                    ["🥶", "La mayor caída en tabla general", "Flaca — bajó 2 puestos", "7°→9°. Pini también cayó 1 (9°→10°)", "#f87171"],
                   ].map(([icon, label, value, sub, color]) => (
                     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 20 }}>{icon}</span>
@@ -1499,9 +1499,9 @@ export default function App() {
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva 8vos+4tos+Semis</div>
                   <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>14 partidos · La flecha muestra el movimiento en la tabla general desde fin de 16avos</div>
                   {[
-                    ["Bigornia",43,4,3], ["Martin",41,3,2], ["yayu",41,7,5], ["Fede",39,2,1],
-                    ["Peluche",38,3,3], ["Esbi",37,5,5], ["Topati",30,13,12], ["Juancho",28,6,6],
-                    ["Rami",26,8,8], ["Indio",26,12,11], ["Pini",25,10,10], ["Chacha",22,11,11], ["Flaca",21,9,9],
+                    ["Bigornia",43,4,4], ["Martin",41,2,2], ["yayu",41,10,7], ["Fede",39,1,1],
+                    ["Peluche",38,3,3], ["Esbi",37,5,5], ["Topati",30,13,13], ["Juancho",28,6,6],
+                    ["Rami",26,8,8], ["Indio",26,12,12], ["Pini",25,9,10], ["Chacha",22,11,11], ["Flaca",21,7,9],
                   ].map(([name, pts, from_, to_]) => {
                     const change = from_ - to_
                     const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted

@@ -1471,7 +1471,7 @@ export default function App() {
               <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#60a5fa" }}>📋 Resumen 8vos + 4tos + Semis</div>
-                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>26 partidos · España vs Argentina en la Final</div>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>14 partidos · España vs Argentina en la Final</div>
                 </div>
                 <button onClick={() => setShowKOSummary(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>✕</button>
               </div>
@@ -1479,10 +1479,10 @@ export default function App() {
 
                 <div style={{ background: "linear-gradient(135deg,#0a1020,#0f1830)", borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
                   {[
-                    ["🥇", "El mejor de la fase", "Fede y Bigornia — 77 pts", "Fede con 7 plenos.", "#60a5fa"],
-                    ["🥴", "El peor de la fase", "Indio — 53 pts", "24 puntos menos que los líderes", "#f87171"],
-                    ["🚀", "La mayor remontada en tabla general", "Bigornia y yayu — subieron 3 puestos", "Bigornia: 5°→2°(empatado) · yayu: 10°→7°", "#4ade80"],
-                    ["🥶", "La mayor caída en tabla general", "Rami — bajó 3 puestos", "5°→8°. Pini también cayó 2 (7°→10°)", "#f87171"],
+                    ["🥇", "El mejor de la fase", "Bigornia — 43 pts", "3 plenos, ganó la eliminatoria.", "#60a5fa"],
+                    ["🥴", "El peor de la fase", "Flaca — 21 pts", "22 puntos menos que el primero. 6 ceros.", "#f87171"],
+                    ["🚀", "La mayor remontada en tabla general", "yayu — subió 3 puestos", "10°→7° en la tabla general", "#4ade80"],
+                    ["🥶", "La mayor caída en tabla general", "Flaca — bajó 2 puestos", "8°→10°. Pini también cayó 1 (9°→10°)", "#f87171"],
                   ].map(([icon, label, value, sub, color]) => (
                     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 20 }}>{icon}</span>
@@ -1496,12 +1496,12 @@ export default function App() {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva fase eliminatoria</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>8vos + 4tos + Semis (26 partidos) · La flecha muestra el movimiento en la tabla general</div>
+                  <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>📊 Tabla exclusiva 8vos+4tos+Semis</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>14 partidos · La flecha muestra el movimiento en la tabla general desde fin de 16avos</div>
                   {[
-                    ["Fede",77,2,1], ["Bigornia",77,5,4], ["Martin",74,3,2], ["Esbi",73,5,5],
-                    ["yayu",73,10,7], ["Peluche",71,1,3], ["Topati",70,13,13], ["Chacha",65,11,11],
-                    ["Juancho",63,6,6], ["Flaca",62,9,9], ["Pini",54,7,10], ["Rami",54,8,8], ["Indio",53,12,12],
+                    ["Bigornia",43,4,3], ["Martin",41,3,2], ["yayu",41,7,5], ["Fede",39,2,1],
+                    ["Peluche",38,3,3], ["Esbi",37,5,5], ["Topati",30,13,12], ["Juancho",28,6,6],
+                    ["Rami",26,8,8], ["Indio",26,12,11], ["Pini",25,10,10], ["Chacha",22,11,11], ["Flaca",21,9,9],
                   ].map(([name, pts, from_, to_]) => {
                     const change = from_ - to_
                     const color = change > 0 ? "#4ade80" : change < 0 ? "#f87171" : C.muted
@@ -1521,22 +1521,22 @@ export default function App() {
                 <div style={{ borderTop: "1px solid " + C.border, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🎯 Plenos (5 pts)</div>
                   {[
-                    ["Fede", 7, "Brasil 2-1 Japón, Costa de Marfil 1-2 Noruega, Francia 3-0 Suecia, Portugal 2-1 Croacia, Australia 1-1 Egipto, Colombia 1-0 Ghana, Inglaterra 1-2 Argentina"],
-                    ["Martin", 5, "Sudáfrica 0-1 Canadá, Países Bajos 1-1 Marruecos, Estados Unidos 2-0 Bosnia, Colombia 1-0 Ghana, Inglaterra 1-2 Argentina"],
-                    ["Esbi", 5, "Brasil 2-1 Japón, Costa de Marfil 1-2 Noruega, Portugal 2-1 Croacia, España 0-1 Portugal(4tos), Inglaterra 1-2 Argentina"],
-                    ["Topati", 5, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, España 3-0 Austria, Portugal 2-1 Croacia, Suiza 2-0 Argelia"],
-                    ["Bigornia", 4, "Costa de Marfil 1-2 Noruega, Bélgica 3-2 Senegal, Portugal 2-1 Croacia, Inglaterra 1-2 Argentina"],
-                    ["yayu", 4, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, España 0-1 Portugal(4tos), Inglaterra 1-2 Argentina"],
-                    ["Peluche", 4, "Inglaterra 2-1 RD del Congo, Portugal 2-1 Croacia, Brasil 1-2 Noruega, Inglaterra 1-2 Argentina"],
-                    ["Juancho", 3, "Brasil 2-1 Japón, Estados Unidos 2-0 Bosnia, Portugal 2-1 Croacia"],
-                    ["Flaca", 3, "Brasil 2-1 Japón, Costa de Marfil 1-2 Noruega, Australia 1-1 Egipto"],
-                    ["Indio", 3, "Sudáfrica 0-1 Canadá, Brasil 2-1 Japón, Portugal 2-1 Croacia"],
-                    ["Pini", 2, "Estados Unidos 2-0 Bosnia, Brasil 1-2 Noruega"],
-                    ["Chacha", 1, "Sudáfrica 0-1 Canadá"],
-                    ["Rami", 1, "Colombia 1-0 Ghana"],
+                    ["Esbi", 4, "Portugal 0-1 España, España 2-1 Bélgica, Argentina 3-1 Suiza, Inglaterra 1-2 Argentina"],
+                    ["Bigornia", 3, "Noruega 1-2 Inglaterra, Argentina 3-1 Suiza, Inglaterra 1-2 Argentina"],
+                    ["Martin", 3, "Francia 2-0 Marruecos, Noruega 1-2 Inglaterra, Inglaterra 1-2 Argentina"],
+                    ["yayu", 2, "Portugal 0-1 España, Inglaterra 1-2 Argentina"],
+                    ["Peluche", 2, "Brasil 1-2 Noruega, Inglaterra 1-2 Argentina"],
+                    ["Juancho", 2, "España 2-1 Bélgica, Argentina 3-1 Suiza"],
+                    ["Fede", 1, "Inglaterra 1-2 Argentina"],
+                    ["Rami", 1, "Argentina 3-1 Suiza"],
+                    ["Pini", 1, "Brasil 1-2 Noruega"],
+                    ["Flaca", 1, "Argentina 3-1 Suiza"],
+                    ["Topati", 0, "Ninguno 😬"],
+                    ["Indio", 0, "Ninguno 😬"],
+                    ["Chacha", 0, "Ninguno 😬"],
                   ].map(([name, count, detail]) => (
                     <div key={name} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 6 ? "#1e3060" : count >= 4 ? "#1e3054" : count >= 2 ? "#1a2035" : "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 6 ? "#60a5fa" : count >= 4 ? "#93c5fd" : count >= 2 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
+                      <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: count >= 4 ? "#1e3060" : count >= 2 ? "#1e3054" : count >= 1 ? "#1a2035" : "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: count >= 4 ? "#60a5fa" : count >= 2 ? "#93c5fd" : count >= 1 ? "#6b7280" : "#3a3a3a" }}>{count}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{name}</div>
                         <div style={{ fontSize: 11, color: C.muted }}>{detail}</div>
@@ -1547,8 +1547,7 @@ export default function App() {
 
                 <div style={{ borderTop: "1px solid " + C.border, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>😬 Ceros notables</div>
-                  <div style={{ fontSize: 12, color: "#4ade80", fontWeight: 700, marginBottom: 8 }}>Nadie salió sin ceros en la fase eliminatoria.</div>
-                  {[["Juancho",6],["Flaca",6],["Pini",6],["Martin",5],["Esbi",5],["Peluche",5],["Topati",5],["Chacha",5]].map(([name, count]) => (
+                  {[["Flaca",6],["Juancho",5],["Chacha",4],["Bigornia",3],["Martin",3],["Peluche",3],["Esbi",3],["Topati",3],["Pini",3]].map(([name, count]) => (
                     <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                       <div style={{ minWidth: 22, height: 22, borderRadius: 4, background: "#2a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{count}</div>
                       <span style={{ fontSize: 13, color: C.text }}>{name}</span>
@@ -1556,35 +1555,35 @@ export default function App() {
                   ))}
                   <div style={{ marginTop: 10, padding: "10px 12px", background: "#1a0f0f", borderRadius: 8, border: "1px solid #3a1a1a" }}>
                     <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 4 }}>Partidos que más ceros repartieron</div>
-                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 EEUU 2-0 Bosnia y Bélgica 3-2 Senegal (4tos) — 10 ceros cada uno</div>
-                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Francia 0-2 España y Alemania 1-1 Paraguay — 7 ceros</div>
-                    <div style={{ fontSize: 12, color: C.textDim }}>🥉 Brasil 1-2 Noruega — 6 ceros</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥇 EEUU 1-4 Bélgica — 10 de 13 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥈 Francia 0-2 España — 7 en cero</div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>🥉 Brasil 1-2 Noruega — 6 en cero</div>
                   </div>
                 </div>
 
                 <div style={{ borderTop: "1px solid " + C.border, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>⚽ Goles imaginados vs realidad</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 70 goles · 2.69 por partido. Martin el más conservador (1.81) y uno de los mejores.</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Real: 40 goles · 2.86 por partido. Fede y Peluche dieron exactamente en el clavo con 2.86/p.</div>
                   {[
-                    ["Flaca",84,3.23],["Peluche",78,3.00],["Indio",77,2.96],["Juancho",77,2.96],
-                    ["Chacha",76,2.92],["Bigornia",75,2.88],["Topati",73,2.81],["Esbi",69,2.65],
-                    ["Fede",68,2.62],["Rami",67,2.58],["Pini",64,2.46],["yayu",60,2.31],["Martin",47,1.81],
+                    ["Flaca",47,3.36],["Juancho",44,3.14],["Topati",41,2.93],["Esbi",41,2.93],
+                    ["Rami",41,2.93],["Chacha",41,2.93],["Fede",40,2.86],["Peluche",40,2.86],
+                    ["Bigornia",39,2.79],["Indio",38,2.71],["Martin",33,2.36],["Pini",32,2.29],["yayu",27,1.93],
                   ].map(([name, total, avg]) => (
                     <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                       <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
                       <div style={{ fontSize: 12, color: C.textDim }}>{total} goles</div>
-                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.69) < 0.12 ? C.green : C.muted }}>{avg.toFixed(2)}/p</div>
+                      <div style={{ fontSize: 11, color: Math.abs(avg - 2.86) < 0.1 ? C.green : C.muted }}>{avg.toFixed(2)}/p</div>
                     </div>
                   ))}
                 </div>
 
                 <div style={{ borderTop: "1px solid " + C.border, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🤝 Empates</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>4 empates en 26 partidos (15%). Peluche el único que no pronosticó ningún empate.</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Solo 1 empate en 14 partidos (7%). Bigornia, Martin y Peluche no pronosticaron ningún empate.</div>
                   {[
-                    ["Indio",10,"38%"],["Chacha",8,"31%"],["Flaca",7,"27%"],["Pini",6,"23%"],
-                    ["Fede",5,"19%"],["Topati",5,"19%"],["Esbi",4,"15%"],["Rami",4,"15%"],
-                    ["Martin",3,"12%"],["Juancho",2,"8%"],["yayu",2,"8%"],["Bigornia",1,"4%"],["Peluche",0,"0%"],
+                    ["Indio",7,"50%"],["Chacha",6,"43%"],["Flaca",5,"36%"],["Pini",4,"29%"],
+                    ["Topati",4,"29%"],["Esbi",3,"21%"],["Rami",2,"14%"],["Fede",1,"7%"],
+                    ["yayu",1,"7%"],["Juancho",1,"7%"],["Bigornia",0,"0%"],["Martin",0,"0%"],["Peluche",0,"0%"],
                   ].map(([name, n, pct]) => (
                     <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
                       <div style={{ flex: 1, fontSize: 13, color: C.text }}>{name}</div>
@@ -1596,9 +1595,8 @@ export default function App() {
                 <div style={{ borderTop: "1px solid " + C.border, paddingTop: 16 }}>
                   <div style={{ fontSize: 12, color: "#60a5fa", fontWeight: 800, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Consenso vs realidad</div>
                   {[
-                    ["Alemania 1-1 Paraguay (pen 3-4)", "100% dijo Alemania", "Real: empate → ganó Paraguay en penales"],
-                    ["EEUU 1-4 Bélgica", "77% dijo EEUU", "Real: ganó Bélgica ampliamente. Contreras: Fede y yayu"],
-                    ["Suiza 0-0 Colombia (pen 4-3)", "77% dijo Colombia", "Real: empate → ganó Suiza en penales. Contreras: Indio, Chacha, Topati"],
+                    ["EEUU 1-4 Bélgica", "77% dijo EEUU", "Real: ganó Bélgica ampliamente · Contreras con razón: Fede y yayu"],
+                    ["Suiza 0-0 Colombia (pen 4-3)", "77% dijo Colombia", "Real: empate → ganó Suiza · Contreras con razón: Topati, Indio, Chacha"],
                   ].map(([match, pred, result]) => (
                     <div key={match} style={{ marginBottom: 10, padding: "8px 10px", background: "#1a0f0f", borderRadius: 8 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>❌ {match}</div>
@@ -1611,6 +1609,7 @@ export default function App() {
             </div>
           </div>
         )}
+
 
         {show16Summary && (
           <div style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 500, overflowY: "auto" }} onClick={() => setShow16Summary(false)}>
